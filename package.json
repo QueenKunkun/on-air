@@ -67,7 +67,7 @@
     "publish-all": "pnpm publish-vsce && pnpm publish-ovsx",
     "package-vsix": "vsce package --no-dependencies",
     "publish-vsce": "vsce package --no-dependencies && vsce publish --no-dependencies",
-    "publish-ovsx": "bash -c 'source .env && npx ovsx publish -p $vsx_token'"
+    "publish-ovsx": "bash -c 'source .env && npx ovsx publish -p $vsx_token --no-dependencies'"
   },
   "devDependencies": {
     "@types/markdown-it": "^14.1.2",
