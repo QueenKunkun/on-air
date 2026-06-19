@@ -5,6 +5,13 @@
   "publisher": "KristinZhang",
   "description": "Turn the currently open Markdown or HTML file into a live local preview link you can open in a browser or copy and share, refreshing instantly as you edit.",
   "icon": "images/icon.png",
+  "repository": {
+    "url": "https://github.com/QueenKunkun/on-air"
+  },
+  "bugs": {
+    "url": "https://github.com/QueenKunkun/on-air/issues",
+    "email": "742711819@qq.com"
+  },
   "version": "0.1.0",
   "engines": {
     "vscode": "^1.85.0"
@@ -52,7 +59,15 @@
     "compile": "webpack",
     "watch": "webpack --watch",
     "package": "webpack --mode production --devtool hidden-source-map",
-    "lint": "eslint src"
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test",
+    "publish-all": "pnpm publish-vsce && pnpm publish-ovsx",
+    "package-vsix": "vsce package --no-dependencies",
+    "publish-vsce": "vsce package --no-dependencies && vsce publish --no-dependencies",
+    "publish-ovsx": "bash -c 'source .env && npx ovsx publish -p $vsx_token'"
   },
   "devDependencies": {
     "@types/markdown-it": "^14.1.2",
