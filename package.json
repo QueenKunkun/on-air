@@ -1,0 +1,82 @@
+{
+  "name": "on-air",
+  "displayName": "OnAir",
+  "license": "MIT",
+  "publisher": "KristinZhang",
+  "description": "Turn the currently open Markdown or HTML file into a live local preview link you can open in a browser or copy and share, refreshing instantly as you edit.",
+  "icon": "images/icon.png",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:onAir.generateUrl"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "onAir.generateUrl",
+        "title": "OnAir: Generate Live Preview Link",
+        "icon": "$(globe)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "onAir.generateUrl",
+          "when": "editorLangId == markdown || editorLangId == html",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "onAir.generateUrl",
+          "when": "editorLangId == markdown || editorLangId == html",
+          "group": "9_markdown"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "onAir.generateUrl",
+          "when": "editorLangId == markdown || editorLangId == html"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.85.0",
+    "@types/ws": "^8.5.10",
+    "@typescript-eslint/eslint-plugin": "^8.42.0",
+    "@typescript-eslint/parser": "^8.42.0",
+    "eslint": "^9.34.0",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.2",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "highlight.js": "^11.11.1",
+    "markdown-it": "^14.1.0",
+    "ws": "^8.16.0"
+  },
+  "keywords": [
+    "markdown",
+    "html",
+    "preview",
+    "live reload",
+    "share link"
+  ]
+}
