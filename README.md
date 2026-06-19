@@ -29,3 +29,18 @@ Turn the currently open Markdown or HTML file into a **live local preview link**
 ## TODO (optional future improvements)
 
 - [ ] Auto-detect LAN IP, to make sharing with colleagues on the same WiFi easier
+
+## Install (from market)
+
+1. Download from [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=KristinZhang.on-air ) or
+2. Download from [openvsx](https://open-vsx.org/extension/KristinZhang/on-air )
+
+## Install (from source)
+
+```bash
+pnpm install
+pnpm run compile
+```
+
+Then press `F5` in VS Code to launch the Extension Development Host, or package with `vsce package`.
+
