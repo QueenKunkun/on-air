@@ -19,7 +19,8 @@ const extensionConfig = {
   },
   externals: {
     vscode: 'commonjs vscode',
-    // ws 的两个可选原生加速依赖，没装也不影响功能，排除掉只是为了消除打包警告
+    // ws's two optional native acceleration deps - not installing them doesn't break anything,
+    // they're excluded here purely to silence webpack's "module not found" warnings
     bufferutil: 'commonjs bufferutil',
     'utf-8-validate': 'commonjs utf-8-validate'
   },
