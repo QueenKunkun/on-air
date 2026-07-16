@@ -26,6 +26,7 @@ import kotlin from 'highlight.js/lib/languages/kotlin';
 import pageCss from './templates/page.css';
 import mdTemplate from './templates/markdown-page.html';
 import htmlSnippet from './templates/html-snippet.html';
+import { tocJs } from './templates/toc-common';
 import sql from 'highlight.js/lib/languages/sql';
 import bash from 'highlight.js/lib/languages/bash';
 import shell from 'highlight.js/lib/languages/shell';
@@ -171,7 +172,8 @@ function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullP
 		.replace('{{TITLE}}', escapeHtml(title))
 		.replace('{{BODY}}', bodyHtml)
 		.replace('{{ID_JSON}}', JSON.stringify(id))
-		.replace('{{FULL_PATH_JSON}}', JSON.stringify(fullPath));
+		.replace('{{FULL_PATH_JSON}}', JSON.stringify(fullPath))
+		.replace('{{TOC_JS}}', tocJs);
 }
 /**
  * HTML preview page: the user's HTML is already a complete page (with its own
@@ -180,14 +182,17 @@ function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullP
  * trigger a full page reload (location.reload) rather than a targeted replacement,
  * since arbitrary HTML/JS/CSS can't be safely patched via innerHTML.
  */
-function htmlLiveReloadSnippet(id: string): string {
+function htmlLiveReloadSnippet(id: string, title: string, fullPath: string): string {
 	return htmlSnippet
 		.replace('{{CSS}}', pageCss)
-		.replace('{{ID_JSON}}', JSON.stringify(id));
+		.replace('{{ID_JSON}}', JSON.stringify(id))
+		.replace('{{TITLE_JSON}}', JSON.stringify(title))
+		.replace('{{FULL_PATH_JSON}}', JSON.stringify(fullPath))
+		.replace('{{TOC_JS}}', tocJs);
 }
 
-function htmlPageTemplate(id: string, rawHtml: string): string {
-	const snippet = htmlLiveReloadSnippet(id);
+function htmlPageTemplate(id: string, rawHtml: string, title: string, fullPath: string): string {
+	const snippet = htmlLiveReloadSnippet(id, title, fullPath);
 	let withSnippet: string;
 	const bodyCloseRegex = /<\/body\s*>/i;
 	if (bodyCloseRegex.test(rawHtml)) {
@@ -250,7 +255,7 @@ export class PreviewServer {
 
 	private renderPage(kind: DocKind, id: string, title: string, content: string, fullPath: string): { page: string; bodyHtml?: string } {
 		if (kind === 'html') {
-			return { page: htmlPageTemplate(id, content) };
+			return { page: htmlPageTemplate(id, content, title, fullPath) };
 		}
 		const bodyHtml = renderMarkdown(content);
 		return { page: markdownPageTemplate(id, title, bodyHtml, fullPath), bodyHtml };

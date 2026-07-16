@@ -77,6 +77,8 @@
 			localStorage.setItem('onair-font-size', String(fs));
 		}
 
+		{{TOC_JS}}
+
 		// ---- table of contents ----
 		function buildToc() {
 			var toc = document.getElementById('toc');
@@ -113,78 +115,8 @@
 
 			var listContainer = document.createElement('div');
 			listContainer.id = 'toc-list';
-
-			var root = document.createElement('ul');
-			var stack = [{el:root,lv:0}];
-
-			for (var i = 0; i < hs.length; i++) {
-				var h = hs[i], lv = +h.tagName[1], txt = h.textContent, id = h.id;
-				while (stack.length > 1 && stack[stack.length-1].lv >= lv) stack.pop();
-				var parent = stack[stack.length-1];
-				var li = document.createElement('li');
-				var row = document.createElement('div');
-				row.className = 'r';
-				var a = document.createElement('a');
-				a.href = '#' + id;
-				a.textContent = txt;
-				a.title = txt;
-				row.appendChild(a);
-				li.appendChild(row);
-				var sub = document.createElement('ul');
-				li.appendChild(sub);
-				parent.el.appendChild(li);
-				stack.push({el:sub,lv:lv,li:li,row:row});
-			}
-
-			// Remove empty sub-lists and add toggle buttons
-			var uls = root.querySelectorAll('ul');
-			for (var i = 0; i < uls.length; i++) {
-				var u = uls[i];
-				if (!u.children.length) { u.remove(); continue; }
-				var p = u.parentNode;
-				if (p && p.tagName === 'LI') {
-					var r = p.querySelector('.r');
-					if (!r) continue;
-					var btn = document.createElement('button');
-					btn.className = 't';
-					btn.textContent = '−';
-					btn.title = 'Collapse';
-					btn.onclick = (function(sub) {
-						return function() {
-							sub.classList.toggle('c');
-							this.textContent = sub.classList.contains('c') ? '+' : '−';
-							this.title = sub.classList.contains('c') ? 'Expand' : 'Collapse';
-						};
-					})(u);
-					r.insertBefore(btn, r.firstChild);
-				}
-			}
-
-			// Add spacer to items without toggle button so text aligns
-			var allRows = root.querySelectorAll('.r');
-			for (var i = 0; i < allRows.length; i++) {
-				var row = allRows[i];
-				if (!row.querySelector('.t')) {
-					var sp = document.createElement('span');
-					sp.className = 's';
-					row.insertBefore(sp, row.firstChild);
-				}
-			}
-
-			master.onclick = function() {
-				var collapsed = this.textContent === '+';
-				this.textContent = collapsed ? '−' : '+';
-				this.title = collapsed ? 'Collapse all' : 'Expand all';
-				var subs = toc.querySelectorAll('ul ul');
-				var btns = toc.querySelectorAll('.t');
-				for (var i = 0; i < subs.length; i++) subs[i].classList.toggle('c', !collapsed);
-				for (var i = 0; i < btns.length; i++) {
-					btns[i].textContent = collapsed ? '−' : '+';
-					btns[i].title = collapsed ? 'Collapse' : 'Expand';
-				}
-			};
-
-			listContainer.appendChild(root);
+			buildTocTree(hs, listContainer);
+			initMasterToggle(toc, master);
 			toc.appendChild(listContainer);
 			updateActiveToc();
 		}
