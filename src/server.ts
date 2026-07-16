@@ -1,0 +1,392 @@
+import * as http from 'http';
+import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { WebSocketServer, WebSocket } from 'ws';
+import MarkdownIt from 'markdown-it';
+import hljs from 'highlight.js/lib/core';
+
+// Only register the languages we actually want to highlight, instead of pulling in
+// highlight.js's full language set (~190 languages, ~1MB+) via the default import.
+// This keeps the bundled extension small. Add more `registerLanguage` calls here
+// if a commonly-requested language is missing.
+import javascript from 'highlight.js/lib/languages/javascript';
+import typescript from 'highlight.js/lib/languages/typescript';
+import python from 'highlight.js/lib/languages/python';
+import java from 'highlight.js/lib/languages/java';
+import csharp from 'highlight.js/lib/languages/csharp';
+import cpp from 'highlight.js/lib/languages/cpp';
+import go from 'highlight.js/lib/languages/go';
+import rust from 'highlight.js/lib/languages/rust';
+import php from 'highlight.js/lib/languages/php';
+import ruby from 'highlight.js/lib/languages/ruby';
+import swift from 'highlight.js/lib/languages/swift';
+import kotlin from 'highlight.js/lib/languages/kotlin';
+import pageCss from './templates/page.css';
+import mdTemplate from './templates/markdown-page.html';
+import htmlSnippet from './templates/html-snippet.html';
+import sql from 'highlight.js/lib/languages/sql';
+import bash from 'highlight.js/lib/languages/bash';
+import shell from 'highlight.js/lib/languages/shell';
+import json from 'highlight.js/lib/languages/json';
+import yaml from 'highlight.js/lib/languages/yaml';
+import xml from 'highlight.js/lib/languages/xml';
+import css from 'highlight.js/lib/languages/css';
+import markdown from 'highlight.js/lib/languages/markdown';
+import diff from 'highlight.js/lib/languages/diff';
+
+hljs.registerLanguage('javascript', javascript);
+hljs.registerLanguage('typescript', typescript);
+hljs.registerLanguage('python', python);
+hljs.registerLanguage('java', java);
+hljs.registerLanguage('csharp', csharp);
+hljs.registerLanguage('cpp', cpp);
+hljs.registerLanguage('go', go);
+hljs.registerLanguage('rust', rust);
+hljs.registerLanguage('php', php);
+hljs.registerLanguage('ruby', ruby);
+hljs.registerLanguage('swift', swift);
+hljs.registerLanguage('kotlin', kotlin);
+hljs.registerLanguage('sql', sql);
+hljs.registerLanguage('bash', bash);
+hljs.registerLanguage('shell', shell);
+hljs.registerLanguage('json', json);
+hljs.registerLanguage('yaml', yaml);
+hljs.registerLanguage('xml', xml);
+hljs.registerLanguage('html', xml);
+hljs.registerLanguage('css', css);
+hljs.registerLanguage('markdown', markdown);
+hljs.registerLanguage('diff', diff);
+
+export type DocKind = 'markdown' | 'html';
+
+interface DocEntry {
+	id: string;
+	title: string;
+	kind: DocKind;
+	page: string;
+	bodyHtml?: string;
+	/** Directory containing the source file, used to resolve relative static assets (images/embeds/attachments/etc.) */
+	rootDir: string;
+	clients: Set<WebSocket>;
+}
+
+function highlightCode(code: string, lang: string): string {
+	if (lang && hljs.getLanguage(lang)) {
+		try {
+			return hljs.highlight(code, { language: lang }).value;
+		} catch {
+			// Fall back to plain text if highlighting fails, so rendering is unaffected
+		}
+	}
+	return md.utils.escapeHtml(code);
+}
+
+const md: MarkdownIt = new MarkdownIt({
+	html: true,
+	linkify: true,
+	typographer: true,
+	highlight: (code, lang) => `<pre class="hljs"><code>${highlightCode(code, lang)}</code></pre>`,
+});
+
+const slugify = (text: string): string =>
+	text.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w\u4e00-\u9fff\-]/g, '');
+
+md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
+	const inline = tokens[idx + 1];
+	if (inline?.type === 'inline') tokens[idx].attrSet('id', slugify(inline.content));
+	return self.renderToken(tokens, idx, options);
+};
+
+function renderFrontmatter(source: string): string {
+	return source.replace(/^---\n([\s\S]*?)\n---\n?/, (_m, content) =>
+		`<div class="frontmatter"><pre>---\n${md.utils.escapeHtml(content)}\n---</pre></div>\n`
+	);
+}
+
+function renderMarkdown(source: string): string {
+	return md.render(renderFrontmatter(source));
+}
+
+function escapeHtml(s: string): string {
+	const map: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+	return s.replace(/[&<>"']/g, (c) => map[c]);
+}
+
+const MIME_TYPES: Record<string, string> = {
+	'.html': 'text/html; charset=utf-8',
+	'.htm': 'text/html; charset=utf-8',
+	'.css': 'text/css; charset=utf-8',
+	'.js': 'text/javascript; charset=utf-8',
+	'.json': 'application/json; charset=utf-8',
+	'.md': 'text/markdown; charset=utf-8',
+	'.txt': 'text/plain; charset=utf-8',
+	'.svg': 'image/svg+xml',
+	'.png': 'image/png',
+	'.jpg': 'image/jpeg',
+	'.jpeg': 'image/jpeg',
+	'.gif': 'image/gif',
+	'.webp': 'image/webp',
+	'.ico': 'image/x-icon',
+	'.pdf': 'application/pdf',
+	'.zip': 'application/zip',
+	'.mp4': 'video/mp4',
+	'.webm': 'video/webm',
+	'.mp3': 'audio/mpeg',
+	'.wav': 'audio/wav',
+	'.woff': 'font/woff',
+	'.woff2': 'font/woff2',
+	'.ttf': 'font/ttf',
+};
+
+function mimeType(filePath: string): string {
+	return MIME_TYPES[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
+}
+
+/**
+ * Resolve a relative request path against a document's root directory, guarding
+ * against path traversal (e.g. `../../etc/passwd`). Returns the absolute file
+ * path if it's a real file inside rootDir, or null otherwise.
+ */
+function resolveStaticPath(rootDir: string, relPath: string): string | null {
+	const decoded = decodeURIComponent(relPath.split('?')[0].split('#')[0]);
+	const resolvedRoot = path.resolve(rootDir);
+	const resolvedTarget = path.resolve(resolvedRoot, decoded);
+	const isInsideRoot = resolvedTarget === resolvedRoot || resolvedTarget.startsWith(resolvedRoot + path.sep);
+	if (!isInsideRoot) { return null; }
+	try {
+		if (fs.statSync(resolvedTarget).isFile()) { return resolvedTarget; }
+	} catch {
+		// File doesn't exist or isn't accessible - treat as not found
+	}
+	return null;
+}
+/** Markdown preview page: wrapped in our own template, content updates use targeted DOM replacement (no full page reload) */
+function markdownPageTemplate(id: string, title: string, bodyHtml: string): string {
+	return mdTemplate
+		.replace('{{CSS}}', pageCss)
+		.replace('{{ID}}', id)
+		.replace('{{TITLE}}', escapeHtml(title))
+		.replace('{{BODY}}', bodyHtml)
+		.replace('{{ID_JSON}}', JSON.stringify(id));
+}
+/**
+ * HTML preview page: the user's HTML is already a complete page (with its own
+ * <head>/styles/scripts), so we can't wrap it in our template. Instead we inject
+ * a small badge + a reconnect script into its existing content. Content updates
+ * trigger a full page reload (location.reload) rather than a targeted replacement,
+ * since arbitrary HTML/JS/CSS can't be safely patched via innerHTML.
+ */
+function htmlLiveReloadSnippet(id: string): string {
+	return htmlSnippet
+		.replace('{{CSS}}', pageCss)
+		.replace('{{ID_JSON}}', JSON.stringify(id));
+}
+
+function htmlPageTemplate(id: string, rawHtml: string): string {
+	const snippet = htmlLiveReloadSnippet(id);
+	let withSnippet: string;
+	const bodyCloseRegex = /<\/body\s*>/i;
+	if (bodyCloseRegex.test(rawHtml)) {
+		withSnippet = rawHtml.replace(bodyCloseRegex, snippet + '</body>');
+	} else {
+		// No </body> found (e.g. it's just an HTML fragment) - append at the end
+		withSnippet = rawHtml + snippet;
+	}
+
+	// Inject a <base> tag so the user's relative asset references (e.g. <img src="images/x.png">)
+	// resolve against /preview/:id/ rather than the bare /preview/:id URL. Skipped if a <base>
+	// tag already exists (don't override the user's own choice) or there's no <head> to inject into.
+	const headOpenRegex = /<head[^>]*>/i;
+	if (!/<base[^>]*>/i.test(withSnippet) && headOpenRegex.test(withSnippet)) {
+		withSnippet = withSnippet.replace(headOpenRegex, (tag) => `${tag}\n<base href="/preview/${id}/" />`);
+	}
+	return withSnippet;
+}
+export class PreviewServer {
+	private server: http.Server;
+	private wss: WebSocketServer;
+	private docs = new Map<string, DocEntry>();
+	private uriToId = new Map<string, string>();
+	public port = 0;
+
+	constructor() {
+		this.server = http.createServer((req, res) => this.handleRequest(req, res));
+		this.wss = new WebSocketServer({ noServer: true });
+		this.server.on('upgrade', (req, socket, head) => this.handleUpgrade(req, socket, head));
+	}
+
+	start(preferredPort = 5757): Promise<number> {
+		return new Promise((resolve, reject) => {
+			const tryListen = (port: number, attemptsLeft: number) => {
+				const onError = (err: NodeJS.ErrnoException) => {
+					if (err.code === 'EADDRINUSE' && attemptsLeft > 0) {
+						tryListen(port + 1, attemptsLeft - 1);
+					} else {
+						reject(err);
+					}
+				};
+				this.server.once('error', onError);
+				this.server.listen(port, '127.0.0.1', () => {
+					this.server.removeListener('error', onError);
+					this.port = port;
+					resolve(port);
+				});
+			};
+			tryListen(preferredPort, 30);
+		});
+	}
+
+	stop(): void {
+		for (const entry of this.docs.values()) {
+			for (const client of entry.clients) { client.close(); }
+		}
+		this.wss.close();
+		this.server.close();
+	}
+
+	private renderPage(kind: DocKind, id: string, title: string, content: string): { page: string; bodyHtml?: string } {
+		if (kind === 'html') {
+			return { page: htmlPageTemplate(id, content) };
+		}
+		const bodyHtml = renderMarkdown(content);
+		return { page: markdownPageTemplate(id, title, bodyHtml), bodyHtml };
+	}
+	/** Register/refresh a document, returning its preview id (calling this multiple times for the same file reuses the same id/link) */
+	registerDocument(uriKey: string, title: string, content: string, kind: DocKind, rootDir: string): string {
+		let id = this.uriToId.get(uriKey);
+		if (!id) {
+			id = crypto.randomBytes(6).toString('hex');
+			this.uriToId.set(uriKey, id);
+		}
+		const existing = this.docs.get(id);
+		const rendered = this.renderPage(kind, id, title, content);
+		this.docs.set(id, {
+			id,
+			title,
+			kind,
+			page: rendered.page,
+			bodyHtml: rendered.bodyHtml,
+			rootDir,
+			clients: existing?.clients ?? new Set<WebSocket>(),
+		});
+		return id;
+	}
+
+	updateDocument(uriKey: string, title: string, content: string, kind: DocKind): void {
+		const id = this.uriToId.get(uriKey);
+		if (!id) { return; }
+		const entry = this.docs.get(id);
+		if (!entry) { return; }
+		entry.title = title;
+		entry.kind = kind;
+		const rendered = this.renderPage(kind, id, title, content);
+		entry.page = rendered.page;
+		entry.bodyHtml = rendered.bodyHtml;
+
+		const payload = kind === 'markdown'
+			? JSON.stringify({ type: 'update', title, html: entry.bodyHtml })
+			: JSON.stringify({ type: 'reload' });
+		for (const client of entry.clients) {
+			if (client.readyState === client.OPEN) { client.send(payload); }
+		}
+	}
+	closeDocument(uriKey: string): void {
+		const id = this.uriToId.get(uriKey);
+		if (!id) { return; }
+		const entry = this.docs.get(id);
+		if (entry) {
+			const payload = JSON.stringify({ type: 'closed' });
+			for (const client of entry.clients) {
+				if (client.readyState === client.OPEN) { client.send(payload); }
+			}
+			// Keep it around for a few seconds so any open browser tabs can receive the "closed" notice before cleanup
+			setTimeout(() => this.docs.delete(id as string), 5000);
+		}
+		this.uriToId.delete(uriKey);
+	}
+
+	buildUrl(id: string): string {
+		return `http://127.0.0.1:${this.port}/preview/${id}`;
+	}
+
+	getLanIp(): string | null {
+		const interfaces = os.networkInterfaces();
+		for (const iface of Object.values(interfaces)) {
+			if (!iface) continue;
+			for (const entry of iface) {
+				if (entry.family === 'IPv4' && !entry.internal) {
+					return entry.address;
+				}
+			}
+		}
+		return null;
+	}
+
+	private handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
+		const url = req.url || '';
+
+		// Static assets alongside the source file, e.g. /preview/<id>/images/foo.png,
+		// referenced via relative paths like `images/foo.png` or `embeds/x.html` in the
+		// source document. Checked before the bare preview-page route below.
+		const staticMatch = url.match(/^\/preview\/([a-f0-9]+)\/(.+)$/);
+		if (staticMatch) {
+			const entry = this.docs.get(staticMatch[1]);
+			if (!entry) {
+				res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+				res.end('Preview not found or has been closed. Please regenerate the link in VS Code.');
+				return;
+			}
+			const filePath = resolveStaticPath(entry.rootDir, staticMatch[2]);
+			if (!filePath) {
+				res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+				res.end('File not found');
+				return;
+			}
+			fs.readFile(filePath, (err, data) => {
+				if (err) {
+					res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+					res.end('File not found');
+					return;
+				}
+				res.writeHead(200, { 'Content-Type': mimeType(filePath) });
+				res.end(data);
+			});
+			return;
+		}
+
+		const match = url.match(/^\/preview\/([a-f0-9]+)\/?$/);
+		if (match) {
+			const entry = this.docs.get(match[1]);
+			if (!entry) {
+				res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+				res.end('Preview not found or has been closed. Please regenerate the link in VS Code.');
+				return;
+			}
+			res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+			res.end(entry.page);
+			return;
+		}
+		res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+		res.end('Not found');
+	}
+	private handleUpgrade(req: http.IncomingMessage, socket: import('stream').Duplex, head: Buffer): void {
+		const url = req.url || '';
+		const match = url.match(/^\/ws\/([a-f0-9]+)\/?$/);
+		if (!match) {
+			socket.destroy();
+			return;
+		}
+		const id = match[1];
+		this.wss.handleUpgrade(req, socket, head, (ws) => {
+			const entry = this.docs.get(id);
+			if (!entry) {
+				ws.close();
+				return;
+			}
+			entry.clients.add(ws);
+			ws.on('close', () => entry.clients.delete(ws));
+		});
+	}
+}

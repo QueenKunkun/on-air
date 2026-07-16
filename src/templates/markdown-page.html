@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<base href="/preview/{{ID}}/" />
+<title>{{TITLE}} · OnAir</title>
+<style>{{CSS}}</style>
+</head>
+<body>
+	<div class="md-online-banner" id="banner"><span id="bannerTxt" title="Connected, live preview active…"><span id="bannerIcon">🔌</span><span id="bannerMsg" class="banner-msg">Connected, live preview active…</span></span>
+	<select class="bp-select" id="themeSelect" title="Theme">
+		<option value="auto">🌓 Auto</option>
+		<option value="dark">🌙 Dark</option>
+		<option value="light">☀️ Light</option>
+	</select>
+	<button class="wp-btn" id="wpBtn" title="Toggle word wrapping for code blocks">Wrap code</button>
+	<button class="bp-btn" id="fsDec" title="Decrease font size">A−</button>
+	<input class="fs-input" id="fsInput" type="number" min="12" max="28" value="16" title="Font size (12-28)">
+	<button class="bp-btn" id="fsReset" title="Reset font size to default">↺</button>
+	<button class="bp-btn" id="fsInc" title="Increase font size">A+</button></div>
+	<div id="wrapper"><nav id="toc" class="toc"></nav><div class="toc-resizer" id="tocResizer"></div><article class="markdown-body" id="content">{{BODY}}</article></div>
+	<script>
+	(function () {
+		var bannerEl = document.getElementById('banner');
+		var bannerTxt = document.getElementById('bannerTxt');
+		var bannerIcon = document.getElementById('bannerIcon');
+		var bannerMsg = document.getElementById('bannerMsg');
+		var contentEl = document.getElementById('content');
+		var id = {{ID_JSON}};
+		var proto = location.protocol === 'https:' ? 'wss' : 'ws';
+		var ws, reconnectTimer;
+
+		// ---- wrap toggle ----
+		document.getElementById('wpBtn').onclick = function () {
+			this.classList.toggle('on');
+			this.textContent = this.classList.contains('on') ? 'Unwrap code' : 'Wrap code';
+			contentEl.classList.toggle('wp');
+		};
+
+		// ---- theme select ----
+		var themeSelect = document.getElementById('themeSelect');
+		var html = document.documentElement;
+		var saved = localStorage.getItem('onair-theme');
+		if (saved) { themeSelect.value = saved; }
+		applyTheme(themeSelect.value);
+
+		themeSelect.onchange = function () {
+			localStorage.setItem('onair-theme', this.value);
+			applyTheme(this.value);
+		};
+
+		function applyTheme(val) {
+			html.classList.remove('force-dark', 'force-light');
+			if (val === 'dark') html.classList.add('force-dark');
+			else if (val === 'light') html.classList.add('force-light');
+		}
+
+		// ---- font size ----
+		var fs = parseInt(localStorage.getItem('onair-font-size')) || 16;
+		var fsInput = document.getElementById('fsInput');
+		contentEl.style.fontSize = fs + 'px';
+		fsInput.value = fs;
+		document.getElementById('fsDec').onclick = function () { setFs(fs - 2); };
+		document.getElementById('fsInc').onclick = function () { setFs(fs + 2); };
+		document.getElementById('fsReset').onclick = function () { setFs(16); };
+		fsInput.onchange = function () {
+			var v = parseInt(this.value);
+			if (isNaN(v)) { this.value = fs; return; }
+			setFs(v);
+		};
+		function setFs(v) {
+			fs = Math.max(12, Math.min(28, Math.round(v)));
+			contentEl.style.fontSize = fs + 'px';
+			fsInput.value = fs;
+			localStorage.setItem('onair-font-size', String(fs));
+		}
+
+		// ---- table of contents ----
+		function buildToc() {
+			var toc = document.getElementById('toc');
+			while (toc.firstChild) toc.removeChild(toc.firstChild);
+			var hs = contentEl.querySelectorAll('h1,h2,h3,h4,h5,h6');
+			if (hs.length < 2) { toc.classList.add('empty'); return; }
+			toc.classList.remove('empty');
+
+			var hdr = document.createElement('div');
+			hdr.id = 'toc-header';
+			hdr.innerHTML = '📑 ' + document.title.replace(/ · OnAir$/, '');
+			var master = document.createElement('button');
+			master.className = 'toc-m';
+			master.textContent = '−';
+			master.title = 'Collapse all';
+			hdr.appendChild(master);
+			toc.appendChild(hdr);
+
+			var root = document.createElement('ul');
+			var stack = [{el:root,lv:0}];
+
+			for (var i = 0; i < hs.length; i++) {
+				var h = hs[i], lv = +h.tagName[1], txt = h.textContent, id = h.id;
+				while (stack.length > 1 && stack[stack.length-1].lv >= lv) stack.pop();
+				var parent = stack[stack.length-1];
+				var li = document.createElement('li');
+				var row = document.createElement('div');
+				row.className = 'r';
+				var a = document.createElement('a');
+				a.href = '#' + id;
+				a.textContent = txt;
+				a.title = txt;
+				row.appendChild(a);
+				li.appendChild(row);
+				var sub = document.createElement('ul');
+				li.appendChild(sub);
+				parent.el.appendChild(li);
+				stack.push({el:sub,lv:lv,li:li,row:row});
+			}
+
+			// Remove empty sub-lists and add toggle buttons
+			var uls = root.querySelectorAll('ul');
+			for (var i = 0; i < uls.length; i++) {
+				var u = uls[i];
+				if (!u.children.length) { u.remove(); continue; }
+				var p = u.parentNode;
+				if (p && p.tagName === 'LI') {
+					var r = p.querySelector('.r');
+					if (!r) continue;
+					var btn = document.createElement('button');
+					btn.className = 't';
+					btn.textContent = '−';
+					btn.title = 'Collapse';
+					btn.onclick = (function(sub) {
+						return function() {
+							sub.classList.toggle('c');
+							this.textContent = sub.classList.contains('c') ? '+' : '−';
+							this.title = sub.classList.contains('c') ? 'Expand' : 'Collapse';
+						};
+					})(u);
+					r.insertBefore(btn, r.firstChild);
+				}
+			}
+
+			// Add spacer to items without toggle button so text aligns
+			var allRows = root.querySelectorAll('.r');
+			for (var i = 0; i < allRows.length; i++) {
+				var row = allRows[i];
+				if (!row.querySelector('.t')) {
+					var sp = document.createElement('span');
+					sp.className = 's';
+					row.insertBefore(sp, row.firstChild);
+				}
+			}
+
+			master.onclick = function() {
+				var collapsed = this.textContent === '+';
+				this.textContent = collapsed ? '−' : '+';
+				this.title = collapsed ? 'Collapse all' : 'Expand all';
+				var subs = toc.querySelectorAll('ul ul');
+				var btns = toc.querySelectorAll('.t');
+				for (var i = 0; i < subs.length; i++) subs[i].classList.toggle('c', !collapsed);
+				for (var i = 0; i < btns.length; i++) {
+					btns[i].textContent = collapsed ? '−' : '+';
+					btns[i].title = collapsed ? 'Collapse' : 'Expand';
+				}
+			};
+
+			toc.appendChild(root);
+			updateActiveToc();
+		}
+
+		// ---- active TOC on scroll ----
+		function updateActiveToc() {
+			var toc = document.getElementById('toc');
+			if (toc.classList.contains('empty')) return;
+			var scrollY = window.scrollY;
+			var offset = 60;
+			var activeId = null;
+			var hs = contentEl.querySelectorAll('h1,h2,h3,h4,h5,h6');
+			for (var i = 0; i < hs.length; i++) {
+				if (hs[i].offsetTop <= scrollY + offset) activeId = hs[i].id;
+				else break;
+			}
+			var links = toc.querySelectorAll('a');
+			for (var i = 0; i < links.length; i++) {
+				links[i].classList.toggle('active', links[i].getAttribute('href') === '#' + activeId);
+			}
+		}
+		var ticking = false;
+		document.addEventListener('scroll', function () {
+			if (!ticking) {
+				window.requestAnimationFrame(function () {
+					updateActiveToc();
+					ticking = false;
+				});
+				ticking = true;
+			}
+		});
+
+		// ---- TOC resize ----
+		(function () {
+			var resizer = document.getElementById('tocResizer');
+			var toc = document.getElementById('toc');
+			var startX, startW;
+			var saved = parseInt(localStorage.getItem('onair-toc-width'));
+			if (saved) toc.style.width = saved + 'px';
+			resizer.onmousedown = function (e) {
+				startX = e.clientX;
+				startW = toc.offsetWidth;
+				resizer.classList.add('active');
+				document.addEventListener('mousemove', onMove);
+				document.addEventListener('mouseup', onUp);
+				e.preventDefault();
+			};
+			function onMove(e) {
+				var w = Math.max(180, Math.min(600, startW + e.clientX - startX));
+				toc.style.width = w + 'px';
+			}
+			function onUp() {
+				resizer.classList.remove('active');
+				document.removeEventListener('mousemove', onMove);
+				document.removeEventListener('mouseup', onUp);
+				localStorage.setItem('onair-toc-width', String(toc.offsetWidth));
+			}
+		})();
+
+		// ---- websocket ----
+		function connect() {
+			ws = new WebSocket(proto + '://' + location.host + '/ws/' + id);
+			ws.onopen = function () {
+				bannerIcon.textContent = '🔌'; bannerMsg.textContent = 'Connected, live preview active…'; bannerTxt.title = 'Connected, live preview active…';
+				bannerEl.classList.remove('offline');
+				clearTimeout(reconnectTimer);
+			};
+			ws.onmessage = function (ev) {
+				try {
+					var msg = JSON.parse(ev.data);
+					if (msg.type === 'update') {
+						contentEl.innerHTML = msg.html;
+						buildToc();
+						if (document.getElementById('wpBtn').classList.contains('on')) contentEl.classList.add('wp');
+						document.title = msg.title + ' · OnAir';
+					} else if (msg.type === 'closed') {
+						bannerIcon.textContent = '⚠️'; bannerMsg.textContent = 'Source file was closed in VS Code, preview will no longer update'; bannerTxt.title = 'Source file was closed in VS Code, preview will no longer update';
+						bannerEl.classList.add('offline');
+					}
+				} catch (e) { /* ignore malformed message */ }
+			};
+			ws.onclose = function () {
+				bannerIcon.textContent = '⚠️'; bannerMsg.textContent = 'Connection lost, reconnecting…'; bannerTxt.title = 'Connection lost, reconnecting…';
+				bannerEl.classList.add('offline');
+				reconnectTimer = setTimeout(connect, 1500);
+			};
+		}
+		connect();
+		buildToc();
+	})();
+	</script>
+</body>
+</html>
