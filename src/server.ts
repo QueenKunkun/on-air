@@ -64,6 +64,7 @@ export type DocKind = 'markdown' | 'html';
 interface DocEntry {
 	id: string;
 	title: string;
+	fullPath: string;
 	kind: DocKind;
 	page: string;
 	bodyHtml?: string;
@@ -163,13 +164,14 @@ function resolveStaticPath(rootDir: string, relPath: string): string | null {
 	return null;
 }
 /** Markdown preview page: wrapped in our own template, content updates use targeted DOM replacement (no full page reload) */
-function markdownPageTemplate(id: string, title: string, bodyHtml: string): string {
+function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullPath: string): string {
 	return mdTemplate
 		.replace('{{CSS}}', pageCss)
 		.replace('{{ID}}', id)
 		.replace('{{TITLE}}', escapeHtml(title))
 		.replace('{{BODY}}', bodyHtml)
-		.replace('{{ID_JSON}}', JSON.stringify(id));
+		.replace('{{ID_JSON}}', JSON.stringify(id))
+		.replace('{{FULL_PATH_JSON}}', JSON.stringify(fullPath));
 }
 /**
  * HTML preview page: the user's HTML is already a complete page (with its own
@@ -246,25 +248,26 @@ export class PreviewServer {
 		this.server.close();
 	}
 
-	private renderPage(kind: DocKind, id: string, title: string, content: string): { page: string; bodyHtml?: string } {
+	private renderPage(kind: DocKind, id: string, title: string, content: string, fullPath: string): { page: string; bodyHtml?: string } {
 		if (kind === 'html') {
 			return { page: htmlPageTemplate(id, content) };
 		}
 		const bodyHtml = renderMarkdown(content);
-		return { page: markdownPageTemplate(id, title, bodyHtml), bodyHtml };
+		return { page: markdownPageTemplate(id, title, bodyHtml, fullPath), bodyHtml };
 	}
 	/** Register/refresh a document, returning its preview id (calling this multiple times for the same file reuses the same id/link) */
-	registerDocument(uriKey: string, title: string, content: string, kind: DocKind, rootDir: string): string {
+	registerDocument(uriKey: string, title: string, content: string, kind: DocKind, rootDir: string, fullPath: string): string {
 		let id = this.uriToId.get(uriKey);
 		if (!id) {
 			id = crypto.randomBytes(6).toString('hex');
 			this.uriToId.set(uriKey, id);
 		}
 		const existing = this.docs.get(id);
-		const rendered = this.renderPage(kind, id, title, content);
+		const rendered = this.renderPage(kind, id, title, content, fullPath);
 		this.docs.set(id, {
 			id,
 			title,
+			fullPath,
 			kind,
 			page: rendered.page,
 			bodyHtml: rendered.bodyHtml,
@@ -274,19 +277,20 @@ export class PreviewServer {
 		return id;
 	}
 
-	updateDocument(uriKey: string, title: string, content: string, kind: DocKind): void {
+	updateDocument(uriKey: string, title: string, content: string, kind: DocKind, fullPath: string): void {
 		const id = this.uriToId.get(uriKey);
 		if (!id) { return; }
 		const entry = this.docs.get(id);
 		if (!entry) { return; }
 		entry.title = title;
+		entry.fullPath = fullPath;
 		entry.kind = kind;
-		const rendered = this.renderPage(kind, id, title, content);
+		const rendered = this.renderPage(kind, id, title, content, fullPath);
 		entry.page = rendered.page;
 		entry.bodyHtml = rendered.bodyHtml;
 
 		const payload = kind === 'markdown'
-			? JSON.stringify({ type: 'update', title, html: entry.bodyHtml })
+			? JSON.stringify({ type: 'update', title, html: entry.bodyHtml, fullPath })
 			: JSON.stringify({ type: 'reload' });
 		for (const client of entry.clients) {
 			if (client.readyState === client.OPEN) { client.send(payload); }

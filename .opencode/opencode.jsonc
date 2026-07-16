@@ -1,4 +1,8 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "skills": [".opencode/skills"]
+  "skills": {
+    "create-skills": ".opencode/skills/create-skills",
+    "release": ".opencode/skills/release",
+    "onair-ui": ".opencode/skills/onair-ui"
+  }
 }

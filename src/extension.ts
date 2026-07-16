@@ -38,7 +38,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			// Files alongside the source document (images/, embeds/, attachments/, etc.) are
 			// only resolvable on disk, so this only works for real files (not untitled buffers).
 			const rootDir = doc.uri.scheme === 'file' ? path.dirname(doc.uri.fsPath) : '';
-			const id = server.registerDocument(uriKey, fileTitle(doc), doc.getText(), kind, rootDir);
+			const id = server.registerDocument(uriKey, fileTitle(doc), doc.getText(), kind, rootDir, doc.fileName);
 			const url = server.buildUrl(id);
 			const lanIp = server.getLanIp();
 			const lanUrl = lanIp ? `http://${lanIp}:${server.port}/preview/${id}` : null;
@@ -78,7 +78,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			if (existing) { clearTimeout(existing); }
 			const timer = setTimeout(() => {
 				debounceTimers.delete(uriKey);
-				server?.updateDocument(uriKey, fileTitle(e.document), e.document.getText(), kind);
+				server?.updateDocument(uriKey, fileTitle(e.document), e.document.getText(), kind, e.document.fileName);
 			}, 200);
 			debounceTimers.set(uriKey, timer);
 		}),

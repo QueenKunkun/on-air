@@ -28,6 +28,7 @@
 		var bannerMsg = document.getElementById('bannerMsg');
 		var contentEl = document.getElementById('content');
 		var id = {{ID_JSON}};
+		var fullPath = {{FULL_PATH_JSON}};
 		var proto = location.protocol === 'https:' ? 'wss' : 'ws';
 		var ws, reconnectTimer;
 
@@ -86,13 +87,32 @@
 
 			var hdr = document.createElement('div');
 			hdr.id = 'toc-header';
-			hdr.innerHTML = '📑 ' + document.title.replace(/ · OnAir$/, '');
+			hdr.title = fullPath;
+
+			var titleSpan = document.createElement('span');
+			titleSpan.id = 'tocTitle';
+			titleSpan.textContent = '📑 ' + document.title.replace(/ · OnAir$/, '');
+			titleSpan.title = fullPath;
+			hdr.appendChild(titleSpan);
+
+			var copyBtn = document.createElement('button');
+			copyBtn.className = 'toc-copy';
+			copyBtn.textContent = '📋';
+			copyBtn.title = 'Copy full path';
+			copyBtn.onclick = function () {
+				navigator.clipboard.writeText(fullPath).catch(function(){});
+			};
+			hdr.appendChild(copyBtn);
+
 			var master = document.createElement('button');
 			master.className = 'toc-m';
 			master.textContent = '−';
 			master.title = 'Collapse all';
 			hdr.appendChild(master);
 			toc.appendChild(hdr);
+
+			var listContainer = document.createElement('div');
+			listContainer.id = 'toc-list';
 
 			var root = document.createElement('ul');
 			var stack = [{el:root,lv:0}];
@@ -164,7 +184,8 @@
 				}
 			};
 
-			toc.appendChild(root);
+			listContainer.appendChild(root);
+			toc.appendChild(listContainer);
 			updateActiveToc();
 		}
 
@@ -236,6 +257,7 @@
 					var msg = JSON.parse(ev.data);
 					if (msg.type === 'update') {
 						contentEl.innerHTML = msg.html;
+						if (msg.fullPath) fullPath = msg.fullPath;
 						buildToc();
 						if (document.getElementById('wpBtn').classList.contains('on')) contentEl.classList.add('wp');
 						document.title = msg.title + ' · OnAir';
