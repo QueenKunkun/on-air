@@ -135,4 +135,43 @@ function bindTocInteractions(tocEl, contentEl, offset) {
 
 	updateActiveToc();
 }
+
+function buildRelatedLinks(tocEl, rootEl) {
+	var seen = {};
+	var items = [];
+	var anchors = rootEl.querySelectorAll('a');
+	for (var i = 0; i < anchors.length; i++) {
+		var a = anchors[i];
+		if (tocEl.contains(a)) continue;
+		var href = a.getAttribute('href') || '';
+		if (/^(https?:|mailto:|tel:|#|data:|\/\/)/i.test(href)) continue;
+		if (!/\.(md|markdown|html?)([#?].*)?$/i.test(href)) continue;
+		var key = href.replace(/^\.\//, '').replace(/[#?].*$/, '');
+		if (seen[key]) continue;
+		seen[key] = true;
+		var label = (a.textContent || '').trim();
+		items.push({ href: href, label: label });
+	}
+	if (!items.length) return;
+
+	var wrap = document.createElement('div');
+	wrap.id = 'toc-related';
+
+	var hdr = document.createElement('div');
+	hdr.className = 'toc-related-h';
+	hdr.textContent = 'Related';
+	wrap.appendChild(hdr);
+
+	for (var j = 0; j < items.length; j++) {
+		var item = items[j];
+		var row = document.createElement('a');
+		row.className = 'toc-related-item';
+		row.href = item.href;
+		row.textContent = item.label || item.href;
+		row.title = item.href;
+		wrap.appendChild(row);
+	}
+
+	tocEl.appendChild(wrap);
+}
 `;
