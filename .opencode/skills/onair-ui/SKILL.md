@@ -185,13 +185,20 @@ JS stack-based: push root ul, iterate headings by level, pop stack while `lv >= 
 
 ## Resizer
 
+There are two resizers. Both share one helper, `attachResizer(resizerEl, targetEl, opts)` in `toc-common.ts`, where `opts = { axis:'x'|'y', invert, key, def, min, max, get, set }`. `get`/`set` read/write the size on `targetEl`; `key` is the `localStorage` key; `def` is the size applied when nothing is saved (`null` = leave CSS in control); `invert:true` means dragging toward the start grows the size (used by the height resizer, whose handle is at the top).
+
 ```
-.toc-resizer { width:2px; cursor:col-resize; flex-shrink:0; background:var(--border); transition:background .15s; }
+.toc-resizer { width:4px; cursor:col-resize; flex-shrink:0; background:var(--border); transition:background .15s; }
 .toc-resizer:hover, .toc-resizer.active { background:var(--link-c); }
+
+.toc-related-resizer { height:4px; cursor:row-resize; flex-shrink:0; background:var(--border); transition:background .15s; margin-bottom:8px; }
+.toc-related-resizer:hover, .toc-related-resizer.active { background:var(--link-c); }
 ```
 
-Placed in the DOM between `#toc` and `.markdown-body` inside `#wrapper`.
-Hover changes color only — never width, to avoid layout jump.
+- `.toc-resizer` — width of the TOC. Placed between `#toc` and `.markdown-body` inside `#wrapper`. Hover changes color only, never width (no layout jump).
+- `.toc-related-resizer` — height of the Related block. Rendered as the first child of `#toc-related` (only when the doc has related links), so it sits between the TOC body and the "Related" header. It gets its geometry inline in `buildRelatedLinks` (`height/cursor/flex-shrink`) so a missing/late CSS rule can't collapse it to 0px; `page.css` owns only the color + `:hover`.
+
+Both: hover changes color only — never the dimension, to avoid layout jump.
 
 ## Banner Controls
 
@@ -220,7 +227,8 @@ Layout: `A− [input] [↺] A+`. Buttons ±2, ↺ resets to 16. Range clamped to
 |---|---|---|
 | `onair-theme` | string | `auto`, `dark`, `light` |
 | `onair-font-size` | number | 12–28 (default 16) |
-| `onair-toc-width` | number | 180–600 (default 320) |
+| `onair-toc-width` | number | 180–600 (no forced default; CSS `clamp(420px,24vw,560px)` applies until the user drags) |
+| `onair-related-height` | number | 120–480 (default 200) |
 
 ## File Locations
 

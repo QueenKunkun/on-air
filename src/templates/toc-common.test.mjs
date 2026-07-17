@@ -25,16 +25,34 @@ function makeEl(tag) {
 		tagName: tag.toUpperCase(),
 		_attrs: {},
 		_children: [],
-		classList: { _s: new Set(), add(c) { this._s.add(c); }, contains(c) { return this._s.has(c); } },
+		style: {},
+		classList: { _s: new Set(), add(c) { this._s.add(c); }, remove(c) { this._s.delete(c); }, contains(c) { return this._s.has(c); } },
 		setAttribute(k, v) { this._attrs[k] = String(v); },
 		getAttribute(k) { return k in this._attrs ? this._attrs[k] : null; },
 		appendChild(c) { this._children.push(c); return c; },
 		querySelectorAll() { return []; },
+		querySelector(sel) {
+			if (sel[0] !== '.') { return null; }
+			const cls = sel.slice(1);
+			return el._children.find((c) => c.className === cls) || null;
+		},
 		contains() { return false; },
+		get offsetHeight() { return 0; },
+		get offsetWidth() { return 0; },
 	};
 	let _text = '';
 	Object.defineProperty(el, 'textContent', { get() { return _text; }, set(v) { _text = (v === null || v === undefined) ? '' : String(v); } });
 	return el;
+}
+
+function makeDocument() {
+	const handlers = {};
+	return {
+		createElement: (t) => makeEl(t),
+		addEventListener: (type, fn) => { (handlers[type] = handlers[type] || []).push(fn); },
+		removeEventListener: (type, fn) => { if (handlers[type]) { handlers[type] = handlers[type].filter((f) => f !== fn); } },
+		dispatch: (type, ev) => { (handlers[type] || []).slice().forEach((f) => f(ev)); },
+	};
 }
 
 function makeAnchor(href, text) {
@@ -50,9 +68,10 @@ function makeDoc(anchors) {
 	return doc;
 }
 
-function runBuildRelatedLinks(toc, root) {
+function runBuildRelatedLinks(toc, root, storage) {
 	const tocJs = loadTocJs();
-	globalThis.document = { createElement: (t) => makeEl(t) };
+	globalThis.document = makeDocument();
+	globalThis.localStorage = storage || { _s: {}, getItem(k) { return k in this._s ? this._s[k] : null; }, setItem(k, v) { this._s[k] = String(v); } };
 	const buildRelatedLinks = new Function(tocJs + '\nreturn buildRelatedLinks;')();
 	buildRelatedLinks(toc, root);
 }
@@ -111,4 +130,74 @@ test('buildRelatedLinks ignores anchors that live inside the TOC itself', () => 
 	const hrefs = related._children.filter((c) => c.className === 'toc-related-item').map((i) => i.href);
 	assert.ok(hrefs.includes('./docs/notes.md'), 'doc link still listed');
 	assert.ok(!hrefs.includes('./internal.md'), 'toc-internal link excluded');
+});
+
+test('attachResizer: related-height drag changes size, clamps, and persists', () => {
+	const doc = makeDocument();
+	globalThis.document = doc;
+	const storage = { _s: {}, getItem(k) { return k in this._s ? this._s[k] : null; }, setItem(k, v) { this._s[k] = String(v); } };
+	globalThis.localStorage = storage;
+
+	const tocJs = loadTocJs();
+	const attachResizer = new Function(tocJs + '\nreturn attachResizer;')();
+
+	const target = makeEl('div');
+	Object.defineProperty(target, 'offsetHeight', { get() { return parseInt(target.style.height, 10) || 0; } });
+	const resizer = makeEl('div');
+
+	attachResizer(resizer, target, {
+		axis: 'y', invert: true, key: 'onair-related-height', def: 200, min: 120, max: 480,
+		get: (el) => el.offsetHeight,
+		set: (el, v) => { el.style.height = v + 'px'; },
+	});
+
+	assert.equal(target.style.height, '200px', 'default height applied when nothing saved');
+
+	resizer.onmousedown({ clientY: 300, preventDefault() {} });
+	doc.dispatch('mousemove', { clientY: 200 });
+	doc.dispatch('mouseup', {});
+	assert.equal(target.style.height, '300px', 'dragging up grows height');
+	assert.equal(storage.getItem('onair-related-height'), '300', 'height persisted');
+
+	resizer.onmousedown({ clientY: 300, preventDefault() {} });
+	doc.dispatch('mousemove', { clientY: -10000 });
+	doc.dispatch('mouseup', {});
+	assert.equal(target.style.height, '480px', 'height clamped to MAX');
+});
+
+test('attachResizer: width resizer leaves CSS default alone when nothing saved', () => {
+	const doc = makeDocument();
+	globalThis.document = doc;
+	globalThis.localStorage = { _s: {}, getItem() { return null; }, setItem() {} };
+
+	const tocJs = loadTocJs();
+	const attachResizer = new Function(tocJs + '\nreturn attachResizer;')();
+
+	const target = makeEl('div');
+	target.style.width = '300px';
+	Object.defineProperty(target, 'offsetWidth', { get() { return parseInt(target.style.width, 10) || 0; } });
+	const resizer = makeEl('div');
+
+	attachResizer(resizer, target, {
+		axis: 'x', invert: false, key: 'onair-toc-width', def: null, min: 180, max: 600,
+		get: (el) => el.offsetWidth,
+		set: (el, v) => { el.style.width = v + 'px'; },
+	});
+
+	assert.equal(target.style.width, '300px', 'width not forced when nothing saved (CSS controls it)');
+
+	resizer.onmousedown({ clientX: 300, preventDefault() {} });
+	doc.dispatch('mousemove', { clientX: 400 });
+	doc.dispatch('mouseup', {});
+	assert.equal(target.style.width, '400px', 'dragging right grows width');
+
+	resizer.onmousedown({ clientX: 300, preventDefault() {} });
+	doc.dispatch('mousemove', { clientX: 100000 });
+	doc.dispatch('mouseup', {});
+	assert.equal(target.style.width, '600px', 'clamped to MAX 600');
+});
+
+test('page.css defines the Related/TOC resizer rule', () => {
+	const css = readFileSync(join(here, 'page.css'), 'utf8');
+	assert.ok(/\.toc-related-resizer\s*\{/.test(css), 'page.css must style .toc-related-resizer');
 });

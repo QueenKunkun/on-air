@@ -158,6 +158,13 @@ function buildRelatedLinks(tocEl, rootEl) {
 	var wrap = document.createElement('div');
 	wrap.id = 'toc-related';
 
+	var resizer = document.createElement('div');
+	resizer.className = 'toc-related-resizer';
+	resizer.style.height = '4px';
+	resizer.style.cursor = 'row-resize';
+	resizer.style.flexShrink = '0';
+	wrap.appendChild(resizer);
+
 	var hdr = document.createElement('div');
 	hdr.className = 'toc-related-h';
 	hdr.textContent = 'Related';
@@ -174,5 +181,42 @@ function buildRelatedLinks(tocEl, rootEl) {
 	}
 
 	tocEl.appendChild(wrap);
+	attachResizer(resizer, wrap, {
+		axis: 'y', invert: true, key: 'onair-related-height', def: 200, min: 120, max: 480,
+		get: function (el) { return el.offsetHeight; },
+		set: function (el, v) { el.style.height = v + 'px'; }
+	});
+}
+
+function attachResizer(resizerEl, targetEl, opts) {
+	var saved = parseInt(localStorage.getItem(opts.key), 10);
+	if (!isNaN(saved)) {
+		opts.set(targetEl, saved);
+	} else if (opts.def != null) {
+		opts.set(targetEl, opts.def);
+	}
+
+	var startPos, startSize;
+	resizerEl.onmousedown = function (e) {
+		startPos = (opts.axis === 'x') ? e.clientX : e.clientY;
+		startSize = opts.get(targetEl);
+		resizerEl.classList.add('active');
+		document.addEventListener('mousemove', onMove);
+		document.addEventListener('mouseup', onUp);
+		e.preventDefault();
+	};
+	function onMove(e) {
+		var pos = (opts.axis === 'x') ? e.clientX : e.clientY;
+		var delta = pos - startPos;
+		if (opts.invert) delta = -delta;
+		var size = Math.max(opts.min, Math.min(opts.max, startSize + delta));
+		opts.set(targetEl, size);
+	}
+	function onUp() {
+		resizerEl.classList.remove('active');
+		document.removeEventListener('mousemove', onMove);
+		document.removeEventListener('mouseup', onUp);
+		localStorage.setItem(opts.key, String(opts.get(targetEl)));
+	}
 }
 `;
