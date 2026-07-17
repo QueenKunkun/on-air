@@ -100,9 +100,9 @@ md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
 	if (inline?.type === 'inline') {
 		const slugs = (env.slugs ||= new Map<string, boolean>());
 		let base = slugify(inline.content);
-		if (!base) base = 'section';
+		if (!base) { base = 'section'; }
 		let slug = base, i = 1;
-		while (slugs.has(slug)) slug = `${base}-${i++}`;
+		while (slugs.has(slug)) { slug = `${base}-${i++}`; }
 		slugs.set(slug, true);
 		tokens[idx].attrSet('id', slug);
 	}
