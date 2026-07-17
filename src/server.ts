@@ -97,7 +97,15 @@ const slugify = (text: string): string =>
 
 md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
 	const inline = tokens[idx + 1];
-	if (inline?.type === 'inline') tokens[idx].attrSet('id', slugify(inline.content));
+	if (inline?.type === 'inline') {
+		const slugs = (env.slugs ||= new Map<string, boolean>());
+		let base = slugify(inline.content);
+		if (!base) base = 'section';
+		let slug = base, i = 1;
+		while (slugs.has(slug)) slug = `${base}-${i++}`;
+		slugs.set(slug, true);
+		tokens[idx].attrSet('id', slug);
+	}
 	return self.renderToken(tokens, idx, options);
 };
 
@@ -108,7 +116,7 @@ function renderFrontmatter(source: string): string {
 }
 
 function renderMarkdown(source: string): string {
-	return md.render(renderFrontmatter(source));
+	return md.render(renderFrontmatter(source), {});
 }
 
 function escapeHtml(s: string): string {
