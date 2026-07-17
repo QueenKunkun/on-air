@@ -144,9 +144,10 @@ function buildRelatedLinks(tocEl, rootEl) {
 		var a = anchors[i];
 		if (tocEl.contains(a)) continue;
 		var href = a.getAttribute('href') || '';
-		if (/^(https?:|mailto:|tel:|#|data:|\/\/)/i.test(href)) continue;
-		if (!/\.(md|markdown|html?)([#?].*)?$/i.test(href)) continue;
-		var key = href.replace(/^\.\//, '').replace(/[#?].*$/, '');
+		if (href.slice(0, 2) === '//') continue;
+		if (/^[a-z][a-z0-9+.-]*:|#|data:/i.test(href)) continue;
+		if (!/\\.(md|markdown|html?)([#?].*)?$/i.test(href)) continue;
+		var key = href.replace(/^\\.\\//, '').replace(/[#?].*$/, '');
 		if (seen[key]) continue;
 		seen[key] = true;
 		var label = (a.textContent || '').trim();
