@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.6.0] - 2026-07-17
+
+- feat: TOC shows full path on hover with copy button
+- feat: TOC now works in HTML previews too
+- feat: html-snippet gets scroll-synced TOC highlight
+
+
 ## [0.5.1] - 2026-07-16
 
 - fix: TOC links no longer scroll past the target heading; heading stays visible below the banner

@@ -13,7 +13,7 @@ Turn the currently open Markdown or HTML file into a **live local preview link**
 - Multiple files can each have their own preview link running at the same time, independently
 - When a file is closed, the browser shows a "source file closed, preview will no longer update" notice
 - Local files next to the previewed document (e.g. an `images/`, `embeds/`, or `attachments/` folder) are served automatically, so relative references like `![alt](images/foo.png)` or `<iframe src="embeds/page.html">` just work
-- **Table of contents** sidebar with nested heading navigation, scroll tracking, and resizable width
+- **Table of contents** sidebar with nested heading navigation, scroll tracking, full path on hover with copy, and resizable width — works in both Markdown and HTML previews
 - **Font size controls** in the preview banner; preference remembered
 - **Theme switch** — auto, dark, light mode
 - **LAN sharing**: quick pick shows both localhost and LAN IP links when you're on a network, so colleagues on the same WiFi can open your preview directly
