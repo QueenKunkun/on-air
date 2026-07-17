@@ -37,19 +37,7 @@
 		var master = buildTocHeader(toc, fileTitle, fullPath);
 		buildTocTree(hs, toc);
 		initMasterToggle(toc, master);
-
-		// Override link clicks for smooth scroll
-		var links = toc.querySelectorAll('a');
-		for (var i = 0; i < links.length; i++) {
-			(function(a) {
-				a.onclick = function(e) {
-					e.preventDefault();
-					var id = a.getAttribute('href').substring(1);
-					var target = document.getElementById(id);
-					if (target) target.scrollIntoView({ behavior: 'smooth' });
-				};
-			})(links[i]);
-		}
+		bindTocInteractions(toc, document);
 	}
 
 	tocBtn.onclick = function () {
