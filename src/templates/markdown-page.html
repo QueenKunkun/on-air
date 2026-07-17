@@ -94,36 +94,8 @@
 			buildTocTree(hs, listContainer);
 			initMasterToggle(toc, master);
 			toc.appendChild(listContainer);
-			updateActiveToc();
+			bindTocInteractions(toc, contentEl);
 		}
-
-		// ---- active TOC on scroll ----
-		function updateActiveToc() {
-			var toc = document.getElementById('toc');
-			if (toc.classList.contains('empty')) return;
-			var scrollY = window.scrollY;
-			var offset = 60;
-			var activeId = null;
-			var hs = contentEl.querySelectorAll('h1,h2,h3,h4,h5,h6');
-			for (var i = 0; i < hs.length; i++) {
-				if (hs[i].offsetTop <= scrollY + offset) activeId = hs[i].id;
-				else break;
-			}
-			var links = toc.querySelectorAll('a');
-			for (var i = 0; i < links.length; i++) {
-				links[i].classList.toggle('active', links[i].getAttribute('href') === '#' + activeId);
-			}
-		}
-		var ticking = false;
-		document.addEventListener('scroll', function () {
-			if (!ticking) {
-				window.requestAnimationFrame(function () {
-					updateActiveToc();
-					ticking = false;
-				});
-				ticking = true;
-			}
-		});
 
 		// ---- TOC resize ----
 		(function () {
