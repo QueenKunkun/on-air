@@ -3,7 +3,12 @@
 out/**
 node_modules/**
 src/**
+.git/**
+.git2/**
+.opencode/**
+scripts/**
 .gitignore
+.gitattributes
 webpack.config.js
 **/tsconfig.json
 **/eslint.config.mjs
@@ -11,6 +16,7 @@ webpack.config.js
 **/*.ts
 demo.md
 TODO.md
+AGENTS.md
 .env
 pnpm-lock.yaml
 .npmrc
