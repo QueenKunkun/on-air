@@ -95,6 +95,37 @@ const md: MarkdownIt = new MarkdownIt({
 const slugify = (text: string): string =>
 	text.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w\u4e00-\u9fff\-]/g, '');
 
+/**
+ * Rewrite a relative link/src to be relative to `rootDir` instead of the document's
+ * own directory. This is what lets `../parent.md` and sibling links resolve correctly
+ * once the preview's `<base href>` points at `/preview/<id>/`. Targets that fall inside
+ * `rootDir` produce a `..`-free path (so the browser never escapes the `<id>` segment);
+ * out-of-scope links keep their `..` and are blocked by resolveStaticPath downstream.
+ */
+function rewriteLink(href: string, docDir: string, rootDir: string): string {
+	if (!rootDir || !docDir) return href;
+	if (/^(https?:)?\/\//i.test(href) || href.startsWith('#') || href.startsWith('data:') || href.startsWith('mailto:') || href.startsWith('/')) {
+		return href;
+	}
+	const hashIdx = href.indexOf('#');
+	const qIdx = href.indexOf('?');
+	const cut = qIdx >= 0 && (hashIdx < 0 || qIdx < hashIdx) ? qIdx : hashIdx;
+	const raw = cut >= 0 ? href.slice(0, cut) : href;
+	if (!raw) return href;
+	const absTarget = path.resolve(docDir, raw);
+	let rel = path.relative(rootDir, absTarget);
+	if (path.sep !== '/') rel = rel.split(path.sep).join('/');
+	return rel + (cut >= 0 ? href.slice(cut) : '');
+}
+
+function rewriteHtmlLinks(html: string, docDir: string, rootDir: string): string {
+	if (!rootDir || !docDir) return html;
+	return html.replace(/(href|src)="([^"]*)"/gi, (_m, attr: string, val: string) => {
+		const rewritten = rewriteLink(val, docDir, rootDir);
+		return rewritten === val ? _m : `${attr}="${rewritten}"`;
+	});
+}
+
 md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
 	const inline = tokens[idx + 1];
 	if (inline?.type === 'inline') {
@@ -109,14 +140,32 @@ md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
 	return self.renderToken(tokens, idx, options);
 };
 
+md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
+	const href = tokens[idx].attrGet('href');
+	if (href != null && env?.docDir && env?.rootDir) {
+		const rewritten = rewriteLink(href, env.docDir, env.rootDir);
+		if (rewritten !== href) tokens[idx].attrSet('href', rewritten);
+	}
+	return self.renderToken(tokens, idx, options);
+};
+
+md.renderer.rules.image = (tokens, idx, options, env, self) => {
+	const src = tokens[idx].attrGet('src');
+	if (src != null && env?.docDir && env?.rootDir) {
+		const rewritten = rewriteLink(src, env.docDir, env.rootDir);
+		if (rewritten !== src) tokens[idx].attrSet('src', rewritten);
+	}
+	return self.renderToken(tokens, idx, options);
+};
+
 function renderFrontmatter(source: string): string {
 	return source.replace(/^---\n([\s\S]*?)\n---\n?/, (_m, content) =>
 		`<div class="frontmatter"><pre>---\n${md.utils.escapeHtml(content)}\n---</pre></div>\n`
 	);
 }
 
-function renderMarkdown(source: string): string {
-	return md.render(renderFrontmatter(source), {});
+function renderMarkdown(source: string, docDir: string, rootDir: string): string {
+	return md.render(renderFrontmatter(source), { docDir, rootDir });
 }
 
 function escapeHtml(s: string): string {
@@ -199,7 +248,7 @@ function htmlLiveReloadSnippet(id: string, title: string, fullPath: string): str
 		.replace('{{TOC_JS}}', tocJs);
 }
 
-function htmlPageTemplate(id: string, rawHtml: string, title: string, fullPath: string): string {
+function htmlPageTemplate(id: string, rawHtml: string, title: string, fullPath: string, rootDir: string): string {
 	const snippet = htmlLiveReloadSnippet(id, title, fullPath);
 	let withSnippet: string;
 	const bodyCloseRegex = /<\/body\s*>/i;
@@ -217,6 +266,11 @@ function htmlPageTemplate(id: string, rawHtml: string, title: string, fullPath: 
 	if (!/<base[^>]*>/i.test(withSnippet) && headOpenRegex.test(withSnippet)) {
 		withSnippet = withSnippet.replace(headOpenRegex, (tag) => `${tag}\n<base href="/preview/${id}/" />`);
 	}
+
+	// Rewrite relative links/src to be root-relative so they resolve via the preview URL
+	// (and so `../` links inside the workspace work). Absolute/external links are left alone.
+	const docDir = path.dirname(fullPath);
+	withSnippet = rewriteHtmlLinks(withSnippet, docDir, rootDir);
 	return withSnippet;
 }
 export class PreviewServer {
@@ -261,11 +315,12 @@ export class PreviewServer {
 		this.server.close();
 	}
 
-	private renderPage(kind: DocKind, id: string, title: string, content: string, fullPath: string): { page: string; bodyHtml?: string } {
+	private renderPage(kind: DocKind, id: string, title: string, content: string, fullPath: string, rootDir: string): { page: string; bodyHtml?: string } {
 		if (kind === 'html') {
-			return { page: htmlPageTemplate(id, content, title, fullPath) };
+			return { page: htmlPageTemplate(id, content, title, fullPath, rootDir) };
 		}
-		const bodyHtml = renderMarkdown(content);
+		const docDir = path.dirname(fullPath);
+		const bodyHtml = renderMarkdown(content, docDir, rootDir);
 		return { page: markdownPageTemplate(id, title, bodyHtml, fullPath), bodyHtml };
 	}
 	/** Register/refresh a document, returning its preview id (calling this multiple times for the same file reuses the same id/link) */
@@ -276,7 +331,7 @@ export class PreviewServer {
 			this.uriToId.set(uriKey, id);
 		}
 		const existing = this.docs.get(id);
-		const rendered = this.renderPage(kind, id, title, content, fullPath);
+		const rendered = this.renderPage(kind, id, title, content, fullPath, rootDir);
 		this.docs.set(id, {
 			id,
 			title,
@@ -298,7 +353,7 @@ export class PreviewServer {
 		entry.title = title;
 		entry.fullPath = fullPath;
 		entry.kind = kind;
-		const rendered = this.renderPage(kind, id, title, content, fullPath);
+		const rendered = this.renderPage(kind, id, title, content, fullPath, entry.rootDir);
 		entry.page = rendered.page;
 		entry.bodyHtml = rendered.bodyHtml;
 

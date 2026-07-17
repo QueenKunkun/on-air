@@ -33,12 +33,16 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 			if (!server) { return; }
 
-			const doc = editor.document;
-			const uriKey = doc.uri.toString();
-			// Files alongside the source document (images/, embeds/, attachments/, etc.) are
-			// only resolvable on disk, so this only works for real files (not untitled buffers).
-			const rootDir = doc.uri.scheme === 'file' ? path.dirname(doc.uri.fsPath) : '';
-			const id = server.registerDocument(uriKey, fileTitle(doc), doc.getText(), kind, rootDir, doc.fileName);
+		const doc = editor.document;
+		const uriKey = doc.uri.toString();
+		// Files alongside the source document (images/, embeds/, attachments/, etc.) are
+		// only resolvable on disk, so this only works for real files (not untitled buffers).
+		// When the file lives inside a workspace folder, resolve relative links against the
+		// whole folder root (so `../` links within the project work); otherwise scope to the
+		// file's own directory.
+		const wsFolder = doc.uri.scheme === 'file' ? vscode.workspace.getWorkspaceFolder(doc.uri) : undefined;
+		const rootDir = wsFolder ? wsFolder.uri.fsPath : (doc.uri.scheme === 'file' ? path.dirname(doc.uri.fsPath) : '');
+		const id = server.registerDocument(uriKey, fileTitle(doc), doc.getText(), kind, rootDir, doc.fileName);
 			const url = server.buildUrl(id);
 			const lanIp = server.getLanIp();
 			const lanUrl = lanIp ? `http://${lanIp}:${server.port}/preview/${id}` : null;
