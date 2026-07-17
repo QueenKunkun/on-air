@@ -59,6 +59,36 @@ function buildTocTree(hs, container) {
 	return root;
 }
 
+function buildTocHeader(toc, titleText, fullPath) {
+	var hdr = document.createElement('div');
+	hdr.id = 'toc-header';
+	hdr.title = fullPath;
+
+	var titleSpan = document.createElement('span');
+	titleSpan.id = 'tocTitle';
+	titleSpan.textContent = titleText;
+	titleSpan.title = fullPath;
+	hdr.appendChild(titleSpan);
+
+	var copyBtn = document.createElement('button');
+	copyBtn.className = 'toc-copy';
+	copyBtn.textContent = '📋';
+	copyBtn.title = 'Copy full path';
+	copyBtn.onclick = function () {
+		navigator.clipboard.writeText(fullPath).catch(function(){});
+	};
+	hdr.appendChild(copyBtn);
+
+	var master = document.createElement('button');
+	master.className = 'toc-m';
+	master.textContent = '−';
+	master.title = 'Collapse all';
+	hdr.appendChild(master);
+	toc.appendChild(hdr);
+
+	return master;
+}
+
 function initMasterToggle(tocContainer, masterBtn) {
 	masterBtn.onclick = function() {
 		var collapsed = this.textContent === '+';

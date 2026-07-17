@@ -34,32 +34,7 @@
 		if (hs.length < 2) { tocBtn.style.display = 'none'; return; }
 		tocBtn.style.display = '';
 
-		var hdr = document.createElement('div');
-		hdr.id = 'toc-header';
-		hdr.title = fullPath;
-
-		var titleSpan = document.createElement('span');
-		titleSpan.id = 'tocTitle';
-		titleSpan.textContent = fileTitle;
-		titleSpan.title = fullPath;
-		hdr.appendChild(titleSpan);
-
-		var copyBtn = document.createElement('button');
-		copyBtn.className = 'toc-copy';
-		copyBtn.textContent = '📋';
-		copyBtn.title = 'Copy full path';
-		copyBtn.onclick = function () {
-			navigator.clipboard.writeText(fullPath).catch(function(){});
-		};
-		hdr.appendChild(copyBtn);
-
-		var master = document.createElement('button');
-		master.className = 'toc-m';
-		master.textContent = '−';
-		master.title = 'Collapse all';
-		hdr.appendChild(master);
-		toc.appendChild(hdr);
-
+		var master = buildTocHeader(toc, fileTitle, fullPath);
 		buildTocTree(hs, toc);
 		initMasterToggle(toc, master);
 
