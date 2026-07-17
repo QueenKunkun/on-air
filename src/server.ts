@@ -3,6 +3,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { WebSocketServer, WebSocket } from 'ws';
 import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js/lib/core';
@@ -103,7 +104,7 @@ const slugify = (text: string): string =>
  * out-of-scope links keep their `..` and are blocked by resolveStaticPath downstream.
  */
 function rewriteLink(href: string, docDir: string, rootDir: string): string {
-	if (!rootDir || !docDir) return href;
+	if (!rootDir || !docDir) { return href; }
 	if (/^(https?:)?\/\//i.test(href) || href.startsWith('#') || href.startsWith('data:') || href.startsWith('mailto:') || href.startsWith('/')) {
 		return href;
 	}
@@ -111,15 +112,15 @@ function rewriteLink(href: string, docDir: string, rootDir: string): string {
 	const qIdx = href.indexOf('?');
 	const cut = qIdx >= 0 && (hashIdx < 0 || qIdx < hashIdx) ? qIdx : hashIdx;
 	const raw = cut >= 0 ? href.slice(0, cut) : href;
-	if (!raw) return href;
+	if (!raw) { return href; }
 	const absTarget = path.resolve(docDir, raw);
 	let rel = path.relative(rootDir, absTarget);
-	if (path.sep !== '/') rel = rel.split(path.sep).join('/');
+	if (path.sep !== '/') { rel = rel.split(path.sep).join('/'); }
 	return rel + (cut >= 0 ? href.slice(cut) : '');
 }
 
 function rewriteHtmlLinks(html: string, docDir: string, rootDir: string): string {
-	if (!rootDir || !docDir) return html;
+	if (!rootDir || !docDir) { return html; }
 	return html.replace(/(href|src)="([^"]*)"/gi, (_m, attr: string, val: string) => {
 		const rewritten = rewriteLink(val, docDir, rootDir);
 		return rewritten === val ? _m : `${attr}="${rewritten}"`;
@@ -142,18 +143,18 @@ md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
 
 md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
 	const href = tokens[idx].attrGet('href');
-	if (href != null && env?.docDir && env?.rootDir) {
+	if (href !== null && env?.docDir && env?.rootDir) {
 		const rewritten = rewriteLink(href, env.docDir, env.rootDir);
-		if (rewritten !== href) tokens[idx].attrSet('href', rewritten);
+		if (rewritten !== href) { tokens[idx].attrSet('href', rewritten); }
 	}
 	return self.renderToken(tokens, idx, options);
 };
 
 md.renderer.rules.image = (tokens, idx, options, env, self) => {
 	const src = tokens[idx].attrGet('src');
-	if (src != null && env?.docDir && env?.rootDir) {
+	if (src !== null && env?.docDir && env?.rootDir) {
 		const rewritten = rewriteLink(src, env.docDir, env.rootDir);
-		if (rewritten !== src) tokens[idx].attrSet('src', rewritten);
+		if (rewritten !== src) { tokens[idx].attrSet('src', rewritten); }
 	}
 	return self.renderToken(tokens, idx, options);
 };
@@ -221,6 +222,13 @@ function resolveStaticPath(rootDir: string, relPath: string): string | null {
 	}
 	return null;
 }
+function kindFromPath(p: string): DocKind | null {
+	const ext = path.extname(p).toLowerCase();
+	if (ext === '.md' || ext === '.markdown') { return 'markdown'; }
+	if (ext === '.html' || ext === '.htm') { return 'html'; }
+	return null;
+}
+
 /** Markdown preview page: wrapped in our own template, content updates use targeted DOM replacement (no full page reload) */
 function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullPath: string): string {
 	return mdTemplate
@@ -410,12 +418,42 @@ export class PreviewServer {
 				res.end('Preview not found or has been closed. Please regenerate the link in VS Code.');
 				return;
 			}
-			const filePath = resolveStaticPath(entry.rootDir, staticMatch[2]);
+			const rel = staticMatch[2];
+			const filePath = resolveStaticPath(entry.rootDir, rel);
 			if (!filePath) {
 				res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
 				res.end('File not found');
 				return;
 			}
+
+			// A relative link to another Markdown/HTML document: register it on demand
+			// (sharing the same id the extension would use) and redirect to its preview,
+			// so clicking the link opens a rendered, live-syncable preview instead of raw bytes.
+			const kind = kindFromPath(filePath);
+			if (kind) {
+				const frag = rel.includes('#') ? '#' + rel.split('#')[1] : '';
+				const uriKey = vscode.Uri.file(filePath).toString();
+				const existingId = this.uriToId.get(uriKey);
+				if (existingId) {
+					res.writeHead(302, { Location: `/preview/${existingId}${frag}` });
+					res.end();
+					return;
+				}
+				fs.readFile(filePath, 'utf8', (err, data) => {
+					if (err) {
+						res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+						res.end('File not found');
+						return;
+					}
+					const targetWs = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(filePath));
+					const targetRootDir = targetWs ? targetWs.uri.fsPath : path.dirname(filePath);
+					const newId = this.registerDocument(uriKey, path.basename(filePath), data, kind, targetRootDir, filePath);
+					res.writeHead(302, { Location: `/preview/${newId}${frag}` });
+					res.end();
+				});
+				return;
+			}
+
 			fs.readFile(filePath, (err, data) => {
 				if (err) {
 					res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
