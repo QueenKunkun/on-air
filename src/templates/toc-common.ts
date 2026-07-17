@@ -103,4 +103,36 @@ function initMasterToggle(tocContainer, masterBtn) {
 		}
 	};
 }
+
+function bindTocInteractions(tocEl, contentEl, offset) {
+	var hs = contentEl.querySelectorAll('h1,h2,h3,h4,h5,h6');
+	var links = tocEl.querySelectorAll('a');
+	var map = [];
+	for (var i = 0; i < hs.length && i < links.length; i++) map.push([hs[i], links[i]]);
+
+	for (var j = 0; j < map.length; j++) {
+		(function (h, a) {
+			a.onclick = function (e) { e.preventDefault(); h.scrollIntoView({ behavior: 'smooth' }); };
+		})(map[j][0], map[j][1]);
+	}
+
+	function updateActiveToc() {
+		var active = null;
+		for (var k = 0; k < map.length; k++) {
+			if (map[k][0].getBoundingClientRect().top <= (offset || 80)) active = map[k][1];
+			else break;
+		}
+		for (var m = 0; m < map.length; m++) map[m][1].classList.toggle('active', map[m][1] === active);
+	}
+
+	var ticking = false;
+	document.addEventListener('scroll', function () {
+		if (!ticking) {
+			window.requestAnimationFrame(function () { updateActiveToc(); ticking = false; });
+			ticking = true;
+		}
+	});
+
+	updateActiveToc();
+}
 `;
