@@ -64,6 +64,7 @@
     "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
     "lint": "eslint src",
     "test": "vscode-test",
+    "test:unit": "node --test",
     "publish-all": "pnpm publish-vsce && pnpm publish-ovsx",
     "package-vsix": "vsce package --no-dependencies",
     "publish-vsce": "vsce package --no-dependencies && vsce publish --no-dependencies",
