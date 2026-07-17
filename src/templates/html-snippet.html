@@ -31,13 +31,15 @@
 		var toc = document.getElementById('toc');
 		while (toc.firstChild) toc.removeChild(toc.firstChild);
 		var hs = document.querySelectorAll('h1,h2,h3,h4,h5,h6');
-		if (hs.length < 2) { tocBtn.style.display = 'none'; return; }
 		tocBtn.style.display = '';
+		toc.classList.toggle('no-tree', hs.length < 2);
 
 		var master = buildTocHeader(toc, fileTitle, fullPath);
-		buildTocTree(hs, toc);
-		initMasterToggle(toc, master);
-		bindTocInteractions(toc, document);
+		if (hs.length >= 2) {
+			buildTocTree(hs, toc);
+			initMasterToggle(toc, master);
+			bindTocInteractions(toc, document);
+		}
 	}
 
 	tocBtn.onclick = function () {

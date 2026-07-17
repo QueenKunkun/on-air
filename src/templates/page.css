@@ -6,7 +6,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
 #wrapper { display: flex; margin: 0 auto; padding: 0 24px; }
 #toc { width: clamp(420px, 24vw, 560px); flex-shrink: 0; position: sticky; top: 38px; align-self: flex-start; max-height: calc(100vh - 46px); overflow: hidden; display: flex; flex-direction: column; padding: 0; box-sizing: border-box; font-size: 14px; line-height: 1.5; }
 #toc-list { overflow: auto; flex: 1; min-height: 0; padding: 0 0 24px 6px; }
-#toc.empty { display: none; }
+#toc.no-tree .toc-m { display: none; }
 #toc ul { list-style: none; padding: 0; margin: 0; }
 #toc li { margin: 1px 0; }
 #toc-list > ul { padding-right: 28px; }

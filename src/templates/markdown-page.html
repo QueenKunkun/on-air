@@ -80,22 +80,23 @@
 		{{TOC_JS}}
 
 		// ---- table of contents ----
-	function buildToc() {
-		var toc = document.getElementById('toc');
-		while (toc.firstChild) toc.removeChild(toc.firstChild);
-		var hs = contentEl.querySelectorAll('h1,h2,h3,h4,h5,h6');
-		if (hs.length < 2) { toc.classList.add('empty'); return; }
-		toc.classList.remove('empty');
+		function buildToc() {
+			var toc = document.getElementById('toc');
+			while (toc.firstChild) toc.removeChild(toc.firstChild);
+			var hs = contentEl.querySelectorAll('h1,h2,h3,h4,h5,h6');
+			toc.classList.toggle('no-tree', hs.length < 2);
 
-		var master = buildTocHeader(toc, '📑 ' + document.title.replace(/ · OnAir$/, ''), fullPath);
+			var master = buildTocHeader(toc, '📑 ' + document.title.replace(/ · OnAir$/, ''), fullPath);
 
-		var listContainer = document.createElement('div');
-			listContainer.id = 'toc-list';
-			buildTocTree(hs, listContainer);
-			initMasterToggle(toc, master);
-			toc.appendChild(listContainer);
+			if (hs.length >= 2) {
+				var listContainer = document.createElement('div');
+				listContainer.id = 'toc-list';
+				buildTocTree(hs, listContainer);
+				initMasterToggle(toc, master);
+				toc.appendChild(listContainer);
 			bindTocInteractions(toc, contentEl);
 		}
+	}
 
 		// ---- TOC resize ----
 		(function () {
