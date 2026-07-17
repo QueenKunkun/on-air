@@ -1,10 +1,10 @@
 <style>{{CSS}}</style>
 <style>
 .__otb,.__otp{font:13px -apple-system,BlinkMacSystemFont,sans-serif;color:#1f2328}
-.__otb{position:fixed!important;right:0!important;top:50%!important;z-index:2147483646!important;transform:translateY(-50%);background:#fff;border:1px solid #d8dee4;border-right:none;border-radius:6px 0 0 6px;padding:8px 5px;cursor:pointer;font-size:15px;line-height:1;transition:right .25s ease,transform .15s;box-shadow:-1px 1px 4px rgba(0,0,0,.08)}
+.__otb{position:fixed!important;right:0;top:50%!important;z-index:2147483646!important;transform:translateY(-50%);background:#fff;border:1px solid #d8dee4;border-right:none;border-radius:6px 0 0 6px;padding:8px 5px;cursor:pointer;font-size:15px;line-height:1;transition:right .25s ease,transform .15s;box-shadow:-1px 1px 4px rgba(0,0,0,.08)}
 
 .__otb:hover{transform:translateY(-50%) translateX(-2px)}
-.__otp{position:fixed!important;right:-280px!important;top:50%!important;max-height:50vh!important;width:260px;z-index:2147483645!important;background:#fff;border-left:1px solid #d8dee4;padding:20px 16px;overflow-y:auto;transition:right .25s ease;box-shadow:-2px 0 10px rgba(0,0,0,.12);transform:translateY(-50%)}
+.__otp{position:fixed!important;right:-230px!important;top:50%!important;max-height:50vh!important;width:260px;box-sizing:border-box;z-index:2147483645!important;background:#fff;border-left:1px solid #d8dee4;padding:20px 16px;overflow-y:auto;transition:right .25s ease;box-shadow:-2px 0 10px rgba(0,0,0,.12);transform:translateY(-50%)}
 .__otp.open{right:0!important}
 .__otp #toc-header{padding:0 0 10px 0!important}
 @media (max-width: 640px){.__onair_banner__ .banner-msg{display:none}}
@@ -78,7 +78,7 @@
 	tocBtn.onclick = function () {
 		var open = tocPanel.classList.toggle('open');
 		tocBtn.textContent = open ? '>' : '<';
-		tocBtn.style.right = open ? '32px' : '0';
+		tocBtn.style.right = open ? '260px' : '0';
 	};
 
 	if (document.readyState === 'loading') {
