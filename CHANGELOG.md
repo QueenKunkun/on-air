@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.7.0] - 2026-07-18
+
+- feat: Open relative links to other Markdown/HTML documents as live previews
+- feat: Add a "Related documents" list under the table of contents
+- feat: Make the TOC / Related divider draggable and remember its height
+
+
 ## [0.6.0] - 2026-07-17
 
 - feat: TOC shows full path on hover with copy button
