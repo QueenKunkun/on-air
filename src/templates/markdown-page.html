@@ -19,8 +19,7 @@
 	<input class="fs-input" id="fsInput" type="number" min="12" max="28" value="16" title="Font size (12-28)">
 	<button class="bp-btn" id="fsReset" title="Reset font size to default">↺</button>
 	<button class="bp-btn" id="fsInc" title="Increase font size">A+</button></div>
-	<button id="tocToggle" class="toc-toggle" aria-label="Toggle table of contents">&#x00AB;</button>
-	<div id="wrapper"><nav id="toc" class="toc"></nav><div class="toc-resizer" id="tocResizer"></div><article class="markdown-body" id="content">{{BODY}}</article></div>
+	<div id="wrapper"><div id="tocSide"><nav id="toc" class="toc"></nav><button id="tocToggle" class="toc-toggle" aria-label="Toggle table of contents">&lt;</button></div><div class="toc-resizer" id="tocResizer"></div><article class="markdown-body" id="content">{{BODY}}</article></div>
 	<script>
 	(function () {
 		var bannerEl = document.getElementById('banner');
@@ -115,21 +114,15 @@
 		// ---- TOC collapse handle ----
 		(function () {
 			var handle = document.getElementById('tocToggle');
-			var toc = document.getElementById('toc');
-			function placeHandle() {
-				handle.style.left = toc.getBoundingClientRect().right + 'px';
-			}
+			var side = document.getElementById('tocSide');
 			function setCollapsed(c) {
-				toc.classList.toggle('collapsed', c);
-				handle.textContent = c ? '»' : '«';
+				side.classList.toggle('collapsed', c);
+				handle.textContent = c ? '>' : '<';
 				handle.title = c ? 'Show table of contents' : 'Hide table of contents';
 				localStorage.setItem('onair-toc-collapsed', c ? '1' : '0');
-				placeHandle();
 			}
 			setCollapsed(localStorage.getItem('onair-toc-collapsed') === '1');
-			handle.onclick = function () { setCollapsed(!toc.classList.contains('collapsed')); };
-			if (window.ResizeObserver) new ResizeObserver(placeHandle).observe(toc);
-			window.addEventListener('resize', placeHandle);
+			handle.onclick = function () { setCollapsed(!side.classList.contains('collapsed')); };
 		})();
 
 		// ---- websocket ----
