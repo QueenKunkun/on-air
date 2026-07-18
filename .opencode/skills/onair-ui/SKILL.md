@@ -200,6 +200,10 @@ There are two resizers. Both share one helper, `attachResizer(resizerEl, targetE
 
 Both: hover changes color only — never the dimension, to avoid layout jump.
 
+## TOC collapse handle (Markdown)
+
+`#tocToggle` is a fixed tab on the far-left edge of the Markdown preview that toggles the whole TOC sidebar. Clicking adds/removes `#toc.collapsed` (drives `#toc` width to `0` and hides the width-resizer via `#toc.collapsed + .toc-resizer { display:none }`) so `.markdown-body` expands to full width. State persists in `localStorage` key `onair-toc-collapsed` (`'1'`/`'0'`). Icon flips `«` (hide) / `»` (show). The HTML snippet has its own equivalent (`#__otb` / `.open` overlay), so this is Markdown-only.
+
 ## Banner Controls
 
 ```
