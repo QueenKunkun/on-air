@@ -103,6 +103,7 @@ Preference saved to `localStorage('onair-theme')`. Values: `auto`, `dark`, `ligh
 --btn-on-c:#fff              --btn-on-border:#0969da
 --fm-bg:#f6f8fa              --fm-border:#d8dee4
 --sb-thumb:#d0d7de           --sb-thumb-hover:#adb5bd
+--mark-bg:#fff1a8
 ```
 
 ### CSS Variables — Dark
@@ -118,6 +119,7 @@ Preference saved to `localStorage('onair-theme')`. Values: `auto`, `dark`, `ligh
 --btn-on-c:#fff               --btn-on-border:#1f6feb
 --fm-bg:#242526               --fm-border:#2a2b2c
 --sb-thumb:#4a4d4f            --sb-thumb-hover:#6a6d6f
+--mark-bg:#4d4526
 ```
 
 Highlight.js syntax colors are also themed (see `page.css` `--hljs-*` to `--h-builtin`).
@@ -257,6 +259,37 @@ The HTML preview can't inject a top layout bar, so status lives in a floating co
 
 **Why two layers, not one morphing element.** The peek is pure CSS: `.__onair_status.idle .__onair_dot:hover ~ .__onair_banner__ { display:block }`. The critical rule is that **the hover target (`#__onair_dot`) never changes shape/size/position when hovered** — the badge that appears is a *separate* `pointer-events:none` sibling, so the cursor stays on the invariant dot and there is no feedback loop. An earlier one-element design (a single badge that morphed between a `border-radius:50%` circle when idle and a `border-radius:6px` rectangle on `:hover`) flickered frantically: where the circle edge and the rounded-rect corner cross, a static cursor is inside one shape but outside the other, so hovering expands it → boundary moves off the cursor → collapses → repeat. Rule of thumb: never let a `:hover` handler change the geometry of the element being hovered; split the invariant hit target from the changing visual.
 
+## Footnotes & Annotations
+
+Two **independent** systems, both built from `markdown-it-footnote` + `markdown-it-mark` (registered on the `md` instance in `server.ts`). Markdown preview only; the HTML-snippet template is untouched. All routing/positioning is client-side in `markdown-page.html` — no server template or websocket changes; the markup flows through `{{BODY}}` and the existing `update` payload, so both blocks rebuild on every live edit (`buildAnnotations()` then `processFootnotes()`, called after `buildToc()` on load and on each ws update, in that order).
+
+### Routing rule (bottom vs. right)
+
+Decided at the **marker position**, not the definition line. A `sup.footnote-ref` whose immediate previous sibling is a `<mark>` (i.e. `==text==^[note]` or `==text==[^id]`) → **annotation** (right column): its `<li>` is looked up by id, cloned into a card (backref stripped), and **removed from the bottom list**; the numeric `sup` is hidden (`display:none`) so the highlight itself is the anchor. Any footnote marker not glued to a `<mark>` → stays a **bottom footnote**. If removing annotation items empties the list, the whole `section.footnotes` + `hr.footnotes-sep` is removed.
+
+### Bottom footnotes (`#footnotes-block`)
+
+`processFootnotes()` wraps `section.footnotes` in `#footnotes-block` with a clickable `#footnotes-head` (a `.fn-toggle` caret + "Footnotes"). Collapsed state → `#footnotes-block.collapsed .footnotes { display:none }`, persisted in `onair-footnotes-collapsed`. Styled with theme vars (`.footnotes` is `88%`/`--quote-c`; `.footnote-backref` has no underline).
+
+### Right annotation column (`#annotSide`)
+
+Third flex child of `#wrapper`, after `.markdown-body`: `[…] .markdown-body [.annot-resizer] [#annotSide > (#annots + #annotToggle)]`. Unlike `#tocSide` it is **not** sticky — it scrolls with the document so cards stay beside their marks. `#annots` is `position:relative`; each `.annot-card` is `position:absolute`, its `top` computed as `markDocY(mark) − markDocY(#annots)` (document-Y delta, robust to scroll). `layoutCards()` sorts cards by mark position and applies **collision stacking** (push down to `prevBottom + 12px` gap); it re-runs on window resize, font-size change (inside `setFs`), and column resize (the `attachResizer` `set` callback). Absolutely-positioned cards ignore `#annots` padding, so `top:0` aligns with the column box top = the article box top (same flex row) = correct mark alignment.
+
+- Resizer `.annot-resizer` sits **before** `#annotSide` (left edge), so `attachResizer` uses `invert:true` (drag left grows width); key `onair-annot-width`, `min:120`. CSS can't select a previous sibling, so the resizer is hidden via JS when the column is collapsed/absent.
+- Collapse handle `#annotToggle` mirrors `#tocToggle` but flipped: `position:absolute; right:100%; border-right:none; border-radius:6px 0 0 6px`, docking `position:fixed; right:0` when collapsed. Icon `>` (hide) / `<` (show). Key `onair-annot-collapsed`.
+
+### Highlight & marker styling
+
+`.markdown-body mark { background:var(--mark-bg) }` (highlighter; own theme var — never reuse `--fm-bg`). Annotated marks get `.annot-mark` (dotted `--link-c` underline + pointer) and `.active` (a `--link-c` ring, mirrored on the card). Plain `.footnote-ref a` has no underline.
+
+### Interactions & fallback
+
+Click always reveals a note; the **shared** banner switch `#hoverBtn` ("Hover notes", a `.wp-btn.on` toggle, key `onair-annot-hover`) only gates whether *hover* also reveals it. When the annotation column is visible (`annotColumnVisible()`: `display!=='none'` and not collapsed) a mark click activates + scrolls its card; otherwise a mark click/hover shows `#annot-pop`, a single reusable popover appended to `<body>` (`position:absolute; z-index:60`), anchored under the mark and clamped to the viewport width. Below `max-width:1000px` a media query hides `#annotSide`/`.annot-resizer`, so the popover is the automatic narrow-screen fallback. Bottom footnote markers also get a hover popover (click stays a native `#fn` anchor jump).
+
+### Future-authoring seams
+
+Each `<mark>` and card carries a stable `data-annot-id`; `cardRegistry` maps `id ↔ mark ↔ card`; the build is idempotent (clears `#annots` and re-derives on every render) so a future write-back re-render stays clean.
+
 ## LocalStorage Keys
 
 | Key | Type | Values |
@@ -266,6 +299,10 @@ The HTML preview can't inject a top layout bar, so status lives in a floating co
 | `onair-scrollbar-width` | number | ≥0 (default 16, step 4, no upper cap); drives `--sb-w` |
 | `onair-toc-width` | number | 24–∞ (min 24 so the resizer stays grabbable; no upper cap — drag as wide as you like, content just scrolls; no forced default, CSS `clamp(420px,24vw,560px)` applies until the user drags) |
 | `onair-related-height` | number | 120–480 (default 200) |
+| `onair-footnotes-collapsed` | string | `'1'`/`'0'` — bottom footnotes block collapsed |
+| `onair-annot-collapsed` | string | `'1'`/`'0'` — right annotation column collapsed |
+| `onair-annot-width` | number | ≥120 — annotation column width |
+| `onair-annot-hover` | string | `'1'`/`'0'` — hover-preview switch (shared) |
 
 ## File Locations
 
