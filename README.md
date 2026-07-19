@@ -17,17 +17,16 @@ Turn the currently open Markdown or HTML file into a **live local preview link**
 
 1. Open a `.md` or `.html` file
 2. Open the Command Palette with `Cmd+Shift+P` and run `OnAir: Generate Live Preview Link` (or click the globe icon in the top-right of the editor)
-3. Choose **Open in Browser** to launch it directly, or **Copy Link to Clipboard** to paste it elsewhere
+3. Choose **Open in Browser** or **Copy Link** (the menu also offers **(LAN)** variants when a local network is detected)
 4. Keep editing — the browser content updates automatically
 
 ## How it works / Notes
 
-- When activated, the extension starts a local HTTP + WebSocket server, searching for an available port starting from `5757`
-- Links look like `http://127.0.0.1:<port>/preview/<id>` and **can only be opened in a browser on this machine** — they are not public addresses. To share with someone else, you'd need to be on the same local network and replace `127.0.0.1` with your LAN IP, or set up your own tunnel (e.g. ngrok)
-- The local server stops when VS Code closes, so links naturally expire
-- Static assets are only resolved relative to the previewed file's own directory (no escaping via `../` outside of it), and standard Markdown link rules apply: a path containing spaces or non-ASCII characters needs to be either percent-encoded (`images/%E5%9B%BE.png`) or wrapped in angle brackets (`![alt](<images/图.png>)`) — otherwise Markdown won't parse it as a link at all
-
-## TODO (optional future improvements)
+- A local HTTP + WebSocket server starts on the first free port from `5757`; links look like `http://127.0.0.1:<port>/preview/<id>`.
+- The **(LAN)** options swap `127.0.0.1` for your machine's LAN IP so others on the same network can open the preview. These links aren't public.
+- The server runs while VS Code is open and stops when it closes, so links expire then.
+- Assets are served only from within the previewed file's project (its workspace folder, or its own directory otherwise), so `../` paths inside the project resolve while nothing outside is exposed.
+- Markdown link paths with spaces or non-ASCII characters must be percent-encoded (`images/%E5%9B%BE.png`) or wrapped in angle brackets (`![alt](<images/图.png>)`), or Markdown won't parse them.
 
 ## Install (from market)
 
