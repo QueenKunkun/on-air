@@ -105,7 +105,7 @@
 			var resizer = document.getElementById('tocResizer');
 			var toc = document.getElementById('toc');
 			attachResizer(resizer, toc, {
-				axis: 'x', invert: false, key: 'onair-toc-width', def: null, min: 180, max: 600,
+				axis: 'x', invert: false, key: 'onair-toc-width', def: null, min: 24, max: Infinity,
 				get: function (el) { return el.offsetWidth; },
 				set: function (el, v) { el.style.width = v + 'px'; }
 			});

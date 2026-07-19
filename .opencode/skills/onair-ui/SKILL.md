@@ -237,7 +237,7 @@ The HTML preview can't inject a top layout bar, so status lives in a floating co
 |---|---|---|
 | `onair-theme` | string | `auto`, `dark`, `light` |
 | `onair-font-size` | number | 12–28 (default 16) |
-| `onair-toc-width` | number | 180–600 (no forced default; CSS `clamp(420px,24vw,560px)` applies until the user drags) |
+| `onair-toc-width` | number | 24–∞ (min 24 so the resizer stays grabbable; no upper cap — drag as wide as you like, content just scrolls; no forced default, CSS `clamp(420px,24vw,560px)` applies until the user drags) |
 | `onair-related-height` | number | 120–480 (default 200) |
 
 ## File Locations
