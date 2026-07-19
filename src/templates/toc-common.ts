@@ -59,16 +59,19 @@ function buildTocTree(hs, container) {
 	return root;
 }
 
-function buildTocHeader(toc, titleText, fullPath) {
+function buildTocHeader(toc, titleText, fullPath, relPath) {
 	var hdr = document.createElement('div');
 	hdr.id = 'toc-header';
 	hdr.title = fullPath;
+
+	var titleRow = document.createElement('div');
+	titleRow.className = 'toc-title-row';
 
 	var titleSpan = document.createElement('span');
 	titleSpan.id = 'tocTitle';
 	titleSpan.textContent = titleText;
 	titleSpan.title = fullPath;
-	hdr.appendChild(titleSpan);
+	titleRow.appendChild(titleSpan);
 
 	var copyBtn = document.createElement('button');
 	copyBtn.className = 'toc-copy';
@@ -77,13 +80,23 @@ function buildTocHeader(toc, titleText, fullPath) {
 	copyBtn.onclick = function () {
 		navigator.clipboard.writeText(fullPath).catch(function(){});
 	};
-	hdr.appendChild(copyBtn);
+	titleRow.appendChild(copyBtn);
 
 	var master = document.createElement('button');
 	master.className = 'toc-m';
 	master.textContent = '−';
 	master.title = 'Collapse all';
-	hdr.appendChild(master);
+	titleRow.appendChild(master);
+	hdr.appendChild(titleRow);
+
+	if (relPath) {
+		var pathEl = document.createElement('div');
+		pathEl.className = 'toc-path';
+		pathEl.textContent = relPath;
+		pathEl.title = fullPath;
+		hdr.appendChild(pathEl);
+	}
+
 	toc.appendChild(hdr);
 
 	return master;

@@ -35,6 +35,7 @@
 		var contentEl = document.getElementById('content');
 		var id = {{ID_JSON}};
 		var fullPath = {{FULL_PATH_JSON}};
+		var relPath = {{REL_PATH_JSON}};
 		var proto = location.protocol === 'https:' ? 'wss' : 'ws';
 		var ws, reconnectTimer;
 
@@ -123,7 +124,7 @@
 			var hs = contentEl.querySelectorAll('h1,h2,h3,h4,h5,h6');
 			toc.classList.toggle('no-tree', hs.length < 2);
 
-			var master = buildTocHeader(toc, '📑 ' + document.title.replace(/ · OnAir$/, ''), fullPath);
+			var master = buildTocHeader(toc, '📑 ' + document.title.replace(/ · OnAir$/, ''), fullPath, relPath);
 
 			if (hs.length >= 2) {
 				var listContainer = document.createElement('div');
@@ -176,6 +177,7 @@
 					if (msg.type === 'update') {
 						contentEl.innerHTML = msg.html;
 						if (msg.fullPath) fullPath = msg.fullPath;
+						if (msg.relPath != null) relPath = msg.relPath;
 						buildToc();
 						if (document.getElementById('wpBtn').classList.contains('on')) contentEl.classList.add('wp');
 						document.title = msg.title + ' · OnAir';

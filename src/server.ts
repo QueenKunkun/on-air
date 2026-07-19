@@ -174,6 +174,38 @@ function escapeHtml(s: string): string {
 	return s.replace(/[&<>"']/g, (c) => map[c]);
 }
 
+const toPosix = (p: string): string => (path.sep !== '/' ? p.split(path.sep).join('/') : p);
+
+/**
+ * Human-friendly path shown under the filename in the TOC. If the file is inside a
+ * workspace folder, it's relative to that folder (prefixed with the folder name when
+ * several folders are open). Otherwise we walk up to the nearest ancestor containing a
+ * `.git` directory and show the path relative to that repo root's parent (so it includes
+ * the repo folder name). With neither, falls back to the absolute path.
+ */
+function computeDisplayPath(fsPath: string): string {
+	if (!fsPath || !path.isAbsolute(fsPath)) { return toPosix(fsPath || ''); }
+	try {
+		const wsFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(fsPath));
+		if (wsFolder) {
+			const rel = toPosix(path.relative(wsFolder.uri.fsPath, fsPath));
+			const folders = vscode.workspace.workspaceFolders || [];
+			return folders.length > 1 ? toPosix(path.join(path.basename(wsFolder.uri.fsPath), rel)) : rel;
+		}
+	} catch {
+		// not a resolvable workspace file - fall through
+	}
+	let dir = path.dirname(fsPath);
+	for (;;) {
+		try { if (fs.existsSync(path.join(dir, '.git'))) { return toPosix(path.relative(path.dirname(dir), fsPath)); } }
+		catch { /* ignore and keep walking up */ }
+		const parent = path.dirname(dir);
+		if (parent === dir) { break; }
+		dir = parent;
+	}
+	return toPosix(fsPath);
+}
+
 const MIME_TYPES: Record<string, string> = {
 	'.html': 'text/html; charset=utf-8',
 	'.htm': 'text/html; charset=utf-8',
@@ -232,7 +264,7 @@ function kindFromPath(p: string): DocKind | null {
 }
 
 /** Markdown preview page: wrapped in our own template, content updates use targeted DOM replacement (no full page reload) */
-function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullPath: string): string {
+function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullPath: string, relPath: string): string {
 	return mdTemplate
 		.replace('{{CSS}}', pageCss)
 		.replace('{{ID}}', id)
@@ -240,6 +272,7 @@ function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullP
 		.replace('{{BODY}}', bodyHtml)
 		.replace('{{ID_JSON}}', JSON.stringify(id))
 		.replace('{{FULL_PATH_JSON}}', JSON.stringify(fullPath))
+		.replace('{{REL_PATH_JSON}}', JSON.stringify(relPath))
 		.replace('{{TOC_JS}}', tocJs);
 }
 /**
@@ -249,17 +282,18 @@ function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullP
  * trigger a full page reload (location.reload) rather than a targeted replacement,
  * since arbitrary HTML/JS/CSS can't be safely patched via innerHTML.
  */
-function htmlLiveReloadSnippet(id: string, title: string, fullPath: string): string {
+function htmlLiveReloadSnippet(id: string, title: string, fullPath: string, relPath: string): string {
 	return htmlSnippet
 		.replace('{{CSS}}', pageCss)
 		.replace('{{ID_JSON}}', JSON.stringify(id))
 		.replace('{{TITLE_JSON}}', JSON.stringify(title))
 		.replace('{{FULL_PATH_JSON}}', JSON.stringify(fullPath))
+		.replace('{{REL_PATH_JSON}}', JSON.stringify(relPath))
 		.replace('{{TOC_JS}}', tocJs);
 }
 
-function htmlPageTemplate(id: string, rawHtml: string, title: string, fullPath: string, rootDir: string): string {
-	const snippet = htmlLiveReloadSnippet(id, title, fullPath);
+function htmlPageTemplate(id: string, rawHtml: string, title: string, fullPath: string, relPath: string, rootDir: string): string {
+	const snippet = htmlLiveReloadSnippet(id, title, fullPath, relPath);
 	let withSnippet: string;
 	const bodyCloseRegex = /<\/body\s*>/i;
 	if (bodyCloseRegex.test(rawHtml)) {
@@ -326,12 +360,13 @@ export class PreviewServer {
 	}
 
 	private renderPage(kind: DocKind, id: string, title: string, content: string, fullPath: string, rootDir: string): { page: string; bodyHtml?: string } {
+		const relPath = computeDisplayPath(fullPath);
 		if (kind === 'html') {
-			return { page: htmlPageTemplate(id, content, title, fullPath, rootDir) };
+			return { page: htmlPageTemplate(id, content, title, fullPath, relPath, rootDir) };
 		}
 		const docDir = path.dirname(fullPath);
 		const bodyHtml = renderMarkdown(content, docDir, rootDir);
-		return { page: markdownPageTemplate(id, title, bodyHtml, fullPath), bodyHtml };
+		return { page: markdownPageTemplate(id, title, bodyHtml, fullPath, relPath), bodyHtml };
 	}
 	/** Register/refresh a document, returning its preview id (calling this multiple times for the same file reuses the same id/link) */
 	registerDocument(uriKey: string, title: string, content: string, kind: DocKind, rootDir: string, fullPath: string): string {
@@ -368,7 +403,7 @@ export class PreviewServer {
 		entry.bodyHtml = rendered.bodyHtml;
 
 		const payload = kind === 'markdown'
-			? JSON.stringify({ type: 'update', title, html: entry.bodyHtml, fullPath })
+			? JSON.stringify({ type: 'update', title, html: entry.bodyHtml, fullPath, relPath: computeDisplayPath(fullPath) })
 			: JSON.stringify({ type: 'reload' });
 		for (const client of entry.clients) {
 			if (client.readyState === client.OPEN) { client.send(payload); }

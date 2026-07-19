@@ -183,12 +183,18 @@ color:var(--text); text-decoration:none;
 
 ### Header
 
+Two stacked rows: `#toc-header` is `flex-direction:column`; the top `.toc-title-row` holds the filename (`#tocTitle`), copy-path button (`.toc-copy`) and master toggle (`.toc-m`); below it a `.toc-path` line shows the file's relative path (single-line, ellipsized, full path in `title`).
+
 ```
-#toc-header { display:flex; align-items:center; gap:6px; padding:0 28px 10px 6px; font-weight:600; font-size:13px; color:var(--quote-c); }
+#toc-header { display:flex; flex-direction:column; gap:3px; padding:0 28px 10px 6px; font-weight:600; font-size:13px; color:var(--quote-c); }
+#toc-header .toc-title-row { display:flex; align-items:center; gap:6px; }
 #toc-header .toc-m { margin-left:auto; width:18px; height:18px; border:1px solid var(--border); border-radius:4px; background:transparent; color:var(--quote-c); cursor:pointer; }
+#toc-header .toc-path { font-weight:400; font-size:11px; color:var(--quote-c); opacity:.7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 ```
 
 Master toggle (`.toc-m`) shows `−` / `+` text, toggles all sub-lists simultaneously.
+
+The relative path is computed server-side (`computeDisplayPath` in `server.ts`): relative to the workspace folder when the file is in one (prefixed with the folder name if several are open), otherwise relative to the parent of the nearest ancestor `.git` directory (so it includes the repo folder name), else the absolute path. It's passed as `{{REL_PATH_JSON}}` and re-sent on markdown live updates via the `relPath` field.
 
 ### Nested tree algorithm
 

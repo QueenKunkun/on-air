@@ -32,6 +32,7 @@
 	var tocPanel = document.getElementById('__otp');
 	var id = {{ID_JSON}};
 	var fullPath = {{FULL_PATH_JSON}};
+	var relPath = {{REL_PATH_JSON}};
 	var fileTitle = {{TITLE_JSON}};
 	var proto = location.protocol === 'https:' ? 'wss' : 'ws';
 	var ws, reconnectTimer, idleTimer;
@@ -63,7 +64,7 @@
 		tocBtn.style.display = '';
 		toc.classList.toggle('no-tree', hs.length < 2);
 
-		var master = buildTocHeader(toc, fileTitle, fullPath);
+		var master = buildTocHeader(toc, fileTitle, fullPath, relPath);
 		if (hs.length >= 2) {
 			buildTocTree(hs, toc);
 			initMasterToggle(toc, master);
