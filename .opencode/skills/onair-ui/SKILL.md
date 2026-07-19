@@ -225,6 +225,10 @@ Both: hover changes color only — never the dimension, to avoid layout jump.
 
 Layout: `A− [input] [↺] A+`. Buttons ±2, ↺ resets to 16. Range clamped to 12–28. Persisted in `localStorage('onair-font-size')`.
 
+## HTML-snippet status badge (`#__onair_banner__`)
+
+The HTML preview can't inject a top layout bar, so status lives in a floating `position:fixed; bottom:12px; right:12px` badge (`pointer-events:none` so it never blocks the page). To avoid overlapping content the user's own page may put in the bottom-right, the badge auto-collapses: 4s after a healthy `onopen` it gains `.idle`, shrinking to a ~14px colored dot (color still conveys state). Hovering the dot (`.idle:hover`, which restores `pointer-events:auto`) expands it back to the full badge via pure CSS — no JS peek logic. Error states (`closed`, `onclose`) call `wakeBanner()` to remove `.idle` and clear the timer so the message stays visible; a fresh `onopen` calls `wakeBanner()` then `scheduleIdle()`. `pointer-events` is owned by CSS (base `none`, `.idle` `auto`), not the inline style, so the hover rule can win.
+
 ## LocalStorage Keys
 
 | Key | Type | Values |

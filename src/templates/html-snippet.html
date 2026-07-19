@@ -7,13 +7,18 @@
 .__otp.open{right:0!important}
 .__otp #toc-header{padding:0 0 10px 0!important}
 .__otp-scroll{max-height:calc(50vh - 40px);overflow-y:auto}
+.__onair_banner__{pointer-events:none;padding:6px 10px!important;border-radius:6px!important;transition:width .2s ease,height .2s ease,padding .2s ease,border-radius .2s ease!important}
+.__onair_banner__.idle{width:14px!important;height:14px!important;padding:0!important;border-radius:50%!important;overflow:hidden!important;pointer-events:auto!important;cursor:pointer!important}
+.__onair_banner__.idle .banner-icon,.__onair_banner__.idle .banner-msg{display:none!important}
+.__onair_banner__.idle:hover{width:auto!important;height:auto!important;padding:6px 10px!important;border-radius:6px!important;overflow:visible!important}
+.__onair_banner__.idle:hover .banner-icon,.__onair_banner__.idle:hover .banner-msg{display:inline!important}
 @media (max-width: 640px){.__onair_banner__ .banner-msg{display:none}}
 </style>
 <nav id="__otp" class="__otp">
 <button id="__otb" class="__otb" style="display:none" aria-label="Toggle TOC">&lt;</button>
 <div class="__otp-scroll"><nav id="toc" class="toc"></nav></div>
 </nav>
-<div id="__onair_banner__" class="__onair_banner__" title="OnAir live preview active…" style="position:fixed!important;bottom:12px!important;right:12px!important;z-index:2147483647!important;background:#0969da!important;color:#fff!important;font:12px -apple-system,BlinkMacSystemFont,sans-serif!important;padding:6px 10px!important;border-radius:6px!important;box-shadow:0 2px 8px rgba(0,0,0,.25)!important;opacity:.88!important;pointer-events:none!important;"><span class="banner-icon">🔌</span><span class="banner-msg">OnAir live preview active…</span></div>
+<div id="__onair_banner__" class="__onair_banner__" title="OnAir live preview active…" style="position:fixed!important;bottom:12px!important;right:12px!important;z-index:2147483647!important;background:#0969da!important;color:#fff!important;font:12px -apple-system,BlinkMacSystemFont,sans-serif!important;box-shadow:0 2px 8px rgba(0,0,0,.25)!important;opacity:.88!important;"><span class="banner-icon">🔌</span><span class="banner-msg">OnAir live preview active…</span></div>
 <script>
 (function () {
 	var bannerEl = document.getElementById('__onair_banner__');
@@ -23,7 +28,16 @@
 	var fullPath = {{FULL_PATH_JSON}};
 	var fileTitle = {{TITLE_JSON}};
 	var proto = location.protocol === 'https:' ? 'wss' : 'ws';
-	var ws, reconnectTimer;
+	var ws, reconnectTimer, idleTimer;
+
+	function scheduleIdle() {
+		clearTimeout(idleTimer);
+		idleTimer = setTimeout(function () { bannerEl.classList.add('idle'); }, 4000);
+	}
+	function wakeBanner() {
+		clearTimeout(idleTimer);
+		bannerEl.classList.remove('idle');
+	}
 
 	{{TOC_JS}}
 
@@ -61,6 +75,7 @@
 			bannerEl.title = 'OnAir live preview active…'; bannerEl.querySelector('.banner-icon').textContent = '🔌'; bannerEl.querySelector('.banner-msg').textContent = 'OnAir live preview active…';
 			bannerEl.style.background = '#0969da';
 			clearTimeout(reconnectTimer);
+			wakeBanner(); scheduleIdle();
 		};
 		ws.onmessage = function (ev) {
 			try {
@@ -70,12 +85,14 @@
 				} else if (msg.type === 'closed') {
 					bannerEl.title = 'Source file was closed in VS Code'; bannerEl.querySelector('.banner-icon').textContent = '⚠️'; bannerEl.querySelector('.banner-msg').textContent = 'Source file was closed in VS Code';
 					bannerEl.style.background = '#bc4c00';
+					wakeBanner();
 				}
 			} catch (e) { /* ignore malformed message */ }
 		};
 		ws.onclose = function () {
 			bannerEl.title = '⚠️ Connection lost, reconnecting…'; bannerEl.querySelector('.banner-icon').textContent = '⚠️'; bannerEl.querySelector('.banner-msg').textContent = 'Connection lost, reconnecting…';
 			bannerEl.style.background = '#bc4c00';
+			wakeBanner();
 			reconnectTimer = setTimeout(connect, 1500);
 		};
 	}
