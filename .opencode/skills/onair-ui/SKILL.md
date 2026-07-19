@@ -131,14 +131,19 @@ body       { margin:0; font:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetic
 
 ### Scrollbar
 
+All custom scrollbars share one rule set, sized by the `--sb-w` variable (default `16px`, user-adjustable — see banner control). Width is `var(--sb-w, 16px)` for both `width` and `height` so horizontal and vertical bars stay homologous.
+
 ```css
-#toc::-webkit-scrollbar { width:16px; height:16px; }
-#toc::-webkit-scrollbar-track { background:transparent; }
-#toc::-webkit-scrollbar-thumb { background:var(--border); border-radius:6px; border:2px solid transparent; background-clip:content-box; }
-#toc::-webkit-scrollbar-thumb:hover { background:var(--quote-c); border:2px solid transparent; background-clip:content-box; }
+.onair-md::-webkit-scrollbar, .onair-md ::-webkit-scrollbar, #toc-list::-webkit-scrollbar, #toc-related::-webkit-scrollbar { width:var(--sb-w,16px); height:var(--sb-w,16px); }
+… -track  { background:transparent; }
+… -thumb  { background:var(--border); border-radius:6px; border:2px solid transparent; background-clip:content-box; }
+… -thumb:hover { background:var(--quote-c); … }
+… -corner { background:transparent; }
 ```
 
-Both horizontal and vertical scrollbars use the same style (set `height` for horizontal).
+**Scoping — critical.** `page.css` is shared by both templates. The markdown selectors are scoped to `.onair-md` (a class set on `<html>` in `markdown-page.html` only), and `#toc-list`/`#toc-related` cover the TOC panels in both templates. This deliberately covers the markdown document scrollbar, code blocks (`pre`), and TOC — but **never** the user's own page in the HTML-snippet preview (its root/body/`pre` scrollbars stay native). Never use a bare `::-webkit-scrollbar` in this file.
+
+**Always define `-corner`.** Where a vertical and horizontal scrollbar meet (e.g. `#toc-list` with wide links, or a code block that scrolls both ways) WebKit draws a separate `::-webkit-scrollbar-corner`. Without a rule it falls back to the browser default (white) — glaring in dark mode. Style it `background:transparent` (shows the element's `var(--bg)`).
 
 ### List & Links
 
@@ -225,6 +230,10 @@ Both: hover changes color only — never the dimension, to avoid layout jump.
 
 Layout: `A− [input] [↺] A+`. Buttons ±2, ↺ resets to 16. Range clamped to 12–28. Persisted in `localStorage('onair-font-size')`.
 
+### Scrollbar Width Input
+
+Same `.fs-input` + `.bp-btn` styling as font size. Layout: `⇳− [input] [↺] ⇳+`. Buttons ±2, ↺ resets to 16. Range clamped to 8–24. Sets `--sb-w` on `document.documentElement` and persists in `localStorage('onair-scrollbar-width')`. Markdown-only control; the HTML snippet has no banner but reads the same key on load and applies `--sb-w` so its TOC scrollbars honor the chosen width.
+
 ## HTML-snippet status badge (`#__onair_banner__`)
 
 The HTML preview can't inject a top layout bar, so status lives in a floating corner widget: `#__onair_status` (a `position:fixed; bottom:12px; right:12px; pointer-events:none` container) holding two stacked layers — `#__onair_dot` (a 14px circle, `pointer-events:auto`) and `#__onair_banner__` (the full badge, `pointer-events:none` **always**). To avoid overlapping whatever the user's page puts in the bottom-right, the widget auto-collapses: 4s after any state change the container gains `.idle`, which shows the dot and hides the badge (color still conveys state). Every state handler — `onopen`, `closed`, `onclose` — calls `setStatus(icon,msg,color)` (updates both dot + badge), then `wakeBanner()` (remove `.idle`, clear timer, show the full badge) then `scheduleIdle()` (re-arm the 4s collapse), so even error (yellow) states settle back into a colored dot instead of lingering.
@@ -237,6 +246,7 @@ The HTML preview can't inject a top layout bar, so status lives in a floating co
 |---|---|---|
 | `onair-theme` | string | `auto`, `dark`, `light` |
 | `onair-font-size` | number | 12–28 (default 16) |
+| `onair-scrollbar-width` | number | 8–24 (default 16); drives `--sb-w` |
 | `onair-toc-width` | number | 24–∞ (min 24 so the resizer stays grabbable; no upper cap — drag as wide as you like, content just scrolls; no forced default, CSS `clamp(420px,24vw,560px)` applies until the user drags) |
 | `onair-related-height` | number | 120–480 (default 200) |
 

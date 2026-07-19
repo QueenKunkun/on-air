@@ -36,6 +36,9 @@
 	var proto = location.protocol === 'https:' ? 'wss' : 'ws';
 	var ws, reconnectTimer, idleTimer;
 
+	var sbw = parseInt(localStorage.getItem('onair-scrollbar-width'));
+	if (!isNaN(sbw)) document.documentElement.style.setProperty('--sb-w', sbw + 'px');
+
 	function setStatus(icon, msg, color) {
 		dotEl.title = msg; dotEl.style.background = color;
 		bannerEl.title = msg; bannerEl.style.background = color;
