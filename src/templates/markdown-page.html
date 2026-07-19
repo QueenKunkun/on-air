@@ -15,6 +15,7 @@
 		<option value="light">☀️ Light</option>
 	</select>
 	<button class="wp-btn" id="wpBtn" title="Toggle word wrapping for code blocks">Wrap code</button>
+	<button class="wp-btn" id="hoverBtn" title="Toggle hover preview for footnote/annotation notes">Hover notes</button>
 	<span class="bp-group"><span class="bp-label" title="Font size">A</span>
 		<button class="bp-btn" id="fsDec" title="Decrease font size">−</button>
 		<input class="fs-input" id="fsInput" type="number" min="12" max="28" value="16" title="Font size (12-28)">
@@ -172,6 +173,32 @@
 		var cardRegistry = [];
 		var hoverOn = localStorage.getItem('onair-annot-hover') === '1';
 
+		var pop = document.createElement('div');
+		pop.id = 'annot-pop';
+		pop.style.display = 'none';
+		document.body.appendChild(pop);
+		function hidePopover() { pop.style.display = 'none'; }
+		function showPopover(mark, htmlStr) {
+			pop.innerHTML = htmlStr;
+			pop.style.display = 'block';
+			pop.style.left = '0px'; pop.style.top = '0px';
+			var r = mark.getBoundingClientRect();
+			var top = r.bottom + window.pageYOffset + 6;
+			pop.style.top = top + 'px';
+			pop.style.left = (r.left + window.pageXOffset) + 'px';
+			var pr = pop.getBoundingClientRect();
+			if (pr.right > window.innerWidth - 8) {
+				pop.style.left = Math.max(8, window.innerWidth - pr.width - 8) + window.pageXOffset + 'px';
+			}
+		}
+		document.addEventListener('click', function (e) {
+			if (pop.style.display !== 'none' && !pop.contains(e.target) && !(e.target.closest && e.target.closest('.annot-mark'))) hidePopover();
+		});
+		function annotColumnVisible() {
+			var side = document.getElementById('annotSide');
+			return getComputedStyle(side).display !== 'none' && !side.classList.contains('collapsed');
+		}
+
 		function prevMark(ref) {
 			var n = ref.previousSibling;
 			while (n && n.nodeType === 3 && !/\S/.test(n.textContent)) n = n.previousSibling;
@@ -222,7 +249,20 @@
 			for (var r = 0; r < refs.length; r++) {
 				var ref = refs[r];
 				var markEl = prevMark(ref);
-				if (!markEl) continue;
+				if (!markEl) {
+					var fa = ref.querySelector('a');
+					var fli = fa && liById[(fa.getAttribute('href') || '').replace(/^#/, '')];
+					if (fli) {
+						var fclone = fli.cloneNode(true);
+						var fback = fclone.querySelector('.footnote-backref');
+						if (fback) fback.parentNode.removeChild(fback);
+						(function (m, htmlStr) {
+							m.onmouseenter = function () { if (hoverOn) showPopover(m, htmlStr); };
+							m.onmouseleave = function () { if (hoverOn) hidePopover(); };
+						})(ref, fclone.innerHTML);
+					}
+					continue;
+				}
 				var a = ref.querySelector('a');
 				if (!a) continue;
 				var fnId = (a.getAttribute('href') || '').replace(/^#/, '');
@@ -241,17 +281,25 @@
 				var clone = li.cloneNode(true);
 				var back = clone.querySelector('.footnote-backref');
 				if (back) back.parentNode.removeChild(back);
-				card.innerHTML = clone.innerHTML;
+				var cardHtml = clone.innerHTML;
+				card.innerHTML = cardHtml;
 				annots.appendChild(card);
 				li.parentNode.removeChild(li);
 
 				cardRegistry.push({ id: aid, mark: markEl, card: card });
-				(function (id, mark, cardEl) {
-					mark.onclick = function () { activate(id, true); };
+				(function (id, mark, cardEl, htmlStr) {
+					mark.onclick = function (e) {
+						if (annotColumnVisible()) { activate(id, true); }
+						else { showPopover(mark, htmlStr); if (e) e.stopPropagation(); }
+					};
 					cardEl.onclick = function () { activate(id, false); };
-					mark.onmouseenter = function () { if (hoverOn) activate(id, false); };
+					mark.onmouseenter = function () {
+						if (!hoverOn) return;
+						if (annotColumnVisible()) activate(id, false); else showPopover(mark, htmlStr);
+					};
+					mark.onmouseleave = function () { if (hoverOn && !annotColumnVisible()) hidePopover(); };
 					cardEl.onmouseenter = function () { if (hoverOn) activate(id, false); };
-				})(aid, markEl, card);
+				})(aid, markEl, card, cardHtml);
 			}
 
 			if (sec && !sec.querySelector('li.footnote-item')) {
@@ -291,7 +339,19 @@
 			handle.onclick = function () { setCollapsed(!side.classList.contains('collapsed')); };
 		})();
 
-		window.addEventListener('resize', layoutCards);
+		// ---- hover-preview switch (shared by footnotes/annotations) ----
+		(function () {
+			var hoverBtn = document.getElementById('hoverBtn');
+			if (hoverOn) hoverBtn.classList.add('on');
+			hoverBtn.onclick = function () {
+				hoverOn = !hoverOn;
+				this.classList.toggle('on', hoverOn);
+				localStorage.setItem('onair-annot-hover', hoverOn ? '1' : '0');
+				if (!hoverOn) hidePopover();
+			};
+		})();
+
+		window.addEventListener('resize', function () { layoutCards(); hidePopover(); });
 
 		// ---- TOC resize ----
 		(function () {
