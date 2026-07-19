@@ -9,7 +9,7 @@ Turn the currently open Markdown or HTML file into a **live local preview link**
 - **Live sync** — edits refresh automatically (no save needed); Markdown updates in place, HTML reloads
 - **Table of contents** — nested navigation, scroll tracking, resizable, collapsible; plus a **Related documents** list, and relative links to other docs open as previews
 - **Assets just work** — sibling files (`images/`, `embeds/`, …) and relative references are served automatically
-- **Reading comfort** — code highlighting with a wrap toggle, font size controls, and auto/dark/light themes
+- **Reading comfort** — code highlighting with a wrap toggle, font size and scrollbar width controls, and auto/dark/light themes
 - **LAN sharing** — get a localhost and a LAN IP link so others on your WiFi can open the preview
 
 

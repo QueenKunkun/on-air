@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.9.0] - 2026-07-19
+
+- feat: adjustable scrollbar width control in the preview banner
+
+
 ## [0.8.0] - 2026-07-19
 
 - feat: Collapse the table of contents with a side handle (Markdown preview)
