@@ -178,18 +178,22 @@
 		pop.style.display = 'none';
 		document.body.appendChild(pop);
 		function hidePopover() { pop.style.display = 'none'; }
-		function showPopover(mark, htmlStr) {
+		function showPopover(evt, htmlStr) {
 			pop.innerHTML = htmlStr;
 			pop.style.display = 'block';
 			pop.style.left = '0px'; pop.style.top = '0px';
-			var r = mark.getBoundingClientRect();
-			var top = r.bottom + window.pageYOffset + 6;
-			pop.style.top = top + 'px';
-			pop.style.left = (r.left + window.pageXOffset) + 'px';
-			var pr = pop.getBoundingClientRect();
-			if (pr.right > window.innerWidth - 8) {
-				pop.style.left = Math.max(8, window.innerWidth - pr.width - 8) + window.pageXOffset + 'px';
+			var curX = evt.clientX, curY = evt.clientY;
+			var ph = pop.offsetHeight, pw = pop.offsetWidth;
+			var below = 26; // clear the hand cursor which extends downward from the pointer
+			var top = curY + below;
+			if (top + ph > window.innerHeight - 8) {
+				// not enough room below: flip above the pointer (hand never covers upward)
+				top = Math.max(8, curY - ph - 8);
 			}
+			var left = curX;
+			if (left + pw > window.innerWidth - 8) left = Math.max(8, window.innerWidth - pw - 8);
+			pop.style.top = (top + window.pageYOffset) + 'px';
+			pop.style.left = (left + window.pageXOffset) + 'px';
 		}
 		document.addEventListener('click', function (e) {
 			if (pop.style.display !== 'none' && !pop.contains(e.target) && !(e.target.closest && e.target.closest('.annot-mark'))) hidePopover();
@@ -257,7 +261,7 @@
 						var fback = fclone.querySelector('.footnote-backref');
 						if (fback) fback.parentNode.removeChild(fback);
 						(function (m, htmlStr) {
-							m.onmouseenter = function () { if (hoverOn) showPopover(m, htmlStr); };
+							m.onmouseenter = function (e) { if (hoverOn) showPopover(e, htmlStr); };
 							m.onmouseleave = function () { if (hoverOn) hidePopover(); };
 						})(ref, fclone.innerHTML);
 					}
@@ -290,12 +294,12 @@
 				(function (id, mark, cardEl, htmlStr) {
 					mark.onclick = function (e) {
 						if (annotColumnVisible()) { activate(id, true); }
-						else { showPopover(mark, htmlStr); if (e) e.stopPropagation(); }
+						else { showPopover(e, htmlStr); if (e) e.stopPropagation(); }
 					};
 					cardEl.onclick = function () { activate(id, false); };
-					mark.onmouseenter = function () {
+					mark.onmouseenter = function (e) {
 						if (!hoverOn) return;
-						if (annotColumnVisible()) activate(id, false); else showPopover(mark, htmlStr);
+						if (annotColumnVisible()) activate(id, false); else showPopover(e, htmlStr);
 					};
 					mark.onmouseleave = function () { if (hoverOn && !annotColumnVisible()) hidePopover(); };
 					cardEl.onmouseenter = function () { if (hoverOn) activate(id, false); };
