@@ -65,10 +65,10 @@
     "lint": "eslint src",
     "test": "vscode-test",
     "test:unit": "node --test",
-    "publish-all": "pnpm publish-vsce && pnpm publish-ovsx",
+    "publish-all": "node scripts/check-size.mjs && pnpm publish-vsce && pnpm publish-ovsx",
     "package-vsix": "vsce package --no-dependencies",
-    "publish-vsce": "vsce package --no-dependencies && vsce publish --no-dependencies",
-    "publish-ovsx": "bash -c 'source .env && npx ovsx publish -p $vsx_token --no-dependencies'"
+    "publish-vsce": "vsce publish --packagePath on-air.vsix --no-dependencies",
+    "publish-ovsx": "bash -c 'source .env && npx ovsx publish on-air.vsix -p $vsx_token --no-dependencies'"
   },
   "devDependencies": {
     "@types/markdown-it": "^14.1.2",

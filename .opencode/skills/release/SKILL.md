@@ -100,7 +100,9 @@ git tag v<new-version>
 
 ```
 git push && git push --tags
-vsce package && vsce publish
+pnpm publish-all
 ```
+
+`pnpm publish-all` first runs `scripts/check-size.mjs`, which packages `on-air.vsix` and aborts if it exceeds 1 MB (prompt to continue, or `ALLOW_LARGE_VSIX=1` to skip); it then publishes that same artifact to the VS Marketplace and Open VSX.
 
 Leave the final publish to the user.
