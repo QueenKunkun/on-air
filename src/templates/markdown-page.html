@@ -25,7 +25,7 @@
 		<input class="fs-input" id="sbInput" type="number" min="0" step="4" value="16" title="Scrollbar width">
 		<button class="bp-btn" id="sbReset" title="Reset scrollbar width to default">↺</button>
 		<button class="bp-btn" id="sbInc" title="Thicker scrollbars">+</button></span></div>
-	<div id="wrapper"><div id="tocSide"><nav id="toc" class="toc"></nav><button id="tocToggle" class="toc-toggle" aria-label="Toggle table of contents">&lt;</button></div><div class="toc-resizer" id="tocResizer"></div><article class="markdown-body" id="content">{{BODY}}</article></div>
+	<div id="wrapper"><div id="tocSide"><nav id="toc" class="toc"></nav><button id="tocToggle" class="toc-toggle" aria-label="Toggle table of contents">&lt;</button></div><div class="toc-resizer" id="tocResizer"></div><article class="markdown-body" id="content">{{BODY}}</article><div class="annot-resizer" id="annotResizer"></div><div id="annotSide"><div id="annots"></div><button id="annotToggle" class="annot-toggle" aria-label="Toggle annotations">&gt;</button></div></div>
 	<script>
 	(function () {
 		var bannerEl = document.getElementById('banner');
@@ -94,6 +94,7 @@
 			});
 			fsInput.value = fs;
 			localStorage.setItem('onair-font-size', String(fs));
+			if (typeof layoutCards === 'function') layoutCards();
 		}
 
 		// ---- scrollbar width ----
@@ -167,6 +168,131 @@
 			head.onclick = function () { setCollapsed(!block.classList.contains('collapsed')); };
 		}
 
+		// ---- annotations: route ==mark==-adjacent notes into the right column ----
+		var cardRegistry = [];
+		var hoverOn = localStorage.getItem('onair-annot-hover') === '1';
+
+		function prevMark(ref) {
+			var n = ref.previousSibling;
+			while (n && n.nodeType === 3 && !/\S/.test(n.textContent)) n = n.previousSibling;
+			if (n && n.nodeType === 1 && n.tagName === 'MARK') return n;
+			return null;
+		}
+		function markDocY(el) { return el.getBoundingClientRect().top + window.pageYOffset; }
+
+		function activate(aid, scroll) {
+			for (var i = 0; i < cardRegistry.length; i++) {
+				var on = cardRegistry[i].id === aid;
+				cardRegistry[i].mark.classList.toggle('active', on);
+				cardRegistry[i].card.classList.toggle('active', on);
+				if (on && scroll) cardRegistry[i].card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+			}
+		}
+
+		function layoutCards() {
+			if (!cardRegistry.length) return;
+			var annots = document.getElementById('annots');
+			annots.style.minHeight = contentEl.offsetHeight + 'px';
+			var base = markDocY(annots);
+			var items = cardRegistry.slice().sort(function (a, b) { return markDocY(a.mark) - markDocY(b.mark); });
+			var prevBottom = -1e9, gap = 12;
+			for (var i = 0; i < items.length; i++) {
+				var natural = markDocY(items[i].mark) - base;
+				var y = Math.max(natural, prevBottom + gap);
+				items[i].card.style.top = y + 'px';
+				prevBottom = y + items[i].card.offsetHeight;
+			}
+		}
+
+		function buildAnnotations() {
+			var side = document.getElementById('annotSide');
+			var annots = document.getElementById('annots');
+			annots.innerHTML = '';
+			cardRegistry = [];
+
+			var refs = contentEl.querySelectorAll('sup.footnote-ref');
+			var sec = contentEl.querySelector('section.footnotes');
+			var liById = {};
+			if (sec) {
+				var lis = sec.querySelectorAll('li.footnote-item');
+				for (var i = 0; i < lis.length; i++) liById[lis[i].id] = lis[i];
+			}
+
+			var annId = 0;
+			for (var r = 0; r < refs.length; r++) {
+				var ref = refs[r];
+				var markEl = prevMark(ref);
+				if (!markEl) continue;
+				var a = ref.querySelector('a');
+				if (!a) continue;
+				var fnId = (a.getAttribute('href') || '').replace(/^#/, '');
+				var li = liById[fnId];
+				if (!li) continue;
+
+				annId++;
+				var aid = 'a' + annId;
+				markEl.setAttribute('data-annot-id', aid);
+				markEl.classList.add('annot-mark');
+				ref.style.display = 'none';
+
+				var card = document.createElement('div');
+				card.className = 'annot-card';
+				card.setAttribute('data-annot-id', aid);
+				var clone = li.cloneNode(true);
+				var back = clone.querySelector('.footnote-backref');
+				if (back) back.parentNode.removeChild(back);
+				card.innerHTML = clone.innerHTML;
+				annots.appendChild(card);
+				li.parentNode.removeChild(li);
+
+				cardRegistry.push({ id: aid, mark: markEl, card: card });
+				(function (id, mark, cardEl) {
+					mark.onclick = function () { activate(id, true); };
+					cardEl.onclick = function () { activate(id, false); };
+					mark.onmouseenter = function () { if (hoverOn) activate(id, false); };
+					cardEl.onmouseenter = function () { if (hoverOn) activate(id, false); };
+				})(aid, markEl, card);
+			}
+
+			if (sec && !sec.querySelector('li.footnote-item')) {
+				var sep = contentEl.querySelector('hr.footnotes-sep');
+				if (sep) sep.parentNode.removeChild(sep);
+				sec.parentNode.removeChild(sec);
+			}
+
+			var has = cardRegistry.length > 0;
+			side.style.display = has ? '' : 'none';
+			document.getElementById('annotResizer').style.display = (has && !side.classList.contains('collapsed')) ? '' : 'none';
+			if (has) layoutCards();
+		}
+
+		// ---- annotation column resize ----
+		(function () {
+			attachResizer(document.getElementById('annotResizer'), document.getElementById('annotSide'), {
+				axis: 'x', invert: true, key: 'onair-annot-width', def: null, min: 120, max: Infinity,
+				get: function (el) { return el.offsetWidth; },
+				set: function (el, v) { el.style.width = v + 'px'; layoutCards(); }
+			});
+		})();
+
+		// ---- annotation column collapse handle ----
+		(function () {
+			var handle = document.getElementById('annotToggle');
+			var side = document.getElementById('annotSide');
+			var resizer = document.getElementById('annotResizer');
+			function setCollapsed(c) {
+				side.classList.toggle('collapsed', c);
+				handle.textContent = c ? '<' : '>';
+				handle.title = c ? 'Show annotations' : 'Hide annotations';
+				if (cardRegistry.length) resizer.style.display = c ? 'none' : '';
+				localStorage.setItem('onair-annot-collapsed', c ? '1' : '0');
+			}
+			setCollapsed(localStorage.getItem('onair-annot-collapsed') === '1');
+			handle.onclick = function () { setCollapsed(!side.classList.contains('collapsed')); };
+		})();
+
+		window.addEventListener('resize', layoutCards);
+
 		// ---- TOC resize ----
 		(function () {
 			var resizer = document.getElementById('tocResizer');
@@ -208,6 +334,7 @@
 						if (msg.fullPath) fullPath = msg.fullPath;
 						if (msg.relPath != null) relPath = msg.relPath;
 						buildToc();
+						buildAnnotations();
 						processFootnotes();
 						if (document.getElementById('wpBtn').classList.contains('on')) contentEl.classList.add('wp');
 						document.title = msg.title + ' · OnAir';
@@ -225,6 +352,7 @@
 		}
 		connect();
 		buildToc();
+		buildAnnotations();
 		processFootnotes();
 	})();
 	</script>
