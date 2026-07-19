@@ -221,12 +221,14 @@
 				var on = cardRegistry[i].id === aid;
 				cardRegistry[i].mark.classList.toggle('active', on);
 				cardRegistry[i].card.classList.toggle('active', on);
+				cardRegistry[i].card.style.zIndex = on ? '5' : '';
 				if (on && scroll) cardRegistry[i].card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 			}
 		}
 
 		function layoutCards() {
 			if (!cardRegistry.length) return;
+			if (document.getElementById('annotSide').classList.contains('collapsed')) return;
 			var annots = document.getElementById('annots');
 			annots.style.minHeight = contentEl.offsetHeight + 'px';
 			var base = markDocY(annots);
@@ -343,6 +345,7 @@
 				handle.title = c ? 'Show annotations' : 'Hide annotations';
 				if (cardRegistry.length) resizer.style.display = c ? 'none' : '';
 				localStorage.setItem('onair-annot-collapsed', c ? '1' : '0');
+				if (!c) layoutCards();
 			}
 			setCollapsed(localStorage.getItem('onair-annot-collapsed') === '1');
 			handle.onclick = function () { setCollapsed(!side.classList.contains('collapsed')); };
@@ -361,6 +364,7 @@
 		})();
 
 		window.addEventListener('resize', function () { layoutCards(); hidePopover(); });
+		window.addEventListener('load', function () { layoutCards(); });
 
 		// ---- TOC resize ----
 		(function () {
