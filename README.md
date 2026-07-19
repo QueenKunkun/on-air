@@ -8,6 +8,7 @@ Turn the currently open Markdown or HTML file into a **live local preview link**
 - **Stable links** — the same file always gets the same address; multiple files can preview at once
 - **Live sync** — edits refresh automatically (no save needed); Markdown updates in place, HTML reloads
 - **Table of contents** — nested navigation, scroll tracking, resizable, collapsible; shows the file's relative path; plus a **Related documents** list, and relative links to other docs open as previews
+- **Highlights & footnotes** — `==highlight==` text with notes shown as margin cards, and footnotes rendered in a collapsible block
 - **Assets just work** — sibling files (`images/`, `embeds/`, …) and relative references are served automatically
 - **Reading comfort** — code highlighting with a wrap toggle, font size and scrollbar width controls, and auto/dark/light themes
 - **LAN sharing** — get a localhost and a LAN IP link so others on your WiFi can open the preview

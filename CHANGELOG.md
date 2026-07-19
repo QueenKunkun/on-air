@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.11.0] - 2026-07-19
+
+- feat: highlight text with ==mark== and attach notes shown as Hypothesis-style margin cards
+- feat: render footnotes in a collapsible block at the bottom of the page
+- feat: preview links now stay stable across restarts and reconnects
+
+
 ## [0.10.0] - 2026-07-19
 
 - feat: show the file's relative path under the filename in the table of contents
