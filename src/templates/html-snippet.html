@@ -7,20 +7,26 @@
 .__otp.open{right:0!important}
 .__otp #toc-header{padding:0 0 10px 0!important}
 .__otp-scroll{max-height:calc(50vh - 40px);overflow-y:auto}
-.__onair_banner__{pointer-events:none;padding:6px 10px!important;border-radius:6px!important;transition:padding .15s ease,border-radius .15s ease!important}
-.__onair_banner__.idle{width:14px!important;height:14px!important;padding:0!important;border-radius:50%!important;overflow:hidden!important;pointer-events:auto!important;cursor:pointer!important}
-.__onair_banner__.idle .banner-icon,.__onair_banner__.idle .banner-msg{display:none!important}
-.__onair_banner__.idle:hover{width:auto!important;height:auto!important;padding:6px 10px!important;border-radius:6px!important;overflow:visible!important}
-.__onair_banner__.idle:hover .banner-icon,.__onair_banner__.idle:hover .banner-msg{display:inline!important}
+.__onair_status{position:fixed!important;bottom:12px!important;right:12px!important;z-index:2147483647!important;pointer-events:none!important}
+.__onair_dot{position:absolute;bottom:0;right:0;width:14px;height:14px;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.25);opacity:.88;pointer-events:auto;cursor:pointer;display:none}
+.__onair_status.idle .__onair_dot{display:block}
+.__onair_banner__{position:absolute;bottom:0;right:0;white-space:nowrap;color:#fff;font:12px -apple-system,BlinkMacSystemFont,sans-serif;padding:6px 10px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.25);opacity:.88;pointer-events:none}
+.__onair_status.idle .__onair_banner__{display:none}
+.__onair_status.idle .__onair_dot:hover ~ .__onair_banner__{display:block}
 @media (max-width: 640px){.__onair_banner__ .banner-msg{display:none}}
 </style>
 <nav id="__otp" class="__otp">
 <button id="__otb" class="__otb" style="display:none" aria-label="Toggle TOC">&lt;</button>
 <div class="__otp-scroll"><nav id="toc" class="toc"></nav></div>
 </nav>
-<div id="__onair_banner__" class="__onair_banner__" title="OnAir live preview active…" style="position:fixed!important;bottom:12px!important;right:12px!important;z-index:2147483647!important;background:#0969da!important;color:#fff!important;font:12px -apple-system,BlinkMacSystemFont,sans-serif!important;box-shadow:0 2px 8px rgba(0,0,0,.25)!important;opacity:.88!important;"><span class="banner-icon">🔌</span><span class="banner-msg">OnAir live preview active…</span></div>
+<div id="__onair_status" class="__onair_status">
+<div id="__onair_dot" class="__onair_dot" title="OnAir live preview active…" style="background:#0969da;"></div>
+<div id="__onair_banner__" class="__onair_banner__" title="OnAir live preview active…" style="background:#0969da;"><span class="banner-icon">🔌</span><span class="banner-msg">OnAir live preview active…</span></div>
+</div>
 <script>
 (function () {
+	var statusEl = document.getElementById('__onair_status');
+	var dotEl = document.getElementById('__onair_dot');
 	var bannerEl = document.getElementById('__onair_banner__');
 	var tocBtn = document.getElementById('__otb');
 	var tocPanel = document.getElementById('__otp');
@@ -30,13 +36,19 @@
 	var proto = location.protocol === 'https:' ? 'wss' : 'ws';
 	var ws, reconnectTimer, idleTimer;
 
+	function setStatus(icon, msg, color) {
+		dotEl.title = msg; dotEl.style.background = color;
+		bannerEl.title = msg; bannerEl.style.background = color;
+		bannerEl.querySelector('.banner-icon').textContent = icon;
+		bannerEl.querySelector('.banner-msg').textContent = msg;
+	}
 	function scheduleIdle() {
 		clearTimeout(idleTimer);
-		idleTimer = setTimeout(function () { bannerEl.classList.add('idle'); }, 4000);
+		idleTimer = setTimeout(function () { statusEl.classList.add('idle'); }, 4000);
 	}
 	function wakeBanner() {
 		clearTimeout(idleTimer);
-		bannerEl.classList.remove('idle');
+		statusEl.classList.remove('idle');
 	}
 
 	{{TOC_JS}}
@@ -72,8 +84,7 @@
 	function connect() {
 		ws = new WebSocket(proto + '://' + location.host + '/ws/' + id);
 		ws.onopen = function () {
-			bannerEl.title = 'OnAir live preview active…'; bannerEl.querySelector('.banner-icon').textContent = '🔌'; bannerEl.querySelector('.banner-msg').textContent = 'OnAir live preview active…';
-			bannerEl.style.background = '#0969da';
+			setStatus('🔌', 'OnAir live preview active…', '#0969da');
 			clearTimeout(reconnectTimer);
 			wakeBanner(); scheduleIdle();
 		};
@@ -83,15 +94,13 @@
 				if (msg.type === 'reload') {
 					location.reload();
 				} else if (msg.type === 'closed') {
-					bannerEl.title = 'Source file was closed in VS Code'; bannerEl.querySelector('.banner-icon').textContent = '⚠️'; bannerEl.querySelector('.banner-msg').textContent = 'Source file was closed in VS Code';
-					bannerEl.style.background = '#bc4c00';
+					setStatus('⚠️', 'Source file was closed in VS Code', '#bc4c00');
 					wakeBanner(); scheduleIdle();
 				}
 			} catch (e) { /* ignore malformed message */ }
 		};
 		ws.onclose = function () {
-			bannerEl.title = '⚠️ Connection lost, reconnecting…'; bannerEl.querySelector('.banner-icon').textContent = '⚠️'; bannerEl.querySelector('.banner-msg').textContent = 'Connection lost, reconnecting…';
-			bannerEl.style.background = '#bc4c00';
+			setStatus('⚠️', 'Connection lost, reconnecting…', '#bc4c00');
 			wakeBanner(); scheduleIdle();
 			reconnectTimer = setTimeout(connect, 1500);
 		};
