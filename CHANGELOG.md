@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.10.0] - 2026-07-19
+
+- feat: show the file's relative path under the filename in the table of contents
+
+
 ## [0.9.0] - 2026-07-19
 
 - feat: adjustable scrollbar width control in the preview banner

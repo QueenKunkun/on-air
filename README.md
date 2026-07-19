@@ -7,7 +7,7 @@ Turn the currently open Markdown or HTML file into a **live local preview link**
 - **Markdown & HTML** — generate a link from the Command Palette, right-click menu, or title bar icon, then **open in browser** or **copy the link**
 - **Stable links** — the same file always gets the same address; multiple files can preview at once
 - **Live sync** — edits refresh automatically (no save needed); Markdown updates in place, HTML reloads
-- **Table of contents** — nested navigation, scroll tracking, resizable, collapsible; plus a **Related documents** list, and relative links to other docs open as previews
+- **Table of contents** — nested navigation, scroll tracking, resizable, collapsible; shows the file's relative path; plus a **Related documents** list, and relative links to other docs open as previews
 - **Assets just work** — sibling files (`images/`, `embeds/`, …) and relative references are served automatically
 - **Reading comfort** — code highlighting with a wrap toggle, font size and scrollbar width controls, and auto/dark/light themes
 - **LAN sharing** — get a localhost and a LAN IP link so others on your WiFi can open the preview
