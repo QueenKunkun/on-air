@@ -377,7 +377,9 @@ export class PreviewServer {
 	registerDocument(uriKey: string, title: string, content: string, kind: DocKind, rootDir: string, fullPath: string): string {
 		let id = this.uriToId.get(uriKey);
 		if (!id) {
-			id = crypto.randomBytes(6).toString('hex');
+			// Deterministic id: the same file always yields the same link, so
+			// previews survive extension restarts/upgrades and VS Code reloads.
+			id = crypto.createHash('sha256').update(uriKey).digest('hex').slice(0, 12);
 			this.uriToId.set(uriKey, id);
 		}
 		const existing = this.docs.get(id);
