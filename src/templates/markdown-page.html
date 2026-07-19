@@ -15,14 +15,16 @@
 		<option value="light">☀️ Light</option>
 	</select>
 	<button class="wp-btn" id="wpBtn" title="Toggle word wrapping for code blocks">Wrap code</button>
-	<button class="bp-btn" id="fsDec" title="Decrease font size">A−</button>
-	<input class="fs-input" id="fsInput" type="number" min="12" max="28" value="16" title="Font size (12-28)">
-	<button class="bp-btn" id="fsReset" title="Reset font size to default">↺</button>
-	<button class="bp-btn" id="fsInc" title="Increase font size">A+</button>
-	<button class="bp-btn" id="sbDec" title="Thinner scrollbars">⇳−</button>
-	<input class="fs-input" id="sbInput" type="number" min="8" max="24" value="16" title="Scrollbar width (8-24)">
-	<button class="bp-btn" id="sbReset" title="Reset scrollbar width to default">↺</button>
-	<button class="bp-btn" id="sbInc" title="Thicker scrollbars">⇳+</button></div>
+	<span class="bp-group"><span class="bp-label" title="Font size">A</span>
+		<button class="bp-btn" id="fsDec" title="Decrease font size">−</button>
+		<input class="fs-input" id="fsInput" type="number" min="12" max="28" value="16" title="Font size (12-28)">
+		<button class="bp-btn" id="fsReset" title="Reset font size to default">↺</button>
+		<button class="bp-btn" id="fsInc" title="Increase font size">+</button></span>
+	<span class="bp-group"><span class="bp-label" title="Scrollbar width">‖</span>
+		<button class="bp-btn" id="sbDec" title="Thinner scrollbars">−</button>
+		<input class="fs-input" id="sbInput" type="number" min="8" max="24" value="16" title="Scrollbar width (8-24)">
+		<button class="bp-btn" id="sbReset" title="Reset scrollbar width to default">↺</button>
+		<button class="bp-btn" id="sbInc" title="Thicker scrollbars">+</button></span></div>
 	<div id="wrapper"><div id="tocSide"><nav id="toc" class="toc"></nav><button id="tocToggle" class="toc-toggle" aria-label="Toggle table of contents">&lt;</button></div><div class="toc-resizer" id="tocResizer"></div><article class="markdown-body" id="content">{{BODY}}</article></div>
 	<script>
 	(function () {

@@ -228,6 +228,7 @@ Border matches the splitter for visual parity: `border: 4px solid var(--border)`
 - Text-changing toggle (`.wp-btn`): must have `min-width` so switching between short/long labels (e.g. "Wrap code" / "Unwrap code") doesn't push adjacent elements sideways.
 - Select (`.bp-select`): same sizing, extra right padding for dropdown arrow via inline SVG `background-image`
 - Select `<option>`: uses CSS variables `background:var(--bg); color:var(--text);`
+- Stepper groups (`.bp-group`): each multi-button cluster (font size, scrollbar width) is a tight `display:inline-flex; gap:4px` unit led by an icon `.bp-label` (`A` for font, `‖` for scrollbar). The `#banner` `gap:16px` between groups vs `4px` inside makes each cluster read as one unit — otherwise two near-identical steppers (both with a `↺` and a `16` input) are indistinguishable. The icon label carries the meaning, so the buttons are plain `−`/`+`.
 
 ### Font Size Input
 
@@ -236,11 +237,11 @@ Border matches the splitter for visual parity: `border: 4px solid var(--border)`
 .fs-input::-webkit-inner-spin-button, .fs-input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
 ```
 
-Layout: `A− [input] [↺] A+`. Buttons ±2, ↺ resets to 16. Range clamped to 12–28. Persisted in `localStorage('onair-font-size')`.
+Wrapped in a `.bp-group` led by an icon label (`.bp-label` = `A`). Layout: `A −[input]↺+`. Buttons ±2, ↺ resets to 16. Range clamped to 12–28. Persisted in `localStorage('onair-font-size')`.
 
 ### Scrollbar Width Input
 
-Same `.fs-input` + `.bp-btn` styling as font size. Layout: `⇳− [input] [↺] ⇳+`. Buttons ±2, ↺ resets to 16. Range clamped to 8–24. Sets `--sb-w` on `document.documentElement` and persists in `localStorage('onair-scrollbar-width')`. Markdown-only control; the HTML snippet has no banner but reads the same key on load and applies `--sb-w` so its TOC scrollbars honor the chosen width.
+Same `.fs-input` + `.bp-btn` styling as font size, wrapped in a `.bp-group` led by an icon label (`.bp-label` = `‖`). Layout: `‖ −[input]↺+`. Buttons ±2, ↺ resets to 16. Range clamped to 8–24. Sets `--sb-w` on `document.documentElement` and persists in `localStorage('onair-scrollbar-width')`. Markdown-only control; the HTML snippet has no banner but reads the same key on load and applies `--sb-w` so its TOC scrollbars honor the chosen width.
 
 ## HTML-snippet status badge (`#__onair_banner__`)
 
