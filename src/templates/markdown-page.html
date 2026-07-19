@@ -74,9 +74,21 @@
 			if (isNaN(v)) { this.value = fs; return; }
 			setFs(v);
 		};
+		function withScrollAnchor(fn) {
+			var se = document.scrollingElement || document.documentElement;
+			var kids = contentEl.children, anchor = null;
+			for (var i = 0; i < kids.length; i++) {
+				if (kids[i].getBoundingClientRect().bottom > 0) { anchor = kids[i]; break; }
+			}
+			var before = anchor ? anchor.getBoundingClientRect().top : 0;
+			fn();
+			if (anchor) se.scrollTop += anchor.getBoundingClientRect().top - before;
+		}
 		function setFs(v) {
-			fs = Math.max(12, Math.min(28, Math.round(v)));
-			contentEl.style.fontSize = fs + 'px';
+			withScrollAnchor(function () {
+				fs = Math.max(12, Math.min(28, Math.round(v)));
+				contentEl.style.fontSize = fs + 'px';
+			});
 			fsInput.value = fs;
 			localStorage.setItem('onair-font-size', String(fs));
 		}
