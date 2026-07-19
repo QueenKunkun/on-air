@@ -53,6 +53,8 @@ Any hover/active/focus transition that changes `width`, `height`, `padding`, `ma
 
 Allowed: `opacity`, `background`, `color`, `transform: scale` (scales from center, no reflow), `box-shadow`.
 
+**Intentional reflows (font-size / zoom) need scroll anchoring.** Changing the content font size necessarily reflows the whole document, so the saved pixel scroll offset lands on different content and the passage the user was reading jumps away. Native CSS `overflow-anchor` does *not* compensate for a global font-size change. The standard fix: before the change, pick the element currently at the top of the viewport (first child whose `getBoundingClientRect().bottom > 0`) and record its `top`; after the change, add the element's new `top` delta to `scrollingElement.scrollTop`. `setFs` in `markdown-page.html` wraps its mutation in this `withScrollAnchor` helper. (Ratio-based `scrollTop/scrollHeight` restore drifts because images and code blocks are px-sized and don't scale with the font.)
+
 ### 9. Text content must degrade gracefully on small viewports
 
 Status text (e.g., banner messages, connection indicators) should use an `icon + text` split in the HTML. On narrow viewports the text can be hidden with `@media` + `display:none`, while the icon remains. Always pair this with a `title` attribute on the container so users can hover to see the full status.
@@ -100,6 +102,7 @@ Preference saved to `localStorage('onair-theme')`. Values: `auto`, `dark`, `ligh
 --btn-hover-bg:#b3d2f0      --btn-on-bg:#0969da
 --btn-on-c:#fff              --btn-on-border:#0969da
 --fm-bg:#f6f8fa              --fm-border:#d8dee4
+--sb-thumb:#d0d7de           --sb-thumb-hover:#adb5bd
 ```
 
 ### CSS Variables — Dark
@@ -114,6 +117,7 @@ Preference saved to `localStorage('onair-theme')`. Values: `auto`, `dark`, `ligh
 --btn-hover-bg:#3c3c3c       --btn-on-bg:#1f6feb
 --btn-on-c:#fff               --btn-on-border:#1f6feb
 --fm-bg:#242526               --fm-border:#2a2b2c
+--sb-thumb:#4a4d4f            --sb-thumb-hover:#6a6d6f
 ```
 
 Highlight.js syntax colors are also themed (see `page.css` `--hljs-*` to `--h-builtin`).
@@ -136,10 +140,12 @@ All custom scrollbars share one rule set, sized by the `--sb-w` variable (defaul
 ```css
 .onair-md::-webkit-scrollbar, .onair-md ::-webkit-scrollbar, #toc-list::-webkit-scrollbar, #toc-related::-webkit-scrollbar { width:var(--sb-w,16px); height:var(--sb-w,16px); }
 … -track  { background:transparent; }
-… -thumb  { background:var(--border); border-radius:6px; border:2px solid transparent; background-clip:content-box; }
-… -thumb:hover { background:var(--quote-c); … }
+… -thumb  { background:var(--sb-thumb); border-radius:6px; border:2px solid transparent; background-clip:content-box; }
+… -thumb:hover { background:var(--sb-thumb-hover); … }
 … -corner { background:transparent; }
 ```
+
+**Never reuse `--border` for the thumb.** In dark mode `--border` (`#2a2b2c`) is almost identical to `--pre-bg` (`#242526`), so a thumb tinted with `--border` disappears on code blocks. The thumb has its own `--sb-thumb`/`--sb-thumb-hover` colors, chosen to stand out against both `--bg` and `--pre-bg`.
 
 **Scoping — critical.** `page.css` is shared by both templates. The markdown selectors are scoped to `.onair-md` (a class set on `<html>` in `markdown-page.html` only), and `#toc-list`/`#toc-related` cover the TOC panels in both templates. This deliberately covers the markdown document scrollbar, code blocks (`pre`), and TOC — but **never** the user's own page in the HTML-snippet preview (its root/body/`pre` scrollbars stay native). Never use a bare `::-webkit-scrollbar` in this file.
 
@@ -208,6 +214,8 @@ Both: hover changes color only — never the dimension, to avoid layout jump.
 ## TOC collapse handle (Markdown)
 
 `#tocToggle` toggles the whole TOC sidebar via a pure-CSS edge tab — no JS geometry. Structure: `#wrapper > #tocSide > (#toc + #tocToggle)`. `#tocSide` owns the sticky/flex role and (being `position:sticky`) is the containing block; `#toc` owns width + `overflow:hidden` + scroll. The handle is `position:absolute; left:100%` so it protrudes past the TOC's right edge and rides it through resize/collapse automatically. This mirrors the HTML snippet's `#__otb` (`position:absolute; right:100%`), just flipped to the right; earlier `overflow:hidden` on `#toc` blocked this, which is why the wrapper was introduced. Clicking adds/removes `#tocSide.collapsed` (drives `#toc` width to `0` and hides `.toc-resizer` via `#tocSide.collapsed + .toc-resizer { display:none }`) so `.markdown-body` expands to full width. When collapsed the handle switches to `position:fixed; left:0` so it docks flush to the viewport's left edge instead of floating at the wrapper's `24px` left padding (mirrors the HTML snippet, whose closed handle docks to the screen edge). State persists in `localStorage` key `onair-toc-collapsed` (`'1'`/`'0'`). Icon flips `<` (hide) / `>` (show).
+
+Border matches the splitter for visual parity: `border: 4px solid var(--border)` (same width as `.toc-resizer`) with `border-left:none`, and `:hover { border-color: var(--link-c) }` (mirrors `.toc-resizer:hover`). A thin 1px border here is invisible against `--bg` in dark mode — keep it at the splitter's 4px.
 
 ## Banner Controls
 
