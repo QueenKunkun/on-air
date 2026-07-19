@@ -6,6 +6,8 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { WebSocketServer, WebSocket } from 'ws';
 import MarkdownIt from 'markdown-it';
+import markdownItFootnote from 'markdown-it-footnote';
+import markdownItMark from 'markdown-it-mark';
 import hljs from 'highlight.js/lib/core';
 
 // Only register the languages we actually want to highlight, instead of pulling in
@@ -92,6 +94,9 @@ const md: MarkdownIt = new MarkdownIt({
 	typographer: true,
 	highlight: (code, lang) => `<pre class="hljs"><code>${highlightCode(code, lang)}</code></pre>`,
 });
+
+md.use(markdownItFootnote);
+md.use(markdownItMark);
 
 const slugify = (text: string): string =>
 	text.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w\u4e00-\u9fff\-]/g, '');
