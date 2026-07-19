@@ -241,7 +241,7 @@ Wrapped in a `.bp-group` led by an icon label (`.bp-label` = `A`). Layout: `A �
 
 ### Scrollbar Width Input
 
-Same `.fs-input` + `.bp-btn` styling as font size, wrapped in a `.bp-group` led by an icon label (`.bp-label` = `‖`). Layout: `‖ −[input]↺+`. Buttons ±2, ↺ resets to 16. Range clamped to 8–24. Sets `--sb-w` on `document.documentElement` and persists in `localStorage('onair-scrollbar-width')`. Markdown-only control; the HTML snippet has no banner but reads the same key on load and applies `--sb-w` so its TOC scrollbars honor the chosen width.
+Same `.fs-input` + `.bp-btn` styling as font size, wrapped in a `.bp-group` led by an icon label (`.bp-label` = `‖`). Layout: `‖ −[input]↺+`. Buttons ±4, ↺ resets to 16. No upper limit (floor 0). Sets `--sb-w` on `document.documentElement` and persists in `localStorage('onair-scrollbar-width')`. Markdown-only control; the HTML snippet has no banner but reads the same key on load and applies `--sb-w` so its TOC scrollbars honor the chosen width.
 
 ## HTML-snippet status badge (`#__onair_banner__`)
 
@@ -255,7 +255,7 @@ The HTML preview can't inject a top layout bar, so status lives in a floating co
 |---|---|---|
 | `onair-theme` | string | `auto`, `dark`, `light` |
 | `onair-font-size` | number | 12–28 (default 16) |
-| `onair-scrollbar-width` | number | 8–24 (default 16); drives `--sb-w` |
+| `onair-scrollbar-width` | number | ≥0 (default 16, step 4, no upper cap); drives `--sb-w` |
 | `onair-toc-width` | number | 24–∞ (min 24 so the resizer stays grabbable; no upper cap — drag as wide as you like, content just scrolls; no forced default, CSS `clamp(420px,24vw,560px)` applies until the user drags) |
 | `onair-related-height` | number | 120–480 (default 200) |
 

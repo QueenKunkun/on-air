@@ -22,7 +22,7 @@
 		<button class="bp-btn" id="fsInc" title="Increase font size">+</button></span>
 	<span class="bp-group"><span class="bp-label" title="Scrollbar width">‖</span>
 		<button class="bp-btn" id="sbDec" title="Thinner scrollbars">−</button>
-		<input class="fs-input" id="sbInput" type="number" min="8" max="24" value="16" title="Scrollbar width (8-24)">
+		<input class="fs-input" id="sbInput" type="number" min="0" step="4" value="16" title="Scrollbar width">
 		<button class="bp-btn" id="sbReset" title="Reset scrollbar width to default">↺</button>
 		<button class="bp-btn" id="sbInc" title="Thicker scrollbars">+</button></span></div>
 	<div id="wrapper"><div id="tocSide"><nav id="toc" class="toc"></nav><button id="tocToggle" class="toc-toggle" aria-label="Toggle table of contents">&lt;</button></div><div class="toc-resizer" id="tocResizer"></div><article class="markdown-body" id="content">{{BODY}}</article></div>
@@ -99,8 +99,8 @@
 		var sbw = parseInt(localStorage.getItem('onair-scrollbar-width')) || 16;
 		var sbInput = document.getElementById('sbInput');
 		setSbw(sbw);
-		document.getElementById('sbDec').onclick = function () { setSbw(sbw - 2); };
-		document.getElementById('sbInc').onclick = function () { setSbw(sbw + 2); };
+		document.getElementById('sbDec').onclick = function () { setSbw(sbw - 4); };
+		document.getElementById('sbInc').onclick = function () { setSbw(sbw + 4); };
 		document.getElementById('sbReset').onclick = function () { setSbw(16); };
 		sbInput.onchange = function () {
 			var v = parseInt(this.value);
@@ -108,7 +108,7 @@
 			setSbw(v);
 		};
 		function setSbw(v) {
-			sbw = Math.max(8, Math.min(24, Math.round(v)));
+			sbw = Math.max(0, Math.round(v));
 			document.documentElement.style.setProperty('--sb-w', sbw + 'px');
 			sbInput.value = sbw;
 			localStorage.setItem('onair-scrollbar-width', String(sbw));
