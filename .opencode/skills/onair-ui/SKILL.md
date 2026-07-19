@@ -145,6 +145,8 @@ All custom scrollbars share one rule set, sized by the `--sb-w` variable (defaul
 … -corner { background:transparent; }
 ```
 
+**Minimum thumb size (VSCode-style).** The thumb has `min-height:40px; min-width:40px` so it stays grabbable on long documents / wide code blocks, where WebKit would otherwise shrink it to a sliver. WebKit clamps to the track length for short scroll areas, so small containers are unaffected.
+
 **Never reuse `--border` for the thumb.** In dark mode `--border` (`#2a2b2c`) is almost identical to `--pre-bg` (`#242526`), so a thumb tinted with `--border` disappears on code blocks. The thumb has its own `--sb-thumb`/`--sb-thumb-hover` colors, chosen to stand out against both `--bg` and `--pre-bg`.
 
 **Scoping — critical.** `page.css` is shared by both templates. The markdown selectors are scoped to `.onair-md` (a class set on `<html>` in `markdown-page.html` only), and `#toc-list`/`#toc-related` cover the TOC panels in both templates. This deliberately covers the markdown document scrollbar, code blocks (`pre`), and TOC — but **never** the user's own page in the HTML-snippet preview (its root/body/`pre` scrollbars stay native). Never use a bare `::-webkit-scrollbar` in this file.
