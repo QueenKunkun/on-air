@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.8.0] - 2026-07-19
+
+- feat: Collapse the table of contents with a side handle (Markdown preview)
+- feat: The HTML preview status badge
+
+
 ## [0.7.0] - 2026-07-18
 
 - feat: Open relative links to other Markdown/HTML documents as live previews

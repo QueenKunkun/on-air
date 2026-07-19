@@ -4,21 +4,13 @@ Turn the currently open Markdown or HTML file into a **live local preview link**
 
 ## Features
 
-- Supports both **Markdown** and **HTML** files
-- Run "OnAir: Generate Live Preview Link" from the Command Palette, right-click menu, or the editor title bar icon
-- A picker lets you choose **Open in Browser** or **Copy Link to Clipboard**, so you decide how to use the link
-- The link is stable: generating it again for the same file gives you the same address
-- Live sync: editing in VS Code (no need to save) triggers an automatic refresh; Markdown updates in place (no flash), while HTML does a full page reload since it's a complete page with its own styles/scripts
-- Markdown code blocks get syntax highlighting (highlight.js); a "Wrap" toggle in the sticky banner lets you switch between horizontal scrolling and word-wrapping for long lines
-- Multiple files can each have their own preview link running at the same time, independently
-- When a file is closed, the browser shows a "source file closed, preview will no longer update" notice
-- Local files next to the previewed document (e.g. an `images/`, `embeds/`, or `attachments/` folder) are served automatically, so relative references like `![alt](images/foo.png)` or `<iframe src="embeds/page.html">` just work
-- **Table of contents** sidebar with nested heading navigation, scroll tracking, full path on hover with copy, and resizable width — works in both Markdown and HTML previews
-- Relative links to other Markdown/HTML documents in your workspace open as live previews, so you can click through a project right from the preview
-- A **Related documents** list under the TOC links to docs referenced by the current page
-- **Font size controls** in the preview banner; preference remembered
-- **Theme switch** — auto, dark, light mode
-- **LAN sharing**: quick pick shows both localhost and LAN IP links when you're on a network, so colleagues on the same WiFi can open your preview directly
+- **Markdown & HTML** — generate a link from the Command Palette, right-click menu, or title bar icon, then **open in browser** or **copy the link**
+- **Stable links** — the same file always gets the same address; multiple files can preview at once
+- **Live sync** — edits refresh automatically (no save needed); Markdown updates in place, HTML reloads
+- **Table of contents** — nested navigation, scroll tracking, resizable, collapsible; plus a **Related documents** list, and relative links to other docs open as previews
+- **Assets just work** — sibling files (`images/`, `embeds/`, …) and relative references are served automatically
+- **Reading comfort** — code highlighting with a wrap toggle, font size controls, and auto/dark/light themes
+- **LAN sharing** — get a localhost and a LAN IP link so others on your WiFi can open the preview
 
 
 ## Usage
