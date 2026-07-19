@@ -138,6 +138,35 @@
 		buildRelatedLinks(toc, contentEl);
 	}
 
+		// ---- footnotes: wrap bottom block in a collapsible container ----
+		function processFootnotes() {
+			var sec = contentEl.querySelector('section.footnotes');
+			if (!sec) return;
+			var sep = contentEl.querySelector('hr.footnotes-sep');
+			if (sep) sep.parentNode.removeChild(sep);
+			var block = document.createElement('div');
+			block.id = 'footnotes-block';
+			var head = document.createElement('div');
+			head.id = 'footnotes-head';
+			var toggle = document.createElement('button');
+			toggle.className = 'fn-toggle';
+			toggle.type = 'button';
+			var title = document.createElement('span');
+			title.textContent = 'Footnotes';
+			head.appendChild(toggle);
+			head.appendChild(title);
+			sec.parentNode.insertBefore(block, sec);
+			block.appendChild(head);
+			block.appendChild(sec);
+			function setCollapsed(c) {
+				block.classList.toggle('collapsed', c);
+				toggle.textContent = c ? '\u25B8' : '\u25BE';
+				localStorage.setItem('onair-footnotes-collapsed', c ? '1' : '0');
+			}
+			setCollapsed(localStorage.getItem('onair-footnotes-collapsed') === '1');
+			head.onclick = function () { setCollapsed(!block.classList.contains('collapsed')); };
+		}
+
 		// ---- TOC resize ----
 		(function () {
 			var resizer = document.getElementById('tocResizer');
@@ -179,6 +208,7 @@
 						if (msg.fullPath) fullPath = msg.fullPath;
 						if (msg.relPath != null) relPath = msg.relPath;
 						buildToc();
+						processFootnotes();
 						if (document.getElementById('wpBtn').classList.contains('on')) contentEl.classList.add('wp');
 						document.title = msg.title + ' · OnAir';
 					} else if (msg.type === 'closed') {
@@ -195,6 +225,7 @@
 		}
 		connect();
 		buildToc();
+		processFootnotes();
 	})();
 	</script>
 </body>
