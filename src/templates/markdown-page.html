@@ -182,15 +182,20 @@
 			pop.innerHTML = htmlStr;
 			pop.style.display = 'block';
 			pop.style.left = '0px'; pop.style.top = '0px';
-			var curX = evt.clientX, curY = evt.clientY;
+			// Anchor to the mark's box (not the cursor) so the position is the same
+			// whether you approach from above or below. The pointer can sit anywhere
+			// within the mark and the hand extends ~24px downward, so keep the popover
+			// well below the mark's bottom edge to guarantee it's never covered.
+			var el = evt.currentTarget || evt.target;
+			var r = el.getBoundingClientRect();
 			var ph = pop.offsetHeight, pw = pop.offsetWidth;
-			var below = 26; // clear the hand cursor which extends downward from the pointer
-			var top = curY + below;
+			var gap = 30;
+			var top = r.bottom + gap;
 			if (top + ph > window.innerHeight - 8) {
-				// not enough room below: flip above the pointer (hand never covers upward)
-				top = Math.max(8, curY - ph - 8);
+				// no room below: flip above the mark (the hand sits below the pointer, so upward is clear)
+				top = Math.max(8, r.top - ph - 12);
 			}
-			var left = curX;
+			var left = r.left;
 			if (left + pw > window.innerWidth - 8) left = Math.max(8, window.innerWidth - pw - 8);
 			pop.style.top = (top + window.pageYOffset) + 'px';
 			pop.style.left = (left + window.pageXOffset) + 'px';
