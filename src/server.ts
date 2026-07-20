@@ -252,10 +252,9 @@ function linkifyMdTokens(html: string, fromId?: string): string {
 		const from = fromId ? `&from=${encodeURIComponent(fromId)}` : '';
 		return `<a class="onair-xref" target="_blank" href="/xref?q=${q}${from}">${name}</a>`;
 	};
-	return html.replace(/(?<![\w.])([\w.-]*\.(?:markdown|md))(?!\w)(?=$|\s|<)/gi, (_m, name, offset, full) => {
-		const before = offset > 0 ? full.charAt(offset - 1) : '';
-		if (before === '>' || before === '"' || before === "'") { return _m; }
-		return xref(name);
+	return html.replace(/(^|[\s<("'])([\w-]*\.(?:markdown|md))(?!\w)(?=$|\s|<)/gi, (_m, pre, name) => {
+		if (pre === '>' || pre === '"' || pre === "'" || pre === '.') { return _m; }
+		return pre + xref(name);
 	});
 }
 
