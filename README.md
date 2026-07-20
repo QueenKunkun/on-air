@@ -11,6 +11,9 @@ Turn the currently open Markdown or HTML file into a **live local preview link**
 - **Highlights & footnotes** — `==highlight==` text with notes shown as margin cards, and footnotes rendered in a collapsible block
 - **Assets just work** — sibling files (`images/`, `embeds/`, …) and relative references are served automatically
 - **Reading comfort** — code highlighting with a wrap toggle, font size and scrollbar width controls, and auto/dark/light themes
+- **Cross-references** — a bare `.md` filename in a document links to a path-proximity picker; even files you haven't opened preview from disk
+- **Version badge** — a corner badge shows the extension version; click it to copy
+- **Max content width** — a banner control caps the reading column width
 - **LAN sharing** — get a localhost and a LAN IP link so others on your WiFi can open the preview
 
 

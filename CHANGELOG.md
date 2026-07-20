@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.12.0] - 2026-07-20
+
+- feat: link bare .md references to a path-proximity picker (xref)
+- feat: show a version badge in the preview that copies on click
+- feat: add a max content width control in the banner
+
+
 ## [0.11.0] - 2026-07-19
 
 - feat: highlight text with ==mark== and attach notes shown as Hypothesis-style margin cards
