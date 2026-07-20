@@ -322,8 +322,15 @@ function mimeType(filePath: string): string {
 	return MIME_TYPES[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
 }
 
-// Extension version, read once from package.json so the preview can show it.
+// Extension version, read once so the preview can show it. Prefer the VS Code
+// API (exact version VS Code loaded), falling back to the on-disk package.json.
 const EXT_VERSION = (() => {
+	try {
+		const ext = vscode.extensions.getExtension('onair.on-air');
+		if (ext && ext.packageJSON && ext.packageJSON.version) {
+			return String(ext.packageJSON.version);
+		}
+	} catch { /* not in a VS Code context */ }
 	try {
 		const require = createRequire(process.cwd() + '/');
 		return require('./package.json').version as string;
