@@ -3,7 +3,6 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { createRequire } from 'module';
 import * as vscode from 'vscode';
 import { WebSocketServer, WebSocket } from 'ws';
 import MarkdownIt from 'markdown-it';
@@ -322,21 +321,19 @@ function mimeType(filePath: string): string {
 	return MIME_TYPES[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
 }
 
-// Extension version, read once so the preview can show it. Prefer the VS Code
-// API (exact version VS Code loaded), falling back to the on-disk package.json.
+// Extension version, shown in the preview corner. Injected at build time by
+// webpack's DefinePlugin (__ONAIR_VERSION__), with a runtime fallback to the
+// VS Code API / on-disk package.json so dev runs still resolve it.
+declare const __ONAIR_VERSION__: string;
 const EXT_VERSION = (() => {
+	if (__ONAIR_VERSION__) { return __ONAIR_VERSION__; }
 	try {
 		const ext = vscode.extensions.getExtension('onair.on-air');
 		if (ext && ext.packageJSON && ext.packageJSON.version) {
 			return String(ext.packageJSON.version);
 		}
 	} catch { /* not in a VS Code context */ }
-	try {
-		const require = createRequire(process.cwd() + '/');
-		return require('./package.json').version as string;
-	} catch {
-		return '';
-	}
+	return '';
 })();
 
 /**

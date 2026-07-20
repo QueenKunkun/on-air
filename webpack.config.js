@@ -3,6 +3,8 @@
 'use strict';
 
 const path = require('path');
+const webpack = require('webpack');
+const pkg = require('./package.json');
 
 /** @typedef {import('webpack').Configuration} WebpackConfig **/
 
@@ -17,6 +19,11 @@ const extensionConfig = {
     filename: 'extension.js',
     libraryTarget: 'commonjs2'
   },
+  plugins: [
+    new webpack.DefinePlugin({
+      __ONAIR_VERSION__: JSON.stringify(pkg.version || '')
+    })
+  ],
   externals: {
     vscode: 'commonjs vscode',
     // ws's two optional native acceleration deps - not installing them doesn't break anything,
