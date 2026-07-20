@@ -129,7 +129,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
 /* Transparent full-screen capture layer; the box itself is positioned by JS
    right under the clicked link, like a context menu. */
 #xrefOverlay { position: fixed; inset: 0; z-index: 70; display: none; }
-#xrefOverlay .xref-box { position: absolute; background: var(--bg); color: var(--text); width: min(420px, 90vw); max-height: 60vh; overflow: auto; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.22); }
+#xrefOverlay .xref-box { position: absolute; background: var(--bg); color: var(--text); width: min(340px, 88vw); max-height: 48vh; overflow: auto; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.22); }
 #xrefOverlay .xref-box :is(h1,a,ul,li,p) { margin: 0; padding: 16px; }
 #xrefOverlay .xref-box h1 { font-size: 16px; }
 #xrefOverlay .xref-box .src { color: var(--quote-c); font-size: 12px; font-family: ui-monospace, monospace; word-break: break-all; padding: 0 16px; margin: 2px 0 0; }
