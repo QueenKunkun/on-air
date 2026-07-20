@@ -25,7 +25,12 @@
 		<button class="bp-btn" id="sbDec" title="Thinner scrollbars">−</button>
 		<input class="fs-input" id="sbInput" type="number" min="0" step="4" value="16" title="Scrollbar width">
 		<button class="bp-btn" id="sbReset" title="Reset scrollbar width to default">↺</button>
-		<button class="bp-btn" id="sbInc" title="Thicker scrollbars">+</button></span></div>
+		<button class="bp-btn" id="sbInc" title="Thicker scrollbars">+</button></span>
+	<span class="bp-group"><span class="bp-label" title="Max content width (0 = no limit)">W</span>
+		<button class="bp-btn" id="mwDec" title="Narrower content">−</button>
+		<input class="fs-input" id="mwInput" type="number" min="0" step="20" value="920" title="Max content width in px (0 = no limit)">
+		<button class="bp-btn" id="mwReset" title="Reset max width to default">↺</button>
+		<button class="bp-btn" id="mwInc" title="Wider content">+</button></span></div>
 	<div id="wrapper"><div id="tocSide"><nav id="toc" class="toc"></nav><button id="tocToggle" class="toc-toggle" aria-label="Toggle table of contents">&lt;</button></div><div class="toc-resizer" id="tocResizer"></div><article class="markdown-body" id="content">{{BODY}}</article><div class="annot-resizer" id="annotResizer"></div><div id="annotSide"><div id="annots"></div><button id="annotToggle" class="annot-toggle" aria-label="Toggle annotations">&gt;</button></div></div>
 	<script>
 	(function () {
@@ -115,6 +120,26 @@
 			document.documentElement.style.setProperty('--sb-w', sbw + 'px');
 			sbInput.value = sbw;
 			localStorage.setItem('onair-scrollbar-width', String(sbw));
+		}
+
+		// ---- max content width ----
+		var mwInput = document.getElementById('mwInput');
+		var mw = parseInt(localStorage.getItem('onair-max-width'));
+		if (isNaN(mw)) mw = 920;
+		setMw(mw);
+		document.getElementById('mwDec').onclick = function () { setMw(mw - 20); };
+		document.getElementById('mwInc').onclick = function () { setMw(mw + 20); };
+		document.getElementById('mwReset').onclick = function () { setMw(920); };
+		mwInput.onchange = function () {
+			var v = parseInt(this.value);
+			if (isNaN(v) || v < 0) { this.value = mw; return; }
+			setMw(v);
+		};
+		function setMw(v) {
+			mw = Math.max(0, Math.round(v));
+			contentEl.style.maxWidth = mw ? mw + 'px' : 'none';
+			mwInput.value = mw;
+			localStorage.setItem('onair-max-width', String(mw));
 		}
 
 		{{TOC_JS}}
