@@ -170,7 +170,7 @@ function xrefPage(files: string[], q: string, sourceTitle: string | null, fragme
 			const rel = sourceTitle ? computeDisplayPath(f) : f;
 			const uriKey = vscode.Uri.file(f).toString();
 			const id = crypto.createHash('sha256').update(uriKey).digest('hex').slice(0, 12);
-			return `<li><a class="name" href="/preview/${id}">${escapeHtml(name)}</a><div class="path">${escapeHtml(rel)}</div></li>`;
+			return `<li><a class="path" href="/preview/${id}">${escapeHtml(rel)}</a><div class="name">${escapeHtml(name)}</div></li>`;
 		}).join('');
 		body = `<ul>${lis}</ul>`;
 	}
