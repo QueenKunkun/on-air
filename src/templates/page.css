@@ -139,4 +139,4 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
 #xrefOverlay .xref-box .path:hover { text-decoration: underline; text-underline-offset: 2px; }
 #xrefOverlay .xref-box .empty, #xrefOverlay .xref-box .xref-loading { color: var(--quote-c); }
 /* Lock background scroll while the menu is open so wheeling over it scrolls the menu, not the page behind. */
-body.xref-open { overflow: hidden; }
+body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
