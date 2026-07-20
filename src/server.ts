@@ -161,7 +161,6 @@ function proximity(candidate: string, source?: string): number {
 	function xrefPage(files: string[], q: string, sourceTitle: string | null, sourcePath: string | null, fragment = false): string {
 	const srcRel = sourceTitle && sourcePath ? computeDisplayPath(sourcePath) : null;
 	const header = `<h1>${escapeHtml(q)}</h1>` + (srcRel ? `<p class="src">${escapeHtml(srcRel)}</p>` : '');
-	const sub = `<p class="sub">${sourceTitle ? `From <strong>${escapeHtml(sourceTitle)}</strong> · ` : ''}sorted by path proximity · click to open its live preview</p>`;
 	let body: string;
 	if (!files.length) {
 		body = `<p class="empty">No matching <code>${escapeHtml(q)}</code> found in this project.</p>`;
@@ -177,7 +176,7 @@ function proximity(candidate: string, source?: string): number {
 	// Fragment mode: just the markup, no <style>. The in-page popover already
 	// carries scoped `#xrefOverlay .xref-box …` rules, so a bare fragment won't
 	// pollute the host page's CSS (a full <style> with global selectors would).
-	if (fragment) { return header + sub + body; }
+	if (fragment) { return header + body; }
 	const head = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device,initial-scale=1">` +
 		`<title>OnAir · ${escapeHtml(q)}</title>` +
 		`<style>
@@ -185,16 +184,15 @@ function proximity(candidate: string, source?: string): number {
 			@media (prefers-color-scheme: dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--border:#30363d;--accent:#58a6ff;--pre:#161b22}}
 			body{font:14px/1.6 system-ui,sans-serif;background:var(--bg);color:var(--fg);margin:0;padding:24px}
 			h1{font-size:16px;margin:0}a{color:var(--accent);text-decoration:none}
-			a:hover{text-decoration:underline}.sub{color:var(--muted);margin:12px 0;font-size:13px}
-			ul{list-style:none;margin:0;padding:0;max-width:680px}
+			a:hover{text-decoration:underline}
+			.src{color:var(--muted);font-size:12px;font-family:ui-monospace,monospace;padding:0 16px;margin:2px 0 0;word-break:break-all}
+			ul{list-style:none;margin:0;padding:0 16px 16px;max-width:680px}
 			li{padding:4px 0;line-height:1.8;border-bottom:1px solid var(--border)}
-			li:last-child{border-bottom:none}
 			.path{display:inline;color:var(--accent);font-size:13px;font-family:ui-monospace,monospace;word-break:break-all;text-decoration:none}
 			.path:hover{text-decoration:underline;text-underline-offset:2px}
-			.src{color:var(--muted);font-size:12px;font-family:ui-monospace,monospace;margin:2px 0 0;word-break:break-all}
 			.empty{color:var(--muted)}
 		</style>`;
-	return head + header + sub + body;
+	return head + header + body;
 }
 
 md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
