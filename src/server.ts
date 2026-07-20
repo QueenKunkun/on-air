@@ -435,6 +435,20 @@ export class PreviewServer {
 		return `http://127.0.0.1:${this.port}/preview/${id}`;
 	}
 
+	/**
+	 * Internal debug helper: return the exact full HTML the preview currently
+	 * serves for a registered document, prefixed with a marker comment so the
+	 * export command can recognize its own files. Output is verbatim (no asset
+	 * embedding / link rewriting). Returns null if the document isn't registered.
+	 */
+	renderHtmlForUri(uriKey: string): string | null {
+		const id = this.uriToId.get(uriKey);
+		if (!id) { return null; }
+		const entry = this.docs.get(id);
+		if (!entry) { return null; }
+		return `<!-- onair:export:md -->\n${entry.page}`;
+	}
+
 	getLanIp(): string | null {
 		const interfaces = os.networkInterfaces();
 		for (const iface of Object.values(interfaces)) {

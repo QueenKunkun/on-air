@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { PreviewServer, DocKind } from './server';
 
 let server: PreviewServer | undefined;
@@ -90,6 +91,38 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.workspace.onDidCloseTextDocument((doc) => {
 			if (!docKind(doc.languageId)) { return; }
 			server?.closeDocument(doc.uri.toString());
+		})
+	);
+
+	// Internal debug only: dump the current preview HTML next to the source file.
+	const EXPORT_MARKER = '<!-- onair:export:md -->';
+	context.subscriptions.push(
+		vscode.commands.registerCommand('onAir.exportPreviewHtml', async () => {
+			const editor = vscode.window.activeTextEditor;
+			if (!editor || docKind(editor.document.languageId) !== 'markdown') {
+				vscode.window.showWarningMessage('Open a Markdown file first to export its preview HTML');
+				return;
+			}
+			const doc = editor.document;
+			const html = server?.renderHtmlForUri(doc.uri.toString());
+			if (html === undefined || html === null) {
+				vscode.window.showWarningMessage('Generate an OnAir preview link for this file first');
+				return;
+			}
+			const dir = path.dirname(doc.uri.fsPath);
+			const base = path.basename(doc.uri.fsPath, path.extname(doc.uri.fsPath));
+			const resolveOut = (suffix: string) => path.join(dir, `${base}${suffix}.md.html`);
+
+			let outPath = resolveOut('');
+			if (fs.existsSync(outPath)) {
+				const head = fs.readFileSync(outPath, 'utf8').slice(0, EXPORT_MARKER.length);
+				if (head !== EXPORT_MARKER) {
+					let n = 1;
+					do { outPath = resolveOut(` (${n++})`); } while (fs.existsSync(outPath));
+				}
+			}
+			fs.writeFileSync(outPath, html);
+			vscode.window.setStatusBarMessage(`OnAir: Exported preview → ${outPath}`, 5000);
 		})
 	);
 }
