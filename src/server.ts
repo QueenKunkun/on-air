@@ -158,7 +158,26 @@ function proximity(candidate: string, source?: string): number {
  * popover (same HTML, single render source). Lists each matching file with its
  * relative path; rows link to that file's live preview. `files` empty => not found.
  */
-function xrefPage(files: string[], q: string, sourceTitle: string | null): string {
+function xrefPage(files: string[], q: string, sourceTitle: string | null, fragment = false): string {
+	const title = `<h1>${escapeHtml(q)}</h1>`;
+	const sub = `<p class="sub">${sourceTitle ? `From <strong>${escapeHtml(sourceTitle)}</strong> · ` : ''}sorted by path proximity · click to open its live preview</p>`;
+	let body: string;
+	if (!files.length) {
+		body = `<p class="empty">No matching <code>${escapeHtml(q)}</code> found in this project.</p>`;
+	} else {
+		const lis = files.map(f => {
+			const name = path.basename(f);
+			const rel = sourceTitle ? computeDisplayPath(f) : f;
+			const uriKey = vscode.Uri.file(f).toString();
+			const id = crypto.createHash('sha256').update(uriKey).digest('hex').slice(0, 12);
+			return `<li><a class="name" href="/preview/${id}">${escapeHtml(name)}</a><span class="path">${escapeHtml(rel)}</span></li>`;
+		}).join('');
+		body = `<ul>${lis}</ul>`;
+	}
+	// Fragment mode: just the markup, no <style>. The in-page popover already
+	// carries scoped `#xrefOverlay .xref-box …` rules, so a bare fragment won't
+	// pollute the host page's CSS (a full <style> with global selectors would).
+	if (fragment) { return title + sub + body; }
 	const head = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device,initial-scale=1">` +
 		`<title>OnAir · ${escapeHtml(q)}</title>` +
 		`<style>
@@ -172,19 +191,7 @@ function xrefPage(files: string[], q: string, sourceTitle: string | null): strin
 			.name{font-weight:600}.path{color:var(--muted);font-size:12px;font-family:ui-monospace,monospace;word-break:break-all;text-align:right}
 			.empty{color:var(--muted)}
 		</style>`;
-	const title = `<h1>${escapeHtml(q)}</h1>`;
-	const sub = `<p class="sub">${sourceTitle ? `From <strong>${escapeHtml(sourceTitle)}</strong> · ` : ''}sorted by path proximity · click to open its live preview</p>`;
-	if (!files.length) {
-		return head + title + sub + `<p class="empty">No matching <code>${escapeHtml(q)}</code> found in this project.</p>`;
-	}
-	const lis = files.map(f => {
-		const name = path.basename(f);
-		const rel = sourceTitle ? computeDisplayPath(f) : f;
-		const uriKey = vscode.Uri.file(f).toString();
-		const id = crypto.createHash('sha256').update(uriKey).digest('hex').slice(0, 12);
-		return `<li><a class="name" href="/preview/${id}">${escapeHtml(name)}</a><span class="path">${escapeHtml(rel)}</span></li>`;
-	}).join('');
-	return head + title + sub + `<ul>${lis}</ul>`;
+	return head + title + sub + body;
 }
 
 md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
@@ -559,11 +566,12 @@ export class PreviewServer {
 		const params = new URLSearchParams(url.includes('?') ? url.slice(url.indexOf('?') + 1) : '');
 		const q = (params.get('q') || '').trim();
 		const fromId = params.get('from');
+		const fragment = params.get('fragment') === '1';
 		const fromEntry = fromId ? this.docs.get(fromId) : undefined;
 
 		res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
 		if (!q) {
-			res.end(xrefPage([], q, fromEntry?.title ?? null));
+			res.end(xrefPage([], q, fromEntry?.title ?? null, fragment));
 			return;
 		}
 
@@ -602,7 +610,7 @@ export class PreviewServer {
 			res.end();
 			return;
 		}
-		res.end(xrefPage(sorted, q, fromEntry?.title ?? null));
+		res.end(xrefPage(sorted, q, fromEntry?.title ?? null, fragment));
 	}
 
 	getLanIp(): string | null {

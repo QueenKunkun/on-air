@@ -31,7 +31,7 @@
 		<input class="fs-input" id="mwInput" type="number" min="0" step="20" value="920" title="Max content width in px (0 = no limit)">
 		<button class="bp-btn" id="mwReset" title="Reset max width to default">↺</button>
 		<button class="bp-btn" id="mwInc" title="Wider content">+</button></span>
-	<div class="ver-badge" id="verBadge" title="OnAir version">v{{VERSION}}</div></div>
+	<div class="ver-badge" id="verBadge" data-version="v{{VERSION}}" title="Click to copy version">v{{VERSION}}</div></div>
 	<div id="wrapper"><div id="tocSide"><nav id="toc" class="toc"></nav><button id="tocToggle" class="toc-toggle" aria-label="Toggle table of contents">&lt;</button></div><div class="toc-resizer" id="tocResizer"></div><article class="markdown-body" id="content">{{BODY}}</article><div class="annot-resizer" id="annotResizer"></div><div id="annotSide"><div id="annots"></div><button id="annotToggle" class="annot-toggle" aria-label="Toggle annotations">&gt;</button></div></div>
 	<script>
 	(function () {
@@ -143,6 +143,35 @@
 			localStorage.setItem('onair-max-width', String(mw));
 		}
 
+		// ---- version badge: click to copy, with "Copied!" feedback ----
+		(function () {
+			var vb = document.getElementById('verBadge');
+			if (!vb) return;
+			var version = vb.getAttribute('data-version') || vb.textContent;
+			var resetTimer;
+			vb.addEventListener('click', function () {
+				function flash() {
+					vb.textContent = 'Copied!';
+					clearTimeout(resetTimer);
+					resetTimer = setTimeout(function () { vb.textContent = version; }, 1200);
+				}
+				try {
+					if (navigator.clipboard && navigator.clipboard.writeText) {
+						navigator.clipboard.writeText(version).then(flash, fallback);
+					} else { fallback(); }
+				} catch (e) { fallback(); }
+				function fallback() {
+					try {
+						var ta = document.createElement('textarea');
+						ta.value = version; ta.style.position = 'fixed'; ta.style.opacity = '0';
+						document.body.appendChild(ta); ta.select();
+						document.execCommand('copy'); document.body.removeChild(ta);
+						flash();
+					} catch (e2) { /* ignore */ }
+				}
+			});
+		})();
+
 		{{TOC_JS}}
 
 		// ---- table of contents ----
@@ -246,10 +275,12 @@
 				if (!a) return;
 				e.preventDefault();
 				var href = a.getAttribute('href');
+				var sep = href.indexOf('?') >= 0 ? '&' : '?';
+				var fragUrl = href + sep + 'fragment=1';
 				box.innerHTML = '<div class="xref-loading">Loading…</div>';
 				overlay.style.display = 'flex';
-				fetch(href).then(function (r) { return r.text(); }).then(function (html) {
-					box.innerHTML = html.replace(/<script[\s\S]*?<\/script>/gi, '');
+				fetch(fragUrl).then(function (r) { return r.text(); }).then(function (html) {
+					box.innerHTML = html;
 				}).catch(function () { box.innerHTML = '<p class="empty">Failed to load references.</p>'; });
 			});
 		})();
