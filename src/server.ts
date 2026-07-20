@@ -95,6 +95,13 @@ const md: MarkdownIt = new MarkdownIt({
 	highlight: (code, lang) => `<pre class="hljs"><code>${highlightCode(code, lang)}</code></pre>`,
 });
 
+// Disable fuzzy (schemaless) linkification. With it on, a bare token like
+// `AGENTS.md` matches linkify-it's fuzzy host rule (`.md` is in its TLD
+// list) and gets turned into a dead `http://AGENTS.md/` link. Bare `.md`
+// / `.markdown` tokens are re-linked as in-project cross-references instead
+// (see `linkifyMdTokens`), so we don't lose the convenience.
+md.linkify.set({ fuzzyLink: false });
+
 md.use(markdownItFootnote);
 md.use(markdownItMark);
 
@@ -130,6 +137,54 @@ function rewriteHtmlLinks(html: string, docDir: string, rootDir: string): string
 		const rewritten = rewriteLink(val, docDir, rootDir);
 		return rewritten === val ? _m : `${attr}="${rewritten}"`;
 	});
+}
+
+/**
+ * Path-proximity score between a candidate file and the source file: smaller is
+ * closer. Based on the shared path prefix (longer shared prefix = closer) with a
+ * tie-breaker on total depth (shallower candidate ranks higher).
+ */
+function proximity(candidate: string, source?: string): number {
+	if (!source) { return Number.MAX_SAFE_INTEGER; }
+	const a = path.resolve(candidate).split(path.sep);
+	const b = path.resolve(source).split(path.sep);
+	let shared = 0;
+	while (shared < Math.min(a.length, b.length) && a[shared] === b[shared]) { shared++; }
+	return -(shared * 1000) + a.length;
+}
+
+/**
+ * Minimal OnAir-styled picker page for `/xref`. Also embedded client-side in a
+ * popover (same HTML, single render source). Lists each matching file with its
+ * relative path; rows link to that file's live preview. `files` empty => not found.
+ */
+function xrefPage(files: string[], q: string, sourceTitle: string | null): string {
+	const head = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device,initial-scale=1">` +
+		`<title>OnAir · ${escapeHtml(q)}</title>` +
+		`<style>
+			:root{--bg:#fff;--fg:#1f2328;--muted:#57606a;--border:#d0d7de;--accent:#0969da;--pre:#f6f8fa}
+			@media (prefers-color-scheme: dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--border:#30363d;--accent:#58a6ff;--pre:#161b22}}
+			body{font:14px/1.6 system-ui,sans-serif;background:var(--bg);color:var(--fg);margin:0;padding:24px}
+			h1{font-size:16px;margin:0 0 4px}a{color:var(--accent);text-decoration:none}
+			a:hover{text-decoration:underline}.sub{color:var(--muted);margin:0 0 16px;font-size:13px}
+			ul{list-style:none;margin:0;padding:0;max-width:680px}
+			li{display:flex;justify-content:space-between;gap:16px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px;background:var(--pre)}
+			.name{font-weight:600}.path{color:var(--muted);font-size:12px;font-family:ui-monospace,monospace;word-break:break-all;text-align:right}
+			.empty{color:var(--muted)}
+		</style>`;
+	const title = `<h1>${escapeHtml(q)}</h1>`;
+	const sub = `<p class="sub">${sourceTitle ? `From <strong>${escapeHtml(sourceTitle)}</strong> · ` : ''}sorted by path proximity · click to open its live preview</p>`;
+	if (!files.length) {
+		return head + title + sub + `<p class="empty">No matching <code>${escapeHtml(q)}</code> found in this project.</p>`;
+	}
+	const lis = files.map(f => {
+		const name = path.basename(f);
+		const rel = sourceTitle ? computeDisplayPath(f) : f;
+		const uriKey = vscode.Uri.file(f).toString();
+		const id = crypto.createHash('sha256').update(uriKey).digest('hex').slice(0, 12);
+		return `<li><a class="name" href="/preview/${id}">${escapeHtml(name)}</a><span class="path">${escapeHtml(rel)}</span></li>`;
+	}).join('');
+	return head + title + sub + `<ul>${lis}</ul>`;
 }
 
 md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
@@ -170,8 +225,31 @@ function renderFrontmatter(source: string): string {
 	);
 }
 
-function renderMarkdown(source: string, docDir: string, rootDir: string): string {
-	return md.render(renderFrontmatter(source), { docDir, rootDir });
+function renderMarkdown(source: string, docDir: string, rootDir: string, fromId?: string): string {
+	return linkifyMdTokens(md.render(renderFrontmatter(source), { docDir, rootDir }), fromId);
+}
+
+/**
+ * Turn bare `NAME.md` / `NAME.markdown` tokens in already-rendered HTML into
+ * in-project cross-reference links. Bare tokens (no `[text](…)` syntax) are not
+ * matched by markdown's link rules, and with fuzzy linkify disabled they stay plain
+ * text — so we re-link them here as `<a class="onair-xref" href="/xref?…">`.
+ *
+ * Scoped to `.md`/`.markdown` only. Skips tokens already inside an `<a>` or
+ * `<code>`/`<pre>` (the negative lookbehind avoids `href="…"` and `>` from a
+ * preceding close tag), so existing links and inline code are untouched.
+ */
+function linkifyMdTokens(html: string, fromId?: string): string {
+	const xref = (name: string): string => {
+		const q = encodeURIComponent(name);
+		const from = fromId ? `&from=${encodeURIComponent(fromId)}` : '';
+		return `<a class="onair-xref" target="_blank" href="/xref?q=${q}${from}">${name}</a>`;
+	};
+	return html.replace(/(?<![\w.])([\w.-]*\.(?:markdown|md))(?!\w)(?=$|\s|<)/gi, (_m, name, offset, full) => {
+		const before = offset > 0 ? full.charAt(offset - 1) : '';
+		if (before === '>' || before === '"' || before === "'") { return _m; }
+		return xref(name);
+	});
 }
 
 function escapeHtml(s: string): string {
@@ -370,7 +448,7 @@ export class PreviewServer {
 			return { page: htmlPageTemplate(id, content, title, fullPath, relPath, rootDir) };
 		}
 		const docDir = path.dirname(fullPath);
-		const bodyHtml = renderMarkdown(content, docDir, rootDir);
+		const bodyHtml = renderMarkdown(content, docDir, rootDir, id);
 		return { page: markdownPageTemplate(id, title, bodyHtml, fullPath, relPath), bodyHtml };
 	}
 	/** Register/refresh a document, returning its preview id (calling this multiple times for the same file reuses the same id/link) */
@@ -447,6 +525,67 @@ export class PreviewServer {
 		const entry = this.docs.get(id);
 		if (!entry) { return null; }
 		return `<!-- onair:export:md -->\n${entry.page}`;
+	}
+
+	/**
+	 * In-project cross-reference resolver. A bare `NAME.md` token in a document is
+	 * linked to `/xref?q=NAME.md&from=<id>` (see `linkifyMdTokens`). This
+	 * resolves it: walks the source document's rootDir for `.md`/`.markdown` files
+	 * whose basename matches, sorts by path proximity to the source, then either
+	 * 302-redirects to the single match's preview, or renders a minimal picker
+	 * page (also embedded in a popover client-side). The picker and the full-page
+	 * navigation share this exact HTML, so the render path is single-source.
+	 */
+	private handleXref(req: http.IncomingMessage, res: http.ServerResponse, url: string): void {
+		const m = url.match(/^\/xref\??([#?].*)?$/);
+		if (!m) { return; }
+		const params = new URLSearchParams(url.includes('?') ? url.slice(url.indexOf('?') + 1) : '');
+		const q = (params.get('q') || '').trim();
+		const fromId = params.get('from');
+		const fromEntry = fromId ? this.docs.get(fromId) : undefined;
+
+		res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+		if (!q) {
+			res.end(xrefPage([], q, fromEntry?.title ?? null));
+			return;
+		}
+
+		const rootDir = fromEntry?.rootDir || '';
+		const matches: string[] = [];
+		if (rootDir) {
+			const walk = (dir: string): void => {
+				let entries: fs.Dirent[];
+				try { entries = fs.readdirSync(dir, { withFileTypes: true }); }
+				catch { return; }
+				for (const e of entries) {
+					const full = path.join(dir, e.name);
+					if (e.isDirectory()) {
+						if (e.name === 'node_modules' || e.name === '.git') { continue; }
+						walk(full);
+					} else if (e.isFile()) {
+						const ext = path.extname(e.name).toLowerCase();
+						if ((ext === '.md' || ext === '.markdown') && e.name.toLowerCase() === q.toLowerCase()) {
+							matches.push(full);
+						}
+					}
+				}
+			};
+			walk(rootDir);
+		}
+
+		const sourcePath = fromEntry?.fullPath;
+		const sorted = matches
+			.filter(p => !sourcePath || path.resolve(p) !== path.resolve(sourcePath))
+			.sort((a, b) => proximity(a, sourcePath) - proximity(b, sourcePath));
+
+		if (sorted.length === 1) {
+			const uriKey = vscode.Uri.file(sorted[0]).toString();
+			const id = this.uriToId.get(uriKey) || crypto.createHash('sha256').update(uriKey).digest('hex').slice(0, 12);
+			res.writeHead(302, { Location: `/preview/${id}` });
+			res.end();
+			return;
+		}
+		res.end(xrefPage(sorted, q, fromEntry?.title ?? null));
 	}
 
 	getLanIp(): string | null {
@@ -536,6 +675,12 @@ export class PreviewServer {
 			res.end(entry.page);
 			return;
 		}
+
+		if (/^\/xref\b/.test(url)) {
+			this.handleXref(req, res, url);
+			return;
+		}
+
 		res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
 		res.end('Not found');
 	}

@@ -228,6 +228,30 @@
 		document.addEventListener('click', function (e) {
 			if (pop.style.display !== 'none' && !pop.contains(e.target) && !(e.target.closest && e.target.closest('.annot-mark'))) hidePopover();
 		});
+
+		// ---- bare `.md` cross-reference popover (B3: reuses the same `/xref` HTML) ----
+		(function () {
+			var overlay = document.createElement('div');
+			overlay.id = 'xrefOverlay';
+			overlay.style.display = 'none';
+			overlay.innerHTML = '<div class="xref-box" role="dialog"></div>';
+			document.body.appendChild(overlay);
+			var box = overlay.firstChild;
+			function closeXref() { overlay.style.display = 'none'; box.innerHTML = ''; }
+			overlay.addEventListener('click', function (e) { if (e.target === overlay) closeXref(); });
+			document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeXref(); });
+			document.addEventListener('click', function (e) {
+				var a = e.target.closest && e.target.closest('a.onair-xref');
+				if (!a) return;
+				e.preventDefault();
+				var href = a.getAttribute('href');
+				box.innerHTML = '<div class="xref-loading">Loading…</div>';
+				overlay.style.display = 'flex';
+				fetch(href).then(function (r) { return r.text(); }).then(function (html) {
+					box.innerHTML = html.replace(/<script[\s\S]*?<\/script>/gi, '');
+				}).catch(function () { box.innerHTML = '<p class="empty">Failed to load references.</p>'; });
+			});
+		})();
 		function annotColumnVisible() {
 			var side = document.getElementById('annotSide');
 			return getComputedStyle(side).display !== 'none' && !side.classList.contains('collapsed');
