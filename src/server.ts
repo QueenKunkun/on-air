@@ -158,17 +158,15 @@ function proximity(candidate: string, source?: string): number {
  * popover (same HTML, single render source). Lists each matching file with its
  * relative path; rows link to that file's live preview. `files` empty => not found.
  */
-function xrefPage(files: string[], q: string, sourceTitle: string | null, sourcePath: string | null, fragment = false): string {
-	const title = `<h1>${escapeHtml(q)}</h1>`;
+	function xrefPage(files: string[], q: string, sourceTitle: string | null, sourcePath: string | null, fragment = false): string {
 	const srcRel = sourceTitle && sourcePath ? computeDisplayPath(sourcePath) : null;
-	const sub = `<p class="sub">${sourceTitle ? `From <strong>${escapeHtml(sourceTitle)}</strong> · ` : ''}sorted by path proximity · click to open its live preview</p>` +
-		(srcRel ? `<p class="src">${escapeHtml(srcRel)}</p>` : '');
+	const header = `<h1>${escapeHtml(q)}</h1>` + (srcRel ? `<p class="src">${escapeHtml(srcRel)}</p>` : '');
+	const sub = `<p class="sub">${sourceTitle ? `From <strong>${escapeHtml(sourceTitle)}</strong> · ` : ''}sorted by path proximity · click to open its live preview</p>`;
 	let body: string;
 	if (!files.length) {
 		body = `<p class="empty">No matching <code>${escapeHtml(q)}</code> found in this project.</p>`;
 	} else {
 		const lis = files.map(f => {
-			const name = path.basename(f);
 			const rel = sourceTitle ? computeDisplayPath(f) : f;
 			const uriKey = vscode.Uri.file(f).toString();
 			const id = crypto.createHash('sha256').update(uriKey).digest('hex').slice(0, 12);
@@ -179,22 +177,23 @@ function xrefPage(files: string[], q: string, sourceTitle: string | null, source
 	// Fragment mode: just the markup, no <style>. The in-page popover already
 	// carries scoped `#xrefOverlay .xref-box …` rules, so a bare fragment won't
 	// pollute the host page's CSS (a full <style> with global selectors would).
-	if (fragment) { return title + sub + body; }
+	if (fragment) { return header + sub + body; }
 	const head = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device,initial-scale=1">` +
 		`<title>OnAir · ${escapeHtml(q)}</title>` +
 		`<style>
 			:root{--bg:#fff;--fg:#1f2328;--muted:#57606a;--border:#d0d7de;--accent:#0969da;--pre:#f6f8fa}
 			@media (prefers-color-scheme: dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--border:#30363d;--accent:#58a6ff;--pre:#161b22}}
 			body{font:14px/1.6 system-ui,sans-serif;background:var(--bg);color:var(--fg);margin:0;padding:24px}
-			h1{font-size:16px;margin:0 0 4px}a{color:var(--accent);text-decoration:none}
-			a:hover{text-decoration:underline}.sub{color:var(--muted);margin:0 0 16px;font-size:13px}
+			h1{font-size:16px;margin:0}a{color:var(--accent);text-decoration:none}
+			a:hover{text-decoration:underline}.sub{color:var(--muted);margin:12px 0;font-size:13px}
 			ul{list-style:none;margin:0;padding:0;max-width:680px}
-			li{padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px;background:var(--pre)}
+			li{padding:3px 0;border-bottom:1px solid var(--border)}
+			li:last-child{border-bottom:none}
 			.path{display:block;color:var(--accent);font-size:13px;font-family:ui-monospace,monospace;word-break:break-all}
-			.src{color:var(--muted);font-size:12px;font-family:ui-monospace,monospace;margin:-10px 0 16px;word-break:break-all}
+			.src{color:var(--muted);font-size:12px;font-family:ui-monospace,monospace;margin:2px 0 0;word-break:break-all}
 			.empty{color:var(--muted)}
 		</style>`;
-	return head + title + sub + body;
+	return head + header + sub + body;
 }
 
 md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
