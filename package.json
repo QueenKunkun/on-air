@@ -20,7 +20,8 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:onAir.generateUrl"
+    "onCommand:onAir.generateUrl",
+    "onCommand:onAir.exportPreviewHtml"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -29,6 +30,10 @@
         "command": "onAir.generateUrl",
         "title": "OnAir: Generate Live Preview Link",
         "icon": "$(globe)"
+      },
+      {
+        "command": "onAir.exportPreviewHtml",
+        "title": "OnAir: Export Preview HTML (debug)"
       }
     ],
     "menus": {
