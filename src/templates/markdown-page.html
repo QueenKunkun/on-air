@@ -286,14 +286,18 @@
 			}
 			function positionBox(anchor) {
 				var r = anchor.getBoundingClientRect();
+				var vw = window.innerWidth, vh = window.innerHeight;
+				var bw = box.offsetWidth, bh = box.offsetHeight;
+				// Prefer below the link; flip above only if it would overflow the
+				// bottom AND there's room above. Always clamp into the viewport so
+				// the menu is never clipped at any corner / edge (tall menus near
+				// a centered link included).
 				var top = r.bottom + 6;
-				var left = r.left;
-				// Flip above the link if it would overflow the viewport bottom.
-				if (top + box.offsetHeight > window.innerHeight && r.top - box.offsetHeight - 6 > 0) {
-					top = r.top - box.offsetHeight - 6;
-				}
+				if (top + bh > vh && r.top - bh - 6 >= 8) { top = r.top - bh - 6; }
+				top = Math.max(8, Math.min(top, vh - bh - 8));
+				var left = Math.max(8, Math.min(r.left, vw - bw - 8));
 				box.style.top = top + 'px';
-				box.style.left = Math.min(left, window.innerWidth - box.offsetWidth - 8) + 'px';
+				box.style.left = left + 'px';
 			}
 			function closeXref() {
 				overlay.style.display = 'none';
