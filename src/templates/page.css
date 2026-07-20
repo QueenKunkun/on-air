@@ -131,7 +131,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
 #xrefOverlay .xref-box h1 { font-size: 16px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
 #xrefOverlay .xref-box .sub { color: var(--quote-c); font-size: 13px; padding-top: 4px; }
 #xrefOverlay .xref-box ul { list-style: none; padding: 0 16px 16px; }
-#xrefOverlay .xref-box li { display: flex; justify-content: space-between; gap: 16px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; }
+#xrefOverlay .xref-box li { padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; }
 #xrefOverlay .xref-box .name { font-weight: 600; color: var(--link-c); }
-#xrefOverlay .xref-box .path { color: var(--quote-c); font-size: 12px; font-family: ui-monospace, monospace; text-align: right; word-break: break-all; }
+#xrefOverlay .xref-box .path { color: var(--quote-c); font-size: 12px; font-family: ui-monospace, monospace; word-break: break-all; margin-top: 4px; }
 #xrefOverlay .xref-box .empty, #xrefOverlay .xref-box .xref-loading { color: var(--quote-c); }

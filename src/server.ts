@@ -170,7 +170,7 @@ function xrefPage(files: string[], q: string, sourceTitle: string | null, fragme
 			const rel = sourceTitle ? computeDisplayPath(f) : f;
 			const uriKey = vscode.Uri.file(f).toString();
 			const id = crypto.createHash('sha256').update(uriKey).digest('hex').slice(0, 12);
-			return `<li><a class="name" href="/preview/${id}">${escapeHtml(name)}</a><span class="path">${escapeHtml(rel)}</span></li>`;
+			return `<li><a class="name" href="/preview/${id}">${escapeHtml(name)}</a><div class="path">${escapeHtml(rel)}</div></li>`;
 		}).join('');
 		body = `<ul>${lis}</ul>`;
 	}
@@ -371,15 +371,15 @@ function kindFromPath(p: string): DocKind | null {
 /** Markdown preview page: wrapped in our own template, content updates use targeted DOM replacement (no full page reload) */
 function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullPath: string, relPath: string): string {
 	return mdTemplate
-		.replace('{{CSS}}', pageCss)
-		.replace('{{ID}}', id)
-		.replace('{{TITLE}}', escapeHtml(title))
-		.replace('{{BODY}}', bodyHtml)
-		.replace('{{VERSION}}', escapeHtml(EXT_VERSION))
-		.replace('{{ID_JSON}}', JSON.stringify(id))
-		.replace('{{FULL_PATH_JSON}}', JSON.stringify(fullPath))
-		.replace('{{REL_PATH_JSON}}', JSON.stringify(relPath))
-		.replace('{{TOC_JS}}', tocJs);
+		.replace(/\{\{CSS\}\}/g, pageCss)
+		.replace(/\{\{ID\}\}/g, id)
+		.replace(/\{\{TITLE\}\}/g, escapeHtml(title))
+		.replace(/\{\{BODY\}\}/g, bodyHtml)
+		.replace(/\{\{VERSION\}\}/g, escapeHtml(EXT_VERSION))
+		.replace(/\{\{ID_JSON\}\}/g, JSON.stringify(id))
+		.replace(/\{\{FULL_PATH_JSON\}\}/g, JSON.stringify(fullPath))
+		.replace(/\{\{REL_PATH_JSON\}\}/g, JSON.stringify(relPath))
+		.replace(/\{\{TOC_JS\}\}/g, tocJs);
 }
 /**
  * HTML preview page: the user's HTML is already a complete page (with its own
@@ -390,13 +390,13 @@ function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullP
  */
 function htmlLiveReloadSnippet(id: string, title: string, fullPath: string, relPath: string): string {
 	return htmlSnippet
-		.replace('{{CSS}}', pageCss)
-		.replace('{{ID_JSON}}', JSON.stringify(id))
-		.replace('{{TITLE_JSON}}', JSON.stringify(title))
-		.replace('{{VERSION}}', escapeHtml(EXT_VERSION))
-		.replace('{{FULL_PATH_JSON}}', JSON.stringify(fullPath))
-		.replace('{{REL_PATH_JSON}}', JSON.stringify(relPath))
-		.replace('{{TOC_JS}}', tocJs);
+		.replace(/\{\{CSS\}\}/g, pageCss)
+		.replace(/\{\{ID_JSON\}\}/g, JSON.stringify(id))
+		.replace(/\{\{TITLE_JSON\}\}/g, JSON.stringify(title))
+		.replace(/\{\{VERSION\}\}/g, escapeHtml(EXT_VERSION))
+		.replace(/\{\{FULL_PATH_JSON\}\}/g, JSON.stringify(fullPath))
+		.replace(/\{\{REL_PATH_JSON\}\}/g, JSON.stringify(relPath))
+		.replace(/\{\{TOC_JS\}\}/g, tocJs);
 }
 
 function htmlPageTemplate(id: string, rawHtml: string, title: string, fullPath: string, relPath: string, rootDir: string): string {
