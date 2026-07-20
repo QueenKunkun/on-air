@@ -3,6 +3,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { createRequire } from 'module';
 import * as vscode from 'vscode';
 import { WebSocketServer, WebSocket } from 'ws';
 import MarkdownIt from 'markdown-it';
@@ -321,6 +322,16 @@ function mimeType(filePath: string): string {
 	return MIME_TYPES[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
 }
 
+// Extension version, read once from package.json so the preview can show it.
+const EXT_VERSION = (() => {
+	try {
+		const require = createRequire(process.cwd() + '/');
+		return require('./package.json').version as string;
+	} catch {
+		return '';
+	}
+})();
+
 /**
  * Resolve a relative request path against a document's root directory, guarding
  * against path traversal (e.g. `../../etc/passwd`). Returns the absolute file
@@ -353,6 +364,7 @@ function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullP
 		.replace('{{ID}}', id)
 		.replace('{{TITLE}}', escapeHtml(title))
 		.replace('{{BODY}}', bodyHtml)
+		.replace('{{VERSION}}', escapeHtml(EXT_VERSION))
 		.replace('{{ID_JSON}}', JSON.stringify(id))
 		.replace('{{FULL_PATH_JSON}}', JSON.stringify(fullPath))
 		.replace('{{REL_PATH_JSON}}', JSON.stringify(relPath))
@@ -370,6 +382,7 @@ function htmlLiveReloadSnippet(id: string, title: string, fullPath: string, relP
 		.replace('{{CSS}}', pageCss)
 		.replace('{{ID_JSON}}', JSON.stringify(id))
 		.replace('{{TITLE_JSON}}', JSON.stringify(title))
+		.replace('{{VERSION}}', escapeHtml(EXT_VERSION))
 		.replace('{{FULL_PATH_JSON}}', JSON.stringify(fullPath))
 		.replace('{{REL_PATH_JSON}}', JSON.stringify(relPath))
 		.replace('{{TOC_JS}}', tocJs);

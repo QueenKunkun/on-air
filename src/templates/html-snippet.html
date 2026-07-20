@@ -13,6 +13,7 @@
 .__onair_banner__{position:absolute;bottom:0;right:0;white-space:nowrap;color:#fff;font:12px -apple-system,BlinkMacSystemFont,sans-serif;padding:6px 10px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.25);opacity:.88;pointer-events:none}
 .__onair_status.idle .__onair_banner__{display:none}
 .__onair_status.idle .__onair_dot:hover ~ .__onair_banner__{display:block}
+.__onair_ver{position:fixed!important;bottom:12px!important;right:32px!important;z-index:2147483647!important;pointer-events:none!important;font:12px -apple-system,BlinkMacSystemFont,sans-serif;color:#1f2328;background:#fff;border:1px solid #d8dee4;border-radius:999px;padding:2px 8px;opacity:.8;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 @media (max-width: 640px){.__onair_banner__ .banner-msg{display:none}}
 </style>
 <nav id="__otp" class="__otp">
@@ -22,6 +23,7 @@
 <div id="__onair_status" class="__onair_status">
 <div id="__onair_dot" class="__onair_dot" title="OnAir live preview active…" style="background:#0969da;"></div>
 <div id="__onair_banner__" class="__onair_banner__" title="OnAir live preview active…" style="background:#0969da;"><span class="banner-icon">🔌</span><span class="banner-msg">OnAir live preview active…</span></div>
+<div id="__onair_ver" class="__onair_ver" title="OnAir version">v{{VERSION}}</div>
 </div>
 <script>
 (function () {
