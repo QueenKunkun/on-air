@@ -9,7 +9,7 @@
 </head>
 <body>
 	<div class="md-online-banner" id="banner"><span id="bannerTxt" title="Connected, live preview active…"><span id="bannerIcon">🔌</span><span id="bannerMsg" class="banner-msg">Connected, live preview active…</span></span>
-	<select class="bp-select" id="themeSelect" title="Theme">
+	<div class="tb-center"><select class="bp-select" id="themeSelect" title="Theme">
 		<option value="auto">🌓 Auto</option>
 		<option value="dark">🌙 Dark</option>
 		<option value="light">☀️ Light</option>
@@ -30,7 +30,7 @@
 		<button class="bp-btn" id="mwDec" title="Narrower content">−</button>
 		<input class="fs-input" id="mwInput" type="number" min="0" step="20" value="920" title="Max content width in px (0 = no limit)">
 		<button class="bp-btn" id="mwReset" title="Reset max width to default">↺</button>
-		<button class="bp-btn" id="mwInc" title="Wider content">+</button></span>
+		<button class="bp-btn" id="mwInc" title="Wider content">+</button></span></div>
 	<div class="ver-badge" id="verBadge" data-version="v{{VERSION}}" title="Click to copy version">v{{VERSION}}</div></div>
 	<div id="wrapper"><div id="tocSide"><nav id="toc" class="toc"></nav><button id="tocToggle" class="toc-toggle" aria-label="Toggle table of contents">&lt;</button></div><div class="toc-resizer" id="tocResizer"></div><article class="markdown-body" id="content">{{BODY}}</article><div class="annot-resizer" id="annotResizer"></div><div id="annotSide"><div id="annots"></div><button id="annotToggle" class="annot-toggle" aria-label="Toggle annotations">&gt;</button></div></div>
 	<script>
@@ -267,7 +267,22 @@
 			overlay.innerHTML = '<div class="xref-box" role="dialog"></div>';
 			document.body.appendChild(overlay);
 			var box = overlay.firstChild;
-			function closeXref() { overlay.style.display = 'none'; box.innerHTML = ''; }
+			function positionBox(anchor) {
+				var r = anchor.getBoundingClientRect();
+				var top = r.bottom + 6;
+				var left = r.left;
+				// Flip above the link if it would overflow the viewport bottom.
+				if (top + box.offsetHeight > window.innerHeight && r.top - box.offsetHeight - 6 > 0) {
+					top = r.top - box.offsetHeight - 6;
+				}
+				box.style.top = top + 'px';
+				box.style.left = Math.min(left, window.innerWidth - box.offsetWidth - 8) + 'px';
+			}
+			function closeXref() {
+				overlay.style.display = 'none';
+				box.innerHTML = '';
+				document.body.classList.remove('xref-open');
+			}
 			overlay.addEventListener('click', function (e) { if (e.target === overlay) closeXref(); });
 			document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeXref(); });
 			document.addEventListener('click', function (e) {
@@ -278,9 +293,13 @@
 				var sep = href.indexOf('?') >= 0 ? '&' : '?';
 				var fragUrl = href + sep + 'fragment=1';
 				box.innerHTML = '<div class="xref-loading">Loading…</div>';
-				overlay.style.display = 'flex';
+				overlay.style.display = 'block';
+				document.body.classList.add('xref-open');
+				// Render first so we can measure the box, then anchor it to the link.
 				fetch(fragUrl).then(function (r) { return r.text(); }).then(function (html) {
+					if (overlay.style.display !== 'block') return;
 					box.innerHTML = html;
+					positionBox(a);
 				}).catch(function () { box.innerHTML = '<p class="empty">Failed to load references.</p>'; });
 			});
 		})();
