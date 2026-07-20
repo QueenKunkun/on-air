@@ -158,9 +158,11 @@ function proximity(candidate: string, source?: string): number {
  * popover (same HTML, single render source). Lists each matching file with its
  * relative path; rows link to that file's live preview. `files` empty => not found.
  */
-function xrefPage(files: string[], q: string, sourceTitle: string | null, fragment = false): string {
+function xrefPage(files: string[], q: string, sourceTitle: string | null, sourcePath: string | null, fragment = false): string {
 	const title = `<h1>${escapeHtml(q)}</h1>`;
-	const sub = `<p class="sub">${sourceTitle ? `From <strong>${escapeHtml(sourceTitle)}</strong> · ` : ''}sorted by path proximity · click to open its live preview</p>`;
+	const srcRel = sourceTitle && sourcePath ? computeDisplayPath(sourcePath) : null;
+	const sub = `<p class="sub">${sourceTitle ? `From <strong>${escapeHtml(sourceTitle)}</strong> · ` : ''}sorted by path proximity · click to open its live preview</p>` +
+		(srcRel ? `<p class="src">${escapeHtml(srcRel)}</p>` : '');
 	let body: string;
 	if (!files.length) {
 		body = `<p class="empty">No matching <code>${escapeHtml(q)}</code> found in this project.</p>`;
@@ -170,7 +172,7 @@ function xrefPage(files: string[], q: string, sourceTitle: string | null, fragme
 			const rel = sourceTitle ? computeDisplayPath(f) : f;
 			const uriKey = vscode.Uri.file(f).toString();
 			const id = crypto.createHash('sha256').update(uriKey).digest('hex').slice(0, 12);
-			return `<li><a class="path" href="/preview/${id}">${escapeHtml(rel)}</a><div class="name">${escapeHtml(name)}</div></li>`;
+			return `<li><a class="path" href="/preview/${id}">${escapeHtml(rel)}</a></li>`;
 		}).join('');
 		body = `<ul>${lis}</ul>`;
 	}
@@ -187,8 +189,9 @@ function xrefPage(files: string[], q: string, sourceTitle: string | null, fragme
 			h1{font-size:16px;margin:0 0 4px}a{color:var(--accent);text-decoration:none}
 			a:hover{text-decoration:underline}.sub{color:var(--muted);margin:0 0 16px;font-size:13px}
 			ul{list-style:none;margin:0;padding:0;max-width:680px}
-			li{display:flex;justify-content:space-between;gap:16px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px;background:var(--pre)}
-			.name{font-weight:600}.path{color:var(--muted);font-size:12px;font-family:ui-monospace,monospace;word-break:break-all;text-align:right}
+			li{padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px;background:var(--pre)}
+			.path{display:block;color:var(--accent);font-size:13px;font-family:ui-monospace,monospace;word-break:break-all}
+			.src{color:var(--muted);font-size:12px;font-family:ui-monospace,monospace;margin:-10px 0 16px;word-break:break-all}
 			.empty{color:var(--muted)}
 		</style>`;
 	return head + title + sub + body;
@@ -567,10 +570,11 @@ export class PreviewServer {
 		const fromId = params.get('from');
 		const fragment = params.get('fragment') === '1';
 		const fromEntry = fromId ? this.docs.get(fromId) : undefined;
+		const sourcePath = fromEntry?.fullPath;
 
 		res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
 		if (!q) {
-			res.end(xrefPage([], q, fromEntry?.title ?? null, fragment));
+			res.end(xrefPage([], q, fromEntry?.title ?? null, sourcePath ?? null, fragment));
 			return;
 		}
 
@@ -594,10 +598,9 @@ export class PreviewServer {
 					}
 				}
 			};
-			walk(rootDir);
-		}
+		walk(rootDir);
+	}
 
-		const sourcePath = fromEntry?.fullPath;
 		const sorted = matches
 			.filter(p => !sourcePath || path.resolve(p) !== path.resolve(sourcePath))
 			.sort((a, b) => proximity(a, sourcePath) - proximity(b, sourcePath));
@@ -609,7 +612,7 @@ export class PreviewServer {
 			res.end();
 			return;
 		}
-		res.end(xrefPage(sorted, q, fromEntry?.title ?? null, fragment));
+		res.end(xrefPage(sorted, q, fromEntry?.title ?? null, sourcePath ?? null, fragment));
 	}
 
 	getLanIp(): string | null {
