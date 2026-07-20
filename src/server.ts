@@ -170,7 +170,7 @@ function proximity(candidate: string, source?: string): number {
 			const rel = sourceTitle ? computeDisplayPath(f) : f;
 			const uriKey = vscode.Uri.file(f).toString();
 			const id = crypto.createHash('sha256').update(uriKey).digest('hex').slice(0, 12);
-			return `<li><a class="path" href="/preview/${id}">${escapeHtml(rel)}</a></li>`;
+			return `<li><a class="path" href="/preview/${id}?file=${encodeURIComponent(f)}">${escapeHtml(rel)}</a></li>`;
 		}).join('');
 		body = `<ul>${lis}</ul>`;
 	}
@@ -187,9 +187,10 @@ function proximity(candidate: string, source?: string): number {
 			h1{font-size:16px;margin:0}a{color:var(--accent);text-decoration:none}
 			a:hover{text-decoration:underline}.sub{color:var(--muted);margin:12px 0;font-size:13px}
 			ul{list-style:none;margin:0;padding:0;max-width:680px}
-			li{padding:3px 0;border-bottom:1px solid var(--border)}
+			li{padding:4px 0;line-height:1.8;border-bottom:1px solid var(--border)}
 			li:last-child{border-bottom:none}
-			.path{display:block;color:var(--accent);font-size:13px;font-family:ui-monospace,monospace;word-break:break-all}
+			.path{display:inline;color:var(--accent);font-size:13px;font-family:ui-monospace,monospace;word-break:break-all;text-decoration:none}
+			.path:hover{text-decoration:underline;text-underline-offset:2px}
 			.src{color:var(--muted);font-size:12px;font-family:ui-monospace,monospace;margin:2px 0 0;word-break:break-all}
 			.empty{color:var(--muted)}
 		</style>`;
@@ -607,7 +608,7 @@ export class PreviewServer {
 		if (sorted.length === 1) {
 			const uriKey = vscode.Uri.file(sorted[0]).toString();
 			const id = this.uriToId.get(uriKey) || crypto.createHash('sha256').update(uriKey).digest('hex').slice(0, 12);
-			res.writeHead(302, { Location: `/preview/${id}` });
+			res.writeHead(302, { Location: `/preview/${id}?file=${encodeURIComponent(sorted[0])}` });
 			res.end();
 			return;
 		}
@@ -629,11 +630,14 @@ export class PreviewServer {
 
 	private handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
 		const url = req.url || '';
+		const u = new URL(url, 'http://localhost');
+		const pathname = u.pathname;
+		const sp = u.searchParams;
 
 		// Static assets alongside the source file, e.g. /preview/<id>/images/foo.png,
 		// referenced via relative paths like `images/foo.png` or `embeds/x.html` in the
 		// source document. Checked before the bare preview-page route below.
-		const staticMatch = url.match(/^\/preview\/([a-f0-9]+)\/(.+)$/);
+		const staticMatch = pathname.match(/^\/preview\/([a-f0-9]+)\/(.+)$/);
 		if (staticMatch) {
 			const entry = this.docs.get(staticMatch[1]);
 			if (!entry) {
@@ -689,10 +693,27 @@ export class PreviewServer {
 			return;
 		}
 
-		const match = url.match(/^\/preview\/([a-f0-9]+)\/?$/);
+		const match = pathname.match(/^\/preview\/([a-f0-9]+)\/?$/);
 		if (match) {
 			const entry = this.docs.get(match[1]);
 			if (!entry) {
+				// Lazy registration: an xref link may point at a file that was
+				// found on disk but never opened as a preview. Load it and register
+				// on demand (mirrors the relative-link path at the top of this method).
+				const file = sp.get('file');
+				const kind = file ? kindFromPath(file) : null;
+				if (file && kind && fs.existsSync(file)) {
+					const data = fs.readFileSync(file, 'utf8');
+					const ws = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(file));
+					const rootDir = ws ? ws.uri.fsPath : path.dirname(file);
+					const newId = this.registerDocument(vscode.Uri.file(file).toString(), path.basename(file), data, kind, rootDir, file);
+					const newEntry = this.docs.get(newId);
+					if (newEntry) {
+						res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+						res.end(newEntry.page);
+						return;
+					}
+				}
 				res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
 				res.end('Preview not found or has been closed. Please regenerate the link in VS Code.');
 				return;
