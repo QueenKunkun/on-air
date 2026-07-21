@@ -9,11 +9,7 @@
 </head>
 <body>
 	<div class="md-online-banner" id="banner"><span id="bannerTxt" title="Connected, live preview active…"><span id="bannerIcon">🔌</span><span id="bannerMsg" class="banner-msg">Connected, live preview active…</span></span>
-	<div class="tb-center"><select class="bp-select" id="themeSelect" title="Theme">
-		<option value="auto">🌓 Auto</option>
-		<option value="dark">🌙 Dark</option>
-		<option value="light">☀️ Light</option>
-	</select>
+	<div class="tb-center">	<select class="bp-select" id="themeSelect" title="Theme"></select>
 	<button class="wp-btn" id="wpBtn" title="Toggle word wrapping for code blocks">Wrap code</button>
 	<button class="wp-btn" id="hoverBtn" title="Toggle hover preview for footnote/annotation notes">Hover notes</button>
 	<span class="bp-group"><span class="bp-label" title="Font size">A</span>
@@ -54,9 +50,20 @@
 		};
 
 		// ---- theme select ----
+		var __THEMES__ = {{THEMES}};
 		var themeSelect = document.getElementById('themeSelect');
 		var html = document.documentElement;
+		if (__THEMES__) {
+			for (var i = 0; i < __THEMES__.length; i++) {
+				var opt = document.createElement('option');
+				opt.value = __THEMES__[i].id;
+				opt.textContent = __THEMES__[i].label;
+				themeSelect.appendChild(opt);
+			}
+		}
 		var saved = localStorage.getItem('onair-theme');
+		if (saved === 'dark') saved = 'vscode-dark';
+		if (saved === 'light') saved = 'github-light';
 		if (saved) { themeSelect.value = saved; }
 		applyTheme(themeSelect.value);
 
@@ -66,9 +73,8 @@
 		};
 
 		function applyTheme(val) {
-			html.classList.remove('force-dark', 'force-light');
-			if (val === 'dark') html.classList.add('force-dark');
-			else if (val === 'light') html.classList.add('force-light');
+			if (val === 'auto') { html.removeAttribute('data-theme'); }
+			else { html.setAttribute('data-theme', val); }
 		}
 
 		// ---- font size ----

@@ -368,10 +368,23 @@ function kindFromPath(p: string): DocKind | null {
 	return null;
 }
 
+const THEMES = [
+	{ id: 'auto', label: '🌓 Auto' },
+	{ id: 'vscode-dark', label: '🌙 VS Code Dark' },
+	{ id: 'github-light', label: '☀️ GitHub Light' },
+	{ id: 'vscode-light', label: '☀️ VS Code Light' },
+	{ id: 'github-dark', label: '🌙 GitHub Dark' },
+	{ id: 'monokai', label: '🌙 Monokai' },
+	{ id: 'solarized-dark', label: '🌙 Solarized Dark' },
+	{ id: 'solarized-light', label: '☀️ Solarized Light' },
+	{ id: 'tomorrow-night-blue', label: '🌙 Tomorrow Night Blue' },
+];
+
 /** Markdown preview page: wrapped in our own template, content updates use targeted DOM replacement (no full page reload) */
 function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullPath: string, relPath: string): string {
 	return mdTemplate
 		.replace(/\{\{CSS\}\}/g, pageCss)
+		.replace(/\{\{THEMES\}\}/g, JSON.stringify(THEMES))
 		.replace(/\{\{ID\}\}/g, id)
 		.replace(/\{\{TITLE\}\}/g, escapeHtml(title))
 		.replace(/\{\{BODY\}\}/g, bodyHtml)
