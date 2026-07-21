@@ -522,17 +522,13 @@
 		})();
 
 		// ---- file tree: tab switching, directory navigation, file opening ----
+		try {
 		(function () {
 			var tocPanel = document.getElementById('toc');
 			var treePanel = document.getElementById('fileTree');
 			var tabToc = document.getElementById('tabToc');
 			var tabTree = document.getElementById('tabTree');
 			var ftScroll = document.getElementById('ftScroll');
-
-			// MUST define filter refs before switchTab (which may call fetchDir)
-			var giCheck = document.getElementById('ftGitignore');
-			var mdCheck = document.getElementById('ftMarkdown');
-			var binCheck = document.getElementById('ftBinary');
 
 			function switchTab(name) {
 				tabToc.classList.toggle('active', name === 'toc');
@@ -551,9 +547,16 @@
 
 			tabToc.onclick = function () { switchTab('toc'); };
 			tabTree.onclick = function () { switchTab('tree'); };
-			[giCheck, mdCheck, binCheck].forEach(function (cb) {
-				cb.onchange = function () { if (treePanel.style.display !== 'none') fetchDir(ftCurrentDir || ''); };
-			});
+
+			function getCheck(id) { var el = document.getElementById(id); return el ? el.checked : false; }
+
+			(function () {
+				var cbs = ['ftGitignore', 'ftMarkdown', 'ftBinary'].map(function (id) { return document.getElementById(id); });
+				cbs.forEach(function (cb) {
+					if (!cb) return;
+					cb.onchange = function () { if (treePanel.style.display !== 'none') fetchDir(ftCurrentDir || ''); };
+				});
+			})();
 
 			window.ftRefresh = function () {
 				if (treePanel.style.display !== 'none') fetchDir(ftCurrentDir || '');
@@ -574,9 +577,9 @@
 			function fetchDir(dir, callback) {
 				ftCurrentDir = dir;
 				var params = 'id=' + encodeURIComponent(id) + '&dir=' + encodeURIComponent(dir);
-				if (giCheck.checked) params += '&respectGitignore=1';
-				if (mdCheck.checked) params += '&ext=.md';
-				if (binCheck.checked) params += '&hideBinary=1';
+				if (getCheck('ftGitignore')) params += '&respectGitignore=1';
+				if (getCheck('ftMarkdown')) params += '&ext=.md';
+				if (getCheck('ftBinary')) params += '&hideBinary=1';
 				ftScroll.innerHTML = '<div class="ft-loading">Loading…</div>';
 				fetch('/api/tree?' + params).then(function (r) { return r.json(); }).then(function (data) {
 					if (data.error) { ftScroll.innerHTML = '<div class="ft-error">' + escapeHtml(data.error) + '</div>'; return; }
@@ -673,6 +676,7 @@
 				}
 			}
 		})();
+		} catch (e) { console.error('file tree error', e); }
 
 		// ---- websocket ----
 		function connect() {
