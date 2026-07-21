@@ -170,25 +170,41 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 .ft-filter { display: flex; align-items: center; gap: 6px; padding: 6px 8px; flex-shrink: 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .ft-filter label { display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--quote-c); cursor: pointer; user-select: none; white-space: nowrap; }
 .ft-filter input[type="checkbox"] { margin: 0; accent-color: var(--link-c); }
+.ft-filter-spacer { flex: 1; }
+
+/* Locate button */
+.ft-locate-btn { font-size: 14px; line-height: 1; cursor: pointer; background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; color: var(--quote-c); user-select: none; transition: background .15s; }
+.ft-locate-btn:hover { background: var(--pre-bg); color: var(--link-c); }
 
 /* Tree scroll container */
 .ft-scroll { flex: 1; overflow-y: auto; padding: 4px 0 24px 4px; }
 .ft-list { list-style: none; padding: 0; margin: 0; }
-.ft-list .ft-list { padding-left: 14px; }
-.ft-item { padding: 2px 6px; border-radius: 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: none; }
-.ft-item:hover { background: var(--pre-bg); color: var(--link-c); }
-.ft-item.ft-active { background: var(--pre-bg); color: var(--link-c); font-weight: 600; }
-.ft-item.ft-parent { color: var(--quote-c); font-style: italic; }
-.ft-item.ft-parent::before { content: '↩ '; }
+
+/* Tree items with grid for toggle + name + children stacking */
+.ft-item { padding: 2px 4px; border-radius: 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: none; }
+.ft-item.ft-directory { display: grid; grid-template-columns: 16px 1fr; align-items: center; }
+.ft-item.ft-file { display: grid; grid-template-columns: 16px 1fr; align-items: center; }
+
+/* Toggle button */
+.ft-toggle { cursor: pointer; user-select: none; width: 16px; text-align: center; flex-shrink: 0; font-size: 10px; color: var(--quote-c); transition: color .15s; }
+.ft-toggle:hover { color: var(--text); }
+.ft-vis-hidden { visibility: hidden; }
+
+/* Directory name / file name */
+.ft-name { overflow: hidden; text-overflow: ellipsis; }
+.ft-item:hover { background: var(--pre-bg); }
+.ft-item:hover .ft-name { color: var(--link-c); }
+
+/* Children container: hidden by default, shown via inline style when expanded */
+.ft-children { list-style: none; padding: 0; margin: 0; display: none; grid-column: 1 / -1; }
+
+/* Current file highlight */
+.ft-item.ft-current { background: var(--pre-bg); }
+.ft-item.ft-current .ft-name { color: var(--link-c); font-weight: 600; }
+
+/* Loading / error states */
 .ft-loading, .ft-error { padding: 12px 16px; color: var(--quote-c); font-size: 12px; }
 .ft-error { color: var(--h-keyword); }
-
-/* Breadcrumb navigation */
-.ft-bc { display: flex; align-items: center; gap: 4px; padding: 6px 10px; flex-shrink: 0; border-bottom: 1px solid var(--border); font-size: 12px; flex-wrap: wrap; }
-.ft-bc-seg { color: var(--link-c); cursor: pointer; user-select: none; padding: 1px 3px; border-radius: 3px; }
-.ft-bc-seg:hover { background: var(--pre-bg); }
-.ft-bc-seg-active { color: var(--text); font-weight: 600; cursor: default; }
-.ft-bc-sep { color: var(--quote-c); font-size: 14px; line-height: 1; user-select: none; }
 
 /* File content view (replaces markdown body) */
 .file-view { padding: 0; }
