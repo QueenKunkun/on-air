@@ -529,6 +529,11 @@
 			var tabTree = document.getElementById('tabTree');
 			var ftScroll = document.getElementById('ftScroll');
 
+			// MUST define filter refs before switchTab (which may call fetchDir)
+			var giCheck = document.getElementById('ftGitignore');
+			var mdCheck = document.getElementById('ftMarkdown');
+			var binCheck = document.getElementById('ftBinary');
+
 			function switchTab(name) {
 				tabToc.classList.toggle('active', name === 'toc');
 				tabTree.classList.toggle('active', name === 'tree');
@@ -546,11 +551,6 @@
 
 			tabToc.onclick = function () { switchTab('toc'); };
 			tabTree.onclick = function () { switchTab('tree'); };
-
-			// Filter toggles
-			var giCheck = document.getElementById('ftGitignore');
-			var mdCheck = document.getElementById('ftMarkdown');
-			var binCheck = document.getElementById('ftBinary');
 			[giCheck, mdCheck, binCheck].forEach(function (cb) {
 				cb.onchange = function () { if (treePanel.style.display !== 'none') fetchDir(ftCurrentDir || ''); };
 			});
