@@ -378,6 +378,13 @@ const THEMES = [
 	{ id: 'solarized-dark', label: '🌙 Solarized Dark' },
 	{ id: 'solarized-light', label: '☀️ Solarized Light' },
 	{ id: 'tomorrow-night-blue', label: '🌙 Tomorrow Night Blue' },
+	{ id: 'abyss', label: '🌙 Abyss' },
+	{ id: 'kimbie-dark', label: '🌙 Kimbie Dark' },
+	{ id: 'monokai-dimmed', label: '🌙 Monokai Dimmed' },
+	{ id: 'red', label: '🌙 Red' },
+	{ id: 'quietlight', label: '☀️ Quiet Light' },
+	{ id: 'hc-black', label: '🌙 High Contrast Black' },
+	{ id: 'hc-light', label: '☀️ High Contrast Light' },
 ];
 
 /** Markdown preview page: wrapped in our own template, content updates use targeted DOM replacement (no full page reload) */
