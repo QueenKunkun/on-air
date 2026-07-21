@@ -532,8 +532,8 @@
 			function switchTab(name) {
 				tabToc.classList.toggle('active', name === 'toc');
 				tabTree.classList.toggle('active', name === 'tree');
-				tocPanel.style.display = name === 'toc' ? '' : 'none';
-				treePanel.style.display = name === 'tree' ? '' : 'none';
+				tocPanel.style.display = name === 'toc' ? 'flex' : 'none';
+				treePanel.style.display = name === 'tree' ? 'flex' : 'none';
 				localStorage.setItem('onair-sidebar-tab', name);
 				if (name === 'tree') {
 					ftCurrentDir = '';
