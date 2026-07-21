@@ -10,6 +10,8 @@
 		"strict": true
 	},
 	"exclude": [
-		"src/frontend"
+		"src/frontend",
+		"tests",
+		"playwright.config.ts"
 	]
 }

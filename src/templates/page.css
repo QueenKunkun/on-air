@@ -201,8 +201,9 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
     color: var(--link-c);
 }
 
-/* Children container: hidden by default, shown via inline style when expanded */
+/* Children container: hidden by default, shown when parent is expanded */
 .ft-children { list-style: none; padding: 0; margin: 0; display: none; grid-column: 1 / -1; }
+.ft-expanded > .ft-children { display: block; }
 
 /* Current file highlight — left accent bar */
 .ft-item.ft-current { background: var(--pre-bg); box-shadow: inset 3px 0 0 var(--link-c); border-radius: 0 4px 4px 0; }

@@ -34,6 +34,9 @@ import { tocJs } from './templates/toc-common';
 
 let preactJs = '';
 try { preactJs = fs.readFileSync(path.join(__dirname, 'preview.js'), 'utf8'); } catch {}
+if (!preactJs) {
+	try { preactJs = fs.readFileSync(path.join(__dirname, '..', 'dist', 'preview.js'), 'utf8'); } catch {}
+}
 import sql from 'highlight.js/lib/languages/sql';
 import bash from 'highlight.js/lib/languages/bash';
 import shell from 'highlight.js/lib/languages/shell';
@@ -478,8 +481,9 @@ export class PreviewServer {
 				this.server.once('error', onError);
 				this.server.listen(port, '127.0.0.1', () => {
 					this.server.removeListener('error', onError);
-					this.port = port;
-					resolve(port);
+					const addr = this.server.address();
+					this.port = typeof addr === 'object' && addr ? addr.port : port;
+					resolve(this.port);
 				});
 			};
 			tryListen(preferredPort, 30);
@@ -727,9 +731,9 @@ export class PreviewServer {
 						try {
 							const fd = fs.openSync(full, 'r');
 							const buf = Buffer.alloc(8192);
-							fs.readSync(fd, buf, 0, 8192, 0);
+							const bytesRead = fs.readSync(fd, buf, 0, 8192, 0);
 							fs.closeSync(fd);
-							if (buf.includes(0)) {continue;}
+							if (buf.subarray(0, bytesRead).includes(0)) {continue;}
 						} catch { continue; }
 					}
 					result.push({ name: e.name, type: 'file', path: relPath, ext, size: fs.statSync(full).size });

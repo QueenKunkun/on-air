@@ -72,12 +72,14 @@
     "lint": "eslint src",
     "test": "vscode-test",
     "test:unit": "node --test",
+    "test:e2e": "npx playwright test",
     "publish-all": "node scripts/check-size.mjs && pnpm publish-vsce && pnpm publish-ovsx",
     "package-vsix": "vsce package --no-dependencies",
     "publish-vsce": "vsce publish --packagePath on-air.vsix --no-dependencies",
     "publish-ovsx": "bash -c 'source .env && npx ovsx publish on-air.vsix -p $vsx_token --no-dependencies'"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "22.x",
     "@types/vscode": "^1.85.0",
@@ -88,6 +90,7 @@
     "esbuild": "^0.28.1",
     "eslint": "^9.34.0",
     "ts-loader": "^9.5.4",
+    "tsx": "^4.23.1",
     "typescript": "^5.9.2",
     "webpack": "^5.101.3",
     "webpack-cli": "^6.0.1"

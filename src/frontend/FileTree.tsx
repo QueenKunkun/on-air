@@ -84,19 +84,24 @@ export function FileTree({ id }: Props) {
     const rel = curPath.replace(rootPath, '').replace(/^[/\\]/, '');
     const parts = rel.split(/[/\\]/);
     parts.pop();
-    if (!parts.length || (parts.length === 1 && parts[0] === '')) {
-      if (doScroll) {
-        const el = document.querySelector('.ft-item.ft-current');
-        if (el) el.scrollIntoView({ block: 'center' });
-      }
-      return;
-    }
 
     if (!cacheRef.current['']) await fetchDir('');
     for (let i = 0; i < parts.length; i++) {
       const dirPath = parts.slice(0, i + 1).join('/');
-      await fetchNeeded(dirPath);
+      if (!cacheRef.current[dirPath]) await fetchDir(dirPath);
       setBothExpanded(prev => ({ ...prev, [dirPath]: true }));
+    }
+
+    // Apply .ft-current directly via DOM (don't rely on async useEffect timing)
+    document.querySelectorAll('.ft-item.ft-current').forEach(el => el.classList.remove('ft-current'));
+    if (rel) {
+      const items = document.querySelectorAll('.ft-item.ft-file');
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].getAttribute('data-path') === rel) {
+          items[i].classList.add('ft-current');
+          break;
+        }
+      }
     }
 
     if (doScroll) {
@@ -110,7 +115,7 @@ export function FileTree({ id }: Props) {
         });
       });
     }
-  }, [fetchDir, fetchNeeded, setBothExpanded]);
+  }, [fetchDir, setBothExpanded]);
 
   const handleLocate = useCallback(() => {
     expandToCurrentFile(true);
@@ -118,7 +123,6 @@ export function FileTree({ id }: Props) {
 
   const handleFilterChange = useCallback((key: keyof Filters) => {
     setFilters(prev => ({ ...prev, [key]: !prev[key] }));
-    cacheRef.current = {};
     setExpanded({});
     expandedRef.current = {};
   }, []);
@@ -135,6 +139,7 @@ export function FileTree({ id }: Props) {
   }, []);
 
   // Apply .ft-current highlight whenever currentPath or expanded changes
+  // (fallback for renders not triggered by expandToCurrentFile)
   useEffect(() => {
     document.querySelectorAll('.ft-item.ft-current').forEach(el => el.classList.remove('ft-current'));
     if (!currentPath) return;
@@ -147,8 +152,9 @@ export function FileTree({ id }: Props) {
     }
   }, [currentPath, expanded]);
 
-  // Initial load: fetch root, restore saved state, expand to current file
+  // Initial load + refetch on filter change
   useEffect(() => {
+    cacheRef.current = {};
     (async () => {
       await fetchDir('');
       const saved = localStorage.getItem('onair-ft-expanded');
@@ -158,7 +164,7 @@ export function FileTree({ id }: Props) {
           if (paths.length) {
             const restore: Record<string, boolean> = {};
             for (const p of paths) {
-              await fetchNeeded(p);
+              if (!cacheRef.current[p]) await fetchDir(p);
               restore[p] = true;
             }
             setBothExpanded(() => restore);
@@ -168,7 +174,7 @@ export function FileTree({ id }: Props) {
       setLoaded(true);
       await expandToCurrentFile(false);
     })();
-  }, []);
+  }, [filters]);
 
   // Persist expanded state
   useEffect(() => {
