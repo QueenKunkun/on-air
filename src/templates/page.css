@@ -192,14 +192,20 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 
 /* Directory name / file name */
 .ft-name { overflow: hidden; text-overflow: ellipsis; }
-.ft-item:hover { background: var(--pre-bg); }
-.ft-item:hover .ft-name { color: var(--link-c); }
+.ft-item.ft-file:hover,
+.ft-item.ft-directory:hover:not(:has(.ft-item:hover)) {
+    background: var(--pre-bg);
+}
+.ft-item.ft-file:hover .ft-name,
+.ft-item.ft-directory:hover:not(:has(.ft-item:hover)) .ft-name {
+    color: var(--link-c);
+}
 
 /* Children container: hidden by default, shown via inline style when expanded */
 .ft-children { list-style: none; padding: 0; margin: 0; display: none; grid-column: 1 / -1; }
 
-/* Current file highlight */
-.ft-item.ft-current { background: var(--pre-bg); }
+/* Current file highlight — left accent bar */
+.ft-item.ft-current { background: var(--pre-bg); box-shadow: inset 3px 0 0 var(--link-c); border-radius: 0 4px 4px 0; }
 .ft-item.ft-current .ft-name { color: var(--link-c); font-weight: 600; }
 
 /* Loading / error states */
