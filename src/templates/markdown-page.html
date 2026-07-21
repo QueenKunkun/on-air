@@ -28,7 +28,7 @@
 		<button class="bp-btn" id="mwReset" title="Reset max width to default">↺</button>
 		<button class="bp-btn" id="mwInc" title="Wider content">+</button></span></div>
 	<div class="ver-badge" id="verBadge" data-version="v{{VERSION}}" title="Click to copy version">v{{VERSION}}</div></div>
-	<div id="wrapper"><div id="tocSide"><div class="sidebar-tabs"><button class="sidebar-tab tab-toc active" id="tabToc">📑 TOC</button><button class="sidebar-tab tab-tree" id="tabTree">📁 Files</button></div><nav id="toc" class="toc"></nav><div id="fileTree"><div class="ft-filter"><label><input type="checkbox" id="ftGitignore" checked> .gitignore</label><label><input type="checkbox" id="ftMarkdown"> .md</label><label><input type="checkbox" id="ftBinary" checked> Hide binary</label><span class="ft-filter-spacer"></span><button class="ft-locate-btn" id="ftLocateBtn" title="Scroll to current file">📍</button></div><div class="ft-scroll" id="ftScroll"></div></div><button id="tocToggle" class="toc-toggle" aria-label="Toggle table of contents">&lt;</button></div><div class="toc-resizer" id="tocResizer"></div><article class="markdown-body" id="content">{{BODY}}</article><div class="annot-resizer" id="annotResizer"></div><div id="annotSide"><div id="annots"></div><button id="annotToggle" class="annot-toggle" aria-label="Toggle annotations">&gt;</button></div></div>
+	<div id="wrapper"><div id="tocSide"><div class="sidebar-tabs"><button class="sidebar-tab tab-toc active" id="tabToc">📑 TOC</button><button class="sidebar-tab tab-tree" id="tabTree">📁 Files</button></div><nav id="toc" class="toc"></nav><div id="fileTree"><div id="ft-preact-root" data-id="{{ID}}" data-fullpath="{{FULL_PATH_ATTR}}" data-rootdir="{{ROOT_DIR_ATTR}}"></div></div><button id="tocToggle" class="toc-toggle" aria-label="Toggle table of contents">&lt;</button></div><div class="toc-resizer" id="tocResizer"></div><article class="markdown-body" id="content">{{BODY}}</article><div class="annot-resizer" id="annotResizer"></div><div id="annotSide"><div id="annots"></div><button id="annotToggle" class="annot-toggle" aria-label="Toggle annotations">&gt;</button></div></div>
 	<script>
 	(function () {
 		var bannerEl = document.getElementById('banner');
@@ -521,321 +521,27 @@
 			handle.onclick = function () { setCollapsed(!side.classList.contains('collapsed')); };
 		})();
 
-		// ---- file tree: tab switching, tree navigation, file opening ----
-		try {
+		// ---- file tree: tab switching (Preact component handles content) ----
 		(function () {
 			var tocPanel = document.getElementById('toc');
 			var treePanel = document.getElementById('fileTree');
 			var tabToc = document.getElementById('tabToc');
 			var tabTree = document.getElementById('tabTree');
-			var ftScroll = document.getElementById('ftScroll');
 
-			function getCheck(id) { var el = document.getElementById(id); return el ? el.checked : false; }
-
-			function filterParams(dir) {
-				var params = 'id=' + encodeURIComponent(id) + '&dir=' + encodeURIComponent(dir);
-				if (getCheck('ftGitignore')) params += '&respectGitignore=1';
-				if (getCheck('ftMarkdown')) params += '&ext=.md';
-				if (getCheck('ftBinary')) params += '&hideBinary=1';
-				return params;
-			}
-
-			// -- cache and state --
-			var ftCache = {};
-			var ftExpanded = {};
-			var ftExpandedToFile = false;
-
-			function fetchDir(path) {
-				return fetch('/api/tree?' + filterParams(path)).then(function (r) { return r.json(); });
-			}
-
-			function getCachedOrFetch(path) {
-				if (ftCache[path]) return Promise.resolve(ftCache[path]);
-				return fetchDir(path).then(function (data) {
-					if (data.error) return Promise.reject(new Error(data.error));
-					ftCache[path] = data;
-					return data;
-				});
-			}
-
-			function clearAllCache() { for (var key in ftCache) delete ftCache[key]; }
-
-			// -- rendering --
-			function renderDirContent(data, container) {
-				container.innerHTML = '';
-				var dirs = [], files = [];
-				for (var i = 0; i < data.entries.length; i++) {
-					if (data.entries[i].type === 'directory') dirs.push(data.entries[i]);
-					else files.push(data.entries[i]);
-				}
-				dirs.sort(function (a, b) { return a.name.localeCompare(b.name); });
-				files.sort(function (a, b) { return a.name.localeCompare(b.name); });
-				var all = dirs.concat(files);
-				for (var i = 0; i < all.length; i++) {
-					var e = all[i];
-					var li = document.createElement('li');
-					li.className = 'ft-item ft-' + e.type;
-					if (e.type === 'directory') {
-						var toggle = document.createElement('span');
-						toggle.className = 'ft-toggle';
-						toggle.textContent = '\u25B6';
-						toggle.dataset.path = e.path;
-						li.appendChild(toggle);
-						var name = document.createElement('span');
-						name.className = 'ft-name';
-						name.textContent = e.name;
-						li.appendChild(name);
-						var children = document.createElement('ul');
-						children.className = 'ft-children';
-						li.appendChild(children);
-						li.onclick = (function (p, t, c) {
-							return function (ev) { ev.stopPropagation(); toggleDir(p, t, c); };
-						})(e.path, toggle, children);
-					} else {
-						var spacer = document.createElement('span');
-						spacer.className = 'ft-toggle ft-vis-hidden';
-						li.appendChild(spacer);
-						var name = document.createElement('span');
-						name.className = 'ft-name';
-						name.textContent = e.name;
-						li.appendChild(name);
-						li.onclick = (function (p) {
-							return function () { openFile(p); };
-						})(e.path);
-					}
-					container.appendChild(li);
-				}
-			}
-
-			function finishExpand(toggleEl, childList) {
-				toggleEl.textContent = '\u25BC';
-				childList.style.display = 'block';
-			}
-
-			function toggleDir(path, toggleEl, childList) {
-				if (ftExpanded[path]) {
-					childList.style.display = 'none';
-					toggleEl.textContent = '\u25B6';
-					delete ftExpanded[path];
-					saveExpandedState();
-				} else {
-					if (!childList.children.length) {
-						getCachedOrFetch(path).then(function (data) {
-							renderDirContent(data, childList);
-							finishExpand(toggleEl, childList);
-							ftExpanded[path] = true;
-							saveExpandedState();
-						}).catch(function () {
-							childList.innerHTML = '<li class="ft-item ft-error">Failed to load</li>';
-							finishExpand(toggleEl, childList);
-							ftExpanded[path] = true;
-							saveExpandedState();
-						});
-					} else {
-						finishExpand(toggleEl, childList);
-						ftExpanded[path] = true;
-						saveExpandedState();
-					}
-				}
-			}
-
-			// -- expand helpers for sequential async expansion --
-			function expandDirInList(listEl, dirName, dirPath) {
-				for (var i = 0; i < listEl.children.length; i++) {
-					var item = listEl.children[i];
-					if (item.classList.contains('ft-directory')) {
-						var nameEl = item.querySelector('.ft-name');
-						if (nameEl && nameEl.textContent === dirName) {
-							var toggleEl = item.querySelector('.ft-toggle');
-							var childList = item.querySelector('.ft-children');
-							return new Promise(function (resolve) {
-								if (ftExpanded[dirPath]) {
-									resolve(childList);
-								} else {
-									if (!childList.children.length) {
-										getCachedOrFetch(dirPath).then(function (data) {
-											renderDirContent(data, childList);
-											finishExpand(toggleEl, childList);
-											ftExpanded[dirPath] = true;
-											saveExpandedState();
-											resolve(childList);
-										}).catch(function () {
-											childList.innerHTML = '<li class="ft-item ft-error">Failed to load</li>';
-											finishExpand(toggleEl, childList);
-											ftExpanded[dirPath] = true;
-											saveExpandedState();
-											resolve(childList);
-										});
-									} else {
-										finishExpand(toggleEl, childList);
-										ftExpanded[dirPath] = true;
-										saveExpandedState();
-										resolve(childList);
-									}
-								}
-							});
-						}
-					}
-				}
-				return Promise.resolve(null);
-			}
-
-			function expandDirPath(listEl, parts, idx) {
-				if (idx >= parts.length) return Promise.resolve();
-				return expandDirInList(listEl, parts[idx], parts.slice(0, idx + 1).join('/')).then(function (childList) {
-					if (childList) return expandDirPath(childList, parts, idx + 1);
-				});
-			}
-
-			// -- state persistence --
-			function saveExpandedState() {
-				var paths = [];
-				for (var key in ftExpanded) {
-					if (key) paths.push(key);
-				}
-				if (paths.length) {
-					localStorage.setItem('onair-ft-expanded', JSON.stringify(paths));
-				} else {
-					localStorage.removeItem('onair-ft-expanded');
-				}
-			}
-
-			function restoreExpandedState() {
-				var saved = localStorage.getItem('onair-ft-expanded');
-				if (!saved) return Promise.resolve();
-				var paths;
-				try { paths = JSON.parse(saved); } catch (e) { return Promise.resolve(); }
-				if (!paths || !paths.length) return Promise.resolve();
-				var rootList = document.querySelector('.ft-list');
-				if (!rootList) return Promise.resolve();
-				paths.sort(function (a, b) { return a.split('/').length - b.split('/').length; });
-				var promise = Promise.resolve();
-				for (var i = 0; i < paths.length; i++) {
-					(function (fullDirPath) {
-						promise = promise.then(function () {
-							return expandDirPath(rootList, fullDirPath.split('/'), 0);
-						});
-					})(paths[i]);
-				}
-				return promise;
-			}
-
-			// -- expand to current file --
-			function expandToCurrentFile() {
-				if (!rootDir || !fullPath) return Promise.resolve();
-				if (ftExpandedToFile) return Promise.resolve();
-				ftExpandedToFile = true;
-				var rel = fullPath.replace(rootDir, '').replace(/^[/\\]/, '');
-				var parts = rel.split(/[/\\]/);
-				var fileName = parts.pop();
-				if (!parts.length || (parts.length === 1 && parts[0] === '')) return Promise.resolve();
-				var rootList = document.querySelector('.ft-list');
-				if (!rootList) return Promise.resolve();
-				function step(idx, listEl) {
-					if (idx >= parts.length) {
-						if (fileName) {
-							for (var i = 0; i < listEl.children.length; i++) {
-								var item = listEl.children[i];
-								if (item.classList.contains('ft-file')) {
-									var nameEl = item.querySelector('.ft-name');
-									if (nameEl && nameEl.textContent === fileName) {
-										item.classList.add('ft-current');
-										item.scrollIntoView({ block: 'center' });
-										break;
-									}
-								}
-							}
-						}
-						return Promise.resolve();
-					}
-					return expandDirInList(listEl, parts[idx], parts.slice(0, idx + 1).join('/')).then(function (childList) {
-						if (childList) return step(idx + 1, childList);
-					});
-				}
-				return step(0, rootList);
-			}
-
-			// -- root tree rendering --
-			function renderRootTree() {
-				ftScroll.innerHTML = '';
-				var ul = document.createElement('ul');
-				ul.className = 'ft-list';
-				ftScroll.appendChild(ul);
-				getCachedOrFetch('').then(function (data) {
-					renderDirContent(data, ul);
-					return restoreExpandedState();
-				}).then(function () {
-					return expandToCurrentFile();
-				}).catch(function (err) {
-					ftScroll.innerHTML = '<div class="ft-loading ft-error">' + escapeHtml(err.message) + '</div>';
-				});
-			}
-
-			// -- tab switching --
 			function switchTab(name) {
 				tabToc.classList.toggle('active', name === 'toc');
 				tabTree.classList.toggle('active', name === 'tree');
 				tocPanel.style.display = name === 'toc' ? 'flex' : 'none';
 				treePanel.style.display = name === 'tree' ? 'flex' : 'none';
 				localStorage.setItem('onair-sidebar-tab', name);
-				if (name === 'tree') renderRootTree();
 			}
 
 			var savedTab = localStorage.getItem('onair-sidebar-tab');
 			switchTab(savedTab === 'tree' ? 'tree' : 'toc');
 
 			tabToc.onclick = function () { switchTab('toc'); };
-			tabTree.onclick = function () { switchTab('tree'); };
-
-			// -- filter change --
-			(function () {
-				var cbs = ['ftGitignore', 'ftMarkdown', 'ftBinary'].map(function (id) { return document.getElementById(id); });
-				cbs.forEach(function (cb) {
-					if (!cb) return;
-					cb.onchange = function () {
-						clearAllCache();
-						for (var key in ftExpanded) delete ftExpanded[key];
-						renderRootTree();
-					};
-				});
-			})();
-
-			// -- locate button --
-			document.getElementById('ftLocateBtn').onclick = function () {
-				ftExpandedToFile = false;
-				expandToCurrentFile();
-			};
-
-			// -- websocket refresh hook --
-			window.ftRefresh = function () {
-				if (treePanel.style.display !== 'none') {
-					clearAllCache();
-					renderRootTree();
-				}
-			};
-
-			// -- file opening --
-			function openFile(filePath) {
-				var ext = filePath.toLowerCase();
-				if (ext.endsWith('.md') || ext.endsWith('.markdown')) {
-					location.href = '/preview/' + id + '/' + encodeURIComponent(filePath);
-				} else {
-					var params = 'id=' + encodeURIComponent(id) + '&path=' + encodeURIComponent(filePath);
-					fetch('/api/file?' + params).then(function (r) { return r.json(); }).then(function (data) {
-						if (data.error) { contentEl.innerHTML = '<div class="file-view"><div class="file-view-header">Error: ' + escapeHtml(data.error) + '</div></div>'; return; }
-						if (data.isBinary) {
-							contentEl.innerHTML = '<div class="file-view"><div class="file-view-header"><button onclick="document.getElementById(\'tabTree\').click()">← Back</button><span class="file-path">' + escapeHtml(filePath) + '</span></div><div class="file-binary">Binary file, cannot preview</div></div>';
-						} else {
-							var code = escapeHtml(data.content);
-							contentEl.innerHTML = '<div class="file-view"><div class="file-view-header"><button onclick="document.getElementById(\'tabTree\').click()">← Back</button><span class="file-path">' + escapeHtml(filePath) + '</span></div><pre><code class="hljs">' + code + '</code></pre></div>';
-						}
-					}).catch(function () {
-						contentEl.innerHTML = '<div class="file-view"><div class="file-view-header">Error loading file</div></div>';
-					});
-				}
-			}
+			tabTree.onclick = function () { switchTab('tree'); window.dispatchEvent(new CustomEvent('onair:tree-activate')); };
 		})();
-		} catch (e) { console.error('file tree error', e); }
 
 		// ---- websocket ----
 		function connect() {
@@ -850,7 +556,11 @@
 					var msg = JSON.parse(ev.data);
 					if (msg.type === 'update') {
 						contentEl.innerHTML = msg.html;
-						if (msg.fullPath) fullPath = msg.fullPath;
+						if (msg.fullPath) {
+							fullPath = msg.fullPath;
+							var ftRoot = document.getElementById('ft-preact-root');
+							if (ftRoot) ftRoot.setAttribute('data-fullpath', msg.fullPath);
+						}
 						if (msg.relPath != null) relPath = msg.relPath;
 						buildToc();
 						buildAnnotations();
@@ -858,7 +568,7 @@
 						if (document.getElementById('wpBtn').classList.contains('on')) contentEl.classList.add('wp');
 						document.title = msg.title + ' · OnAir';
 					} else if (msg.type === 'filetree-changed') {
-						if (typeof ftRefresh === 'function') ftRefresh();
+						window.dispatchEvent(new CustomEvent('onair:tree-refresh'));
 					} else if (msg.type === 'closed') {
 						bannerIcon.textContent = '⚠️'; bannerMsg.textContent = 'Source file was closed in VS Code, preview will no longer update'; bannerTxt.title = 'Source file was closed in VS Code, preview will no longer update';
 						bannerEl.classList.add('offline');
@@ -877,5 +587,6 @@
 		processFootnotes();
 	})();
 	</script>
+	<script>{{PREACT_JS}}</script>
 </body>
 </html>

@@ -31,6 +31,9 @@ import pageCss from './templates/page.css';
 import mdTemplate from './templates/markdown-page.html';
 import htmlSnippet from './templates/html-snippet.html';
 import { tocJs } from './templates/toc-common';
+
+let preactJs = '';
+try { preactJs = fs.readFileSync(path.join(__dirname, 'preview.js'), 'utf8'); } catch {}
 import sql from 'highlight.js/lib/languages/sql';
 import bash from 'highlight.js/lib/languages/bash';
 import shell from 'highlight.js/lib/languages/shell';
@@ -401,7 +404,10 @@ function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullP
 		.replace(/\{\{FULL_PATH_JSON\}\}/g, JSON.stringify(fullPath))
 		.replace(/\{\{REL_PATH_JSON\}\}/g, JSON.stringify(relPath))
 		.replace(/\{\{ROOT_DIR_JSON\}\}/g, JSON.stringify(rootDir || ''))
-		.replace(/\{\{TOC_JS\}\}/g, tocJs);
+		.replace(/\{\{FULL_PATH_ATTR\}\}/g, escapeHtml(fullPath))
+		.replace(/\{\{ROOT_DIR_ATTR\}\}/g, escapeHtml(rootDir || ''))
+		.replace(/\{\{TOC_JS\}\}/g, tocJs)
+		.replace(/\{\{PREACT_JS\}\}/g, preactJs);
 }
 /**
  * HTML preview page: the user's HTML is already a complete page (with its own

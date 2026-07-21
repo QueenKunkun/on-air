@@ -12,7 +12,7 @@
     "url": "https://github.com/QueenKunkun/on-air/issues",
     "email": "742711819@qq.com"
   },
-  "version": "0.12.0",
+  "version": "0.12.1",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -60,9 +60,11 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "pnpm run package",
+    "vscode:prepublish": "pnpm run build:frontend && pnpm run package",
+    "build:frontend": "esbuild src/frontend/index.tsx --bundle --minify --outfile=dist/preview.js --jsx-factory=h --jsx-fragment=Fragment --format=iife",
+    "watch:frontend": "esbuild src/frontend/index.tsx --bundle --minify --outfile=dist/preview.js --jsx-factory=h --jsx-fragment=Fragment --format=iife --watch",
     "compile": "webpack",
-    "watch": "webpack --watch",
+    "watch": "pnpm run build:frontend && concurrently -n fe,ext -c cyan,green 'pnpm:watch:frontend' 'webpack --watch'",
     "package": "webpack --mode production --devtool hidden-source-map",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
@@ -82,6 +84,8 @@
     "@types/ws": "^8.5.10",
     "@typescript-eslint/eslint-plugin": "^8.42.0",
     "@typescript-eslint/parser": "^8.42.0",
+    "concurrently": "^10.0.3",
+    "esbuild": "^0.28.1",
     "eslint": "^9.34.0",
     "ts-loader": "^9.5.4",
     "typescript": "^5.9.2",
@@ -90,10 +94,12 @@
   },
   "dependencies": {
     "highlight.js": "^11.11.1",
+    "htm": "^3.1.1",
     "ignore": "^7.0.6",
     "markdown-it": "^14.1.0",
     "markdown-it-footnote": "^4.0.0",
     "markdown-it-mark": "^4.0.0",
+    "preact": "^10.29.7",
     "ws": "^8.16.0"
   },
   "keywords": [
