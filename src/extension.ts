@@ -91,7 +91,12 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.workspace.onDidCloseTextDocument((doc) => {
 			if (!docKind(doc.languageId)) { return; }
 			server?.closeDocument(doc.uri.toString());
-		})
+		}),
+
+		// File system events — refresh file tree in all open preview tabs
+		vscode.workspace.onDidCreateFiles(() => server?.broadcastFileTreeChange([])),
+		vscode.workspace.onDidDeleteFiles(() => server?.broadcastFileTreeChange([])),
+		vscode.workspace.onDidRenameFiles(() => server?.broadcastFileTreeChange([]))
 	);
 
 	// Internal debug only: dump the current preview HTML next to the source file.

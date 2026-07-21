@@ -28,7 +28,7 @@
 		<button class="bp-btn" id="mwReset" title="Reset max width to default">↺</button>
 		<button class="bp-btn" id="mwInc" title="Wider content">+</button></span></div>
 	<div class="ver-badge" id="verBadge" data-version="v{{VERSION}}" title="Click to copy version">v{{VERSION}}</div></div>
-	<div id="wrapper"><div id="tocSide"><nav id="toc" class="toc"></nav><button id="tocToggle" class="toc-toggle" aria-label="Toggle table of contents">&lt;</button></div><div class="toc-resizer" id="tocResizer"></div><article class="markdown-body" id="content">{{BODY}}</article><div class="annot-resizer" id="annotResizer"></div><div id="annotSide"><div id="annots"></div><button id="annotToggle" class="annot-toggle" aria-label="Toggle annotations">&gt;</button></div></div>
+	<div id="wrapper"><div id="tocSide"><div class="sidebar-tabs"><button class="sidebar-tab tab-toc active" id="tabToc">📑 TOC</button><button class="sidebar-tab tab-tree" id="tabTree">📁 Files</button></div><nav id="toc" class="toc"></nav><div id="fileTree"><div class="ft-filter"><label><input type="checkbox" id="ftGitignore" checked> .gitignore</label><label><input type="checkbox" id="ftMarkdown"> .md</label><label><input type="checkbox" id="ftBinary" checked> Hide binary</label></div><div class="ft-scroll" id="ftScroll"><div class="ft-loading">Navigate to a directory…</div></div></div><button id="tocToggle" class="toc-toggle" aria-label="Toggle table of contents">&lt;</button></div><div class="toc-resizer" id="tocResizer"></div><article class="markdown-body" id="content">{{BODY}}</article><div class="annot-resizer" id="annotResizer"></div><div id="annotSide"><div id="annots"></div><button id="annotToggle" class="annot-toggle" aria-label="Toggle annotations">&gt;</button></div></div>
 	<script>
 	(function () {
 		var bannerEl = document.getElementById('banner');
@@ -39,6 +39,9 @@
 		var id = {{ID_JSON}};
 		var fullPath = {{FULL_PATH_JSON}};
 		var relPath = {{REL_PATH_JSON}};
+		var rootDir = {{ROOT_DIR_JSON}};
+		var ftCurrentDir = '';
+		function escapeHtml(s) { return String(s).replace(/[&<>"']/g, function(c) { return '&#' + c.charCodeAt(0) + ';'; }); }
 		var proto = location.protocol === 'https:' ? 'wss' : 'ws';
 		var ws, reconnectTimer;
 
@@ -518,6 +521,124 @@
 			handle.onclick = function () { setCollapsed(!side.classList.contains('collapsed')); };
 		})();
 
+		// ---- file tree: tab switching, directory navigation, file opening ----
+		(function () {
+			var tocPanel = document.getElementById('toc');
+			var treePanel = document.getElementById('fileTree');
+			var tabToc = document.getElementById('tabToc');
+			var tabTree = document.getElementById('tabTree');
+			var ftScroll = document.getElementById('ftScroll');
+
+			function switchTab(name) {
+				tabToc.classList.toggle('active', name === 'toc');
+				tabTree.classList.toggle('active', name === 'tree');
+				tocPanel.style.display = name === 'toc' ? '' : 'none';
+				treePanel.style.display = name === 'tree' ? '' : 'none';
+				localStorage.setItem('onair-sidebar-tab', name);
+				if (name === 'tree') {
+					// Auto-navigate to the current file's directory
+					if (!ftCurrentDir && rootDir && fullPath) {
+						var rel = fullPath.replace(rootDir, '').replace(/^[/\\]/, '');
+						ftCurrentDir = rel.split(/[/\\]/).slice(0, -1).join('/');
+					}
+					fetchDir(ftCurrentDir || '');
+				}
+			}
+
+			var savedTab = localStorage.getItem('onair-sidebar-tab');
+			switchTab(savedTab === 'tree' ? 'tree' : 'toc');
+
+			tabToc.onclick = function () { switchTab('toc'); };
+			tabTree.onclick = function () { switchTab('tree'); };
+
+			// Filter toggles
+			var giCheck = document.getElementById('ftGitignore');
+			var mdCheck = document.getElementById('ftMarkdown');
+			var binCheck = document.getElementById('ftBinary');
+			[giCheck, mdCheck, binCheck].forEach(function (cb) {
+				cb.onchange = function () { if (treePanel.style.display !== 'none') fetchDir(ftCurrentDir || ''); };
+			});
+
+			window.ftRefresh = function () {
+				if (treePanel.style.display !== 'none') fetchDir(ftCurrentDir || '');
+			};
+
+			function fetchDir(dir) {
+				ftCurrentDir = dir;
+				var params = 'id=' + encodeURIComponent(id) + '&dir=' + encodeURIComponent(dir);
+				if (giCheck.checked) params += '&respectGitignore=1';
+				if (mdCheck.checked) params += '&ext=.md';
+				if (binCheck.checked) params += '&hideBinary=1';
+				ftScroll.innerHTML = '<div class="ft-loading">Loading…</div>';
+				fetch('/api/tree?' + params).then(function (r) { return r.json(); }).then(function (data) {
+					if (data.error) { ftScroll.innerHTML = '<div class="ft-error">' + escapeHtml(data.error) + '</div>'; return; }
+					renderTree(data);
+				}).catch(function () {
+					ftScroll.innerHTML = '<div class="ft-error">Failed to load directory</div>';
+				});
+			}
+
+			function renderTree(data) {
+				ftScroll.innerHTML = '';
+				var ul = document.createElement('ul');
+				ul.className = 'ft-list';
+				if (data.dir) {
+					var parts = data.dir.split('/').filter(Boolean);
+					if (parts.length) {
+						var parentDir = parts.slice(0, -1).join('/');
+						var pli = document.createElement('li');
+						pli.className = 'ft-item ft-parent';
+						pli.textContent = '.. / ' + (parts[parts.length - 1] || 'root');
+						pli.onclick = function () { fetchDir(parentDir); };
+						ul.appendChild(pli);
+					}
+				}
+				var dirs = [], files = [];
+				for (var i = 0; i < data.entries.length; i++) {
+					if (data.entries[i].type === 'directory') dirs.push(data.entries[i]);
+					else files.push(data.entries[i]);
+				}
+				dirs.sort(function (a, b) { return a.name.localeCompare(b.name); });
+				files.sort(function (a, b) { return a.name.localeCompare(b.name); });
+				var all = dirs.concat(files);
+				for (var i = 0; i < all.length; i++) {
+					var e = all[i];
+					var li = document.createElement('li');
+					li.className = 'ft-item ft-' + e.type;
+					if (e.type === 'directory') {
+						li.textContent = '📁 ' + e.name;
+						li.onclick = (function (ep) { return function () { fetchDir(ep); }; })(e.path);
+					} else {
+						li.textContent = '📄 ' + e.name;
+						li.onclick = (function (ep) { return function () { openFile(ep); }; })(e.path);
+					}
+					ul.appendChild(li);
+				}
+				ftScroll.appendChild(ul);
+			}
+
+			function openFile(filePath) {
+				var ext = filePath.toLowerCase();
+				if (ext.endsWith('.md') || ext.endsWith('.markdown')) {
+					location.href = '/preview/' + id + '/' + encodeURIComponent(filePath);
+				} else {
+					var params = 'id=' + encodeURIComponent(id) + '&path=' + encodeURIComponent(filePath);
+					fetch('/api/file?' + params).then(function (r) { return r.json(); }).then(function (data) {
+						if (data.error) { contentEl.innerHTML = '<div class="file-view"><div class="file-view-header">Error: ' + escapeHtml(data.error) + '</div></div>'; return; }
+						if (data.isBinary) {
+							contentEl.innerHTML = '<div class="file-view"><div class="file-view-header"><button onclick="(function(){document.getElementById(\'tabToc\').click()})()">← Back</button><span class="file-path">' + escapeHtml(filePath) + '</span></div><div class="file-binary">Binary file, cannot preview</div></div>';
+						} else {
+							var code = escapeHtml(data.content);
+							var lang = data.ext ? data.ext.replace(/^\./, '') : '';
+							contentEl.innerHTML = '<div class="file-view"><div class="file-view-header"><button onclick="(function(){document.getElementById(\'tabToc\').click()})()">← Back</button><span class="file-path">' + escapeHtml(filePath) + '</span></div><pre><code class="hljs">' + code + '</code></pre></div>';
+						}
+					}).catch(function () {
+						contentEl.innerHTML = '<div class="file-view"><div class="file-view-header">Error loading file</div></div>';
+					});
+				}
+			}
+		})();
+
 		// ---- websocket ----
 		function connect() {
 			ws = new WebSocket(proto + '://' + location.host + '/ws/' + id);
@@ -538,6 +659,8 @@
 						processFootnotes();
 						if (document.getElementById('wpBtn').classList.contains('on')) contentEl.classList.add('wp');
 						document.title = msg.title + ' · OnAir';
+					} else if (msg.type === 'filetree-changed') {
+						if (typeof ftRefresh === 'function') ftRefresh();
 					} else if (msg.type === 'closed') {
 						bannerIcon.textContent = '⚠️'; bannerMsg.textContent = 'Source file was closed in VS Code, preview will no longer update'; bannerTxt.title = 'Source file was closed in VS Code, preview will no longer update';
 						bannerEl.classList.add('offline');

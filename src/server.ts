@@ -9,6 +9,7 @@ import MarkdownIt from 'markdown-it';
 import markdownItFootnote from 'markdown-it-footnote';
 import markdownItMark from 'markdown-it-mark';
 import hljs from 'highlight.js/lib/core';
+import ignore from 'ignore';
 
 // Only register the languages we actually want to highlight, instead of pulling in
 // highlight.js's full language set (~190 languages, ~1MB+) via the default import.
@@ -388,7 +389,7 @@ const THEMES = [
 ];
 
 /** Markdown preview page: wrapped in our own template, content updates use targeted DOM replacement (no full page reload) */
-function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullPath: string, relPath: string): string {
+function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullPath: string, relPath: string, rootDir: string): string {
 	return mdTemplate
 		.replace(/\{\{CSS\}\}/g, pageCss)
 		.replace(/\{\{THEMES\}\}/g, JSON.stringify(THEMES))
@@ -399,6 +400,7 @@ function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullP
 		.replace(/\{\{ID_JSON\}\}/g, JSON.stringify(id))
 		.replace(/\{\{FULL_PATH_JSON\}\}/g, JSON.stringify(fullPath))
 		.replace(/\{\{REL_PATH_JSON\}\}/g, JSON.stringify(relPath))
+		.replace(/\{\{ROOT_DIR_JSON\}\}/g, JSON.stringify(rootDir || ''))
 		.replace(/\{\{TOC_JS\}\}/g, tocJs);
 }
 /**
@@ -493,7 +495,7 @@ export class PreviewServer {
 		}
 		const docDir = path.dirname(fullPath);
 		const bodyHtml = renderMarkdown(content, docDir, rootDir, id);
-		return { page: markdownPageTemplate(id, title, bodyHtml, fullPath, relPath), bodyHtml };
+		return { page: markdownPageTemplate(id, title, bodyHtml, fullPath, relPath, rootDir), bodyHtml };
 	}
 	/** Register/refresh a document, returning its preview id (calling this multiple times for the same file reuses the same id/link) */
 	registerDocument(uriKey: string, title: string, content: string, kind: DocKind, rootDir: string, fullPath: string): string {
@@ -551,6 +553,15 @@ export class PreviewServer {
 			setTimeout(() => this.docs.delete(id as string), 5000);
 		}
 		this.uriToId.delete(uriKey);
+	}
+
+	broadcastFileTreeChange(paths: string[]): void {
+		const payload = JSON.stringify({ type: 'filetree-changed', paths });
+		for (const entry of this.docs.values()) {
+			for (const client of entry.clients) {
+				if (client.readyState === client.OPEN) { client.send(payload); }
+			}
+		}
 	}
 
 	buildUrl(id: string): string {
@@ -651,6 +662,110 @@ export class PreviewServer {
 		const u = new URL(url, 'http://localhost');
 		const pathname = u.pathname;
 		const sp = u.searchParams;
+
+		// ---- file tree API: list directory entries ----
+		if (pathname === '/api/tree') {
+			const id = sp.get('id') || '';
+			const dir = sp.get('dir') || '';
+			const respectGitignore = sp.get('respectGitignore') === '1';
+			const extFilter = sp.get('ext') || '';
+			const hideBinary = sp.get('hideBinary') === '1';
+
+			const entry = this.docs.get(id);
+			if (!entry) {
+				res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
+				res.end(JSON.stringify({ error: 'Preview not found' }));
+				return;
+			}
+
+			const rootDirResolved = path.resolve(entry.rootDir);
+			const targetDir = dir ? path.resolve(rootDirResolved, dir) : rootDirResolved;
+			if (dir && !targetDir.startsWith(rootDirResolved + path.sep)) {
+				res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+				res.end(JSON.stringify({ error: 'Directory outside root' }));
+				return;
+			}
+
+			let dirents: fs.Dirent[];
+			try { dirents = fs.readdirSync(targetDir, { withFileTypes: true }); }
+			catch {
+				res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+				res.end(JSON.stringify({ error: 'Cannot read directory' }));
+				return;
+			}
+
+			// Load root .gitignore
+			let ig: ReturnType<typeof ignore> | null = null;
+			if (respectGitignore) {
+				try {
+					const giPath = path.join(rootDirResolved, '.gitignore');
+					ig = ignore().add(fs.readFileSync(giPath, 'utf8'));
+				} catch { /* no .gitignore — skip */ }
+			}
+
+			const result: Array<{ name: string; type: string; path: string; ext: string; size?: number }> = [];
+			for (const e of dirents) {
+				if (e.name.startsWith('.')) {continue;}
+				const full = path.join(targetDir, e.name);
+				const relPath = toPosix(path.relative(rootDirResolved, full));
+
+				if (e.isDirectory()) {
+					if (e.name === 'node_modules' || e.name === '.git' || e.name === '.vscode') {continue;}
+					if (ig && ig.ignores(relPath + '/')) {continue;}
+					result.push({ name: e.name, type: 'directory', path: relPath, ext: '' });
+				} else if (e.isFile()) {
+					const ext = path.extname(e.name).toLowerCase();
+					if (extFilter && ext !== '.' + extFilter.replace(/^\./, '')) {continue;}
+					if (ig && ig.ignores(relPath)) {continue;}
+					if (hideBinary) {
+						try {
+							const fd = fs.openSync(full, 'r');
+							const buf = Buffer.alloc(8192);
+							fs.readSync(fd, buf, 0, 8192, 0);
+							fs.closeSync(fd);
+							if (buf.includes(0)) {continue;}
+						} catch { continue; }
+					}
+					result.push({ name: e.name, type: 'file', path: relPath, ext, size: fs.statSync(full).size });
+				}
+			}
+
+			res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+			res.end(JSON.stringify({ dir: toPosix(path.relative(rootDirResolved, targetDir) || ''), entries: result }));
+			return;
+		}
+
+		// ---- file API: read and return file content ----
+		if (pathname === '/api/file') {
+			const id = sp.get('id') || '';
+			const filePath = sp.get('path') || '';
+
+			const entry = this.docs.get(id);
+			if (!entry) {
+				res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
+				res.end(JSON.stringify({ error: 'Preview not found' }));
+				return;
+			}
+
+			const absPath = resolveStaticPath(entry.rootDir, filePath);
+			if (!absPath) {
+				res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
+				res.end(JSON.stringify({ error: 'File not found' }));
+				return;
+			}
+
+			try {
+				const buf = fs.readFileSync(absPath);
+				const isBinary = buf.includes(0);
+				const content = isBinary ? null : buf.toString('utf8');
+				res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+				res.end(JSON.stringify({ content, ext: path.extname(absPath).toLowerCase(), size: buf.length, isBinary }));
+			} catch {
+				res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+				res.end(JSON.stringify({ error: 'Cannot read file' }));
+			}
+			return;
+		}
 
 		// Static assets alongside the source file, e.g. /preview/<id>/images/foo.png,
 		// referenced via relative paths like `images/foo.png` or `embeds/x.html` in the
