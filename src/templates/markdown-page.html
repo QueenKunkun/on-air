@@ -496,12 +496,12 @@
 		window.addEventListener('resize', function () { layoutCards(); hidePopover(); });
 		window.addEventListener('load', function () { layoutCards(); });
 
-		// ---- TOC resize ----
+		// ---- Sidebar resize (shared between TOC and Files tabs) ----
 		(function () {
 			var resizer = document.getElementById('tocResizer');
-			var toc = document.getElementById('toc');
-			attachResizer(resizer, toc, {
-				axis: 'x', invert: false, key: 'onair-toc-width', def: null, min: 24, max: Infinity,
+			var side = document.getElementById('tocSide');
+			attachResizer(resizer, side, {
+				axis: 'x', invert: false, key: 'onair-toc-width', def: null, min: 120, max: Infinity,
 				get: function (el) { return el.offsetWidth; },
 				set: function (el, v) { el.style.width = v + 'px'; }
 			});
@@ -536,12 +536,8 @@
 				treePanel.style.display = name === 'tree' ? '' : 'none';
 				localStorage.setItem('onair-sidebar-tab', name);
 				if (name === 'tree') {
-					// Auto-navigate to the current file's directory
-					if (!ftCurrentDir && rootDir && fullPath) {
-						var rel = fullPath.replace(rootDir, '').replace(/^[/\\]/, '');
-						ftCurrentDir = rel.split(/[/\\]/).slice(0, -1).join('/');
-					}
-					fetchDir(ftCurrentDir || '');
+					ftCurrentDir = '';
+					fetchDir('', function () { expandToCurrentFile(); });
 				}
 			}
 
@@ -563,7 +559,19 @@
 				if (treePanel.style.display !== 'none') fetchDir(ftCurrentDir || '');
 			};
 
-			function fetchDir(dir) {
+			function expandToCurrentFile() {
+				if (!rootDir || !fullPath) return;
+				var rel = fullPath.replace(rootDir, '').replace(/^[/\\]/, '');
+				var parts = rel.split(/[/\\]/);
+				parts.pop();
+				if (!parts.length || (parts.length === 1 && parts[0] === '')) return;
+				(function step(idx) {
+					if (idx >= parts.length) return;
+					fetchDir(parts.slice(0, idx + 1).join('/'), function () { step(idx + 1); });
+				})(0);
+			}
+
+			function fetchDir(dir, callback) {
 				ftCurrentDir = dir;
 				var params = 'id=' + encodeURIComponent(id) + '&dir=' + encodeURIComponent(dir);
 				if (giCheck.checked) params += '&respectGitignore=1';
@@ -573,26 +581,54 @@
 				fetch('/api/tree?' + params).then(function (r) { return r.json(); }).then(function (data) {
 					if (data.error) { ftScroll.innerHTML = '<div class="ft-error">' + escapeHtml(data.error) + '</div>'; return; }
 					renderTree(data);
+					if (callback) callback();
 				}).catch(function () {
 					ftScroll.innerHTML = '<div class="ft-error">Failed to load directory</div>';
+					if (callback) callback();
 				});
 			}
 
 			function renderTree(data) {
 				ftScroll.innerHTML = '';
+
+				// Breadcrumb
+				var parts = (data.dir || '').split('/').filter(Boolean);
+				var bc = document.createElement('div');
+				bc.className = 'ft-bc';
+				var rootSeg = document.createElement('span');
+				rootSeg.className = 'ft-bc-seg' + (parts.length ? '' : ' ft-bc-seg-active');
+				rootSeg.textContent = 'root';
+				rootSeg.onclick = function () { fetchDir(''); };
+				bc.appendChild(rootSeg);
+				var cum = '';
+				for (var i = 0; i < parts.length; i++) {
+					cum = cum ? cum + '/' + parts[i] : parts[i];
+					var sep = document.createElement('span');
+					sep.className = 'ft-bc-sep';
+					sep.textContent = '›';
+					bc.appendChild(sep);
+					var seg = document.createElement('span');
+					seg.className = 'ft-bc-seg' + (i === parts.length - 1 ? ' ft-bc-seg-active' : '');
+					seg.textContent = parts[i];
+					(function (p) { seg.onclick = function () { fetchDir(p); }; })(cum);
+					bc.appendChild(seg);
+				}
+				ftScroll.appendChild(bc);
+
+				// Entry list
 				var ul = document.createElement('ul');
 				ul.className = 'ft-list';
-				if (data.dir) {
-					var parts = data.dir.split('/').filter(Boolean);
-					if (parts.length) {
-						var parentDir = parts.slice(0, -1).join('/');
-						var pli = document.createElement('li');
-						pli.className = 'ft-item ft-parent';
-						pli.textContent = '.. / ' + (parts[parts.length - 1] || 'root');
-						pli.onclick = function () { fetchDir(parentDir); };
-						ul.appendChild(pli);
-					}
+
+				// Parent dir link (not at root)
+				if (parts.length) {
+					var parentDir = parts.slice(0, -1).join('/');
+					var pli = document.createElement('li');
+					pli.className = 'ft-item ft-parent';
+					pli.textContent = '..';
+					pli.onclick = function () { fetchDir(parentDir); };
+					ul.appendChild(pli);
 				}
+
 				var dirs = [], files = [];
 				for (var i = 0; i < data.entries.length; i++) {
 					if (data.entries[i].type === 'directory') dirs.push(data.entries[i]);
@@ -626,11 +662,10 @@
 					fetch('/api/file?' + params).then(function (r) { return r.json(); }).then(function (data) {
 						if (data.error) { contentEl.innerHTML = '<div class="file-view"><div class="file-view-header">Error: ' + escapeHtml(data.error) + '</div></div>'; return; }
 						if (data.isBinary) {
-							contentEl.innerHTML = '<div class="file-view"><div class="file-view-header"><button onclick="(function(){document.getElementById(\'tabToc\').click()})()">← Back</button><span class="file-path">' + escapeHtml(filePath) + '</span></div><div class="file-binary">Binary file, cannot preview</div></div>';
+							contentEl.innerHTML = '<div class="file-view"><div class="file-view-header"><button onclick="document.getElementById(\'tabToc\').click()">← Back</button><span class="file-path">' + escapeHtml(filePath) + '</span></div><div class="file-binary">Binary file, cannot preview</div></div>';
 						} else {
 							var code = escapeHtml(data.content);
-							var lang = data.ext ? data.ext.replace(/^\./, '') : '';
-							contentEl.innerHTML = '<div class="file-view"><div class="file-view-header"><button onclick="(function(){document.getElementById(\'tabToc\').click()})()">← Back</button><span class="file-path">' + escapeHtml(filePath) + '</span></div><pre><code class="hljs">' + code + '</code></pre></div>';
+							contentEl.innerHTML = '<div class="file-view"><div class="file-view-header"><button onclick="document.getElementById(\'tabToc\').click()">← Back</button><span class="file-path">' + escapeHtml(filePath) + '</span></div><pre><code class="hljs">' + code + '</code></pre></div>';
 						}
 					}).catch(function () {
 						contentEl.innerHTML = '<div class="file-view"><div class="file-view-header">Error loading file</div></div>';

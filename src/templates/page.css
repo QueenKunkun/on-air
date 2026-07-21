@@ -17,8 +17,8 @@
 [data-theme="hc-light"] { --bg:#FFFFFF; --text:#000000; --pre-bg:#e8e8e8; --border:#555; --quote-c:#333; --link-c:#0069CC; --hljs:#000000; --h-comment:#515151; --h-keyword:#b5200d; --h-number:#096d48; --h-string:#0F4A85; --h-title:#5e2cbc; --h-name:#185E73; --h-attr:#001080; --h-symbol:#0F4A85; --h-del:#5A5A5A; --h-builtin:#ccc; --bnr-bg:#FFFFFF; --bnr-c:#000000; --bnr-off-bg:#fff1e5; --bnr-off-c:#bc4c00; --btn-border:#555; --btn-c:#000; --btn-hover-bg:#e0e0e0; --btn-on-bg:#1f6feb; --btn-on-c:#fff; --btn-on-border:#1f6feb; --fm-bg:#e8e8e8; --fm-border:#555; --sb-thumb:#888; --sb-thumb-hover:#aaa; --mark-bg:#fff1a8; }
 body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); }
 #wrapper { display: flex; margin: 0 auto; padding: 0 24px; }
-#tocSide { position: sticky; top: 38px; align-self: flex-start; flex-shrink: 0; max-height: calc(100vh - 46px); display: flex; flex-direction: column; }
-#toc { width: clamp(420px, 24vw, 560px); flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding: 0; box-sizing: border-box; font-size: 14px; line-height: 1.5; }
+#tocSide { position: sticky; top: 38px; align-self: flex-start; flex-shrink: 0; max-height: calc(100vh - 46px); display: flex; flex-direction: column; width: clamp(420px, 24vw, 560px); }
+#toc { width: 100%; flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding: 0; box-sizing: border-box; font-size: 14px; line-height: 1.5; }
 #toc-list { overflow: auto; flex: 1; min-height: 0; padding: 0 0 24px 6px; }
 #toc.no-tree .toc-m { display: none; }
 #toc ul { list-style: none; padding: 0; margin: 0; }
@@ -161,7 +161,7 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 .sidebar-tab.active { color: var(--link-c); border-bottom: 2px solid var(--link-c); background: var(--bg); }
 
 /* ---- file tree panel ---- */
-#fileTree { display: none; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; font-size: 13px; line-height: 1.6; }
+#fileTree { display: none; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; font-size: 13px; line-height: 1.6; width: 100%; box-sizing: border-box; }
 #tocSide .sidebar-tabs ~ #fileTree,
 #tocSide .sidebar-tabs ~ #toc { flex: 1; min-height: 0; }
 
@@ -181,6 +181,13 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 .ft-item.ft-parent::before { content: '↩ '; }
 .ft-loading, .ft-error { padding: 12px 16px; color: var(--quote-c); font-size: 12px; }
 .ft-error { color: var(--h-keyword); }
+
+/* Breadcrumb navigation */
+.ft-bc { display: flex; align-items: center; gap: 4px; padding: 6px 10px; flex-shrink: 0; border-bottom: 1px solid var(--border); font-size: 12px; flex-wrap: wrap; }
+.ft-bc-seg { color: var(--link-c); cursor: pointer; user-select: none; padding: 1px 3px; border-radius: 3px; }
+.ft-bc-seg:hover { background: var(--pre-bg); }
+.ft-bc-seg-active { color: var(--text); font-weight: 600; cursor: default; }
+.ft-bc-sep { color: var(--quote-c); font-size: 14px; line-height: 1; user-select: none; }
 
 /* File content view (replaces markdown body) */
 .file-view { padding: 0; }
