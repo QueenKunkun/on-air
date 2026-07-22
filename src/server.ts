@@ -397,20 +397,20 @@ const THEMES = [
 /** Markdown preview page: wrapped in our own template, content updates use targeted DOM replacement (no full page reload) */
 function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullPath: string, relPath: string, rootDir: string): string {
 	return mdTemplate
-		.replace(/\{\{CSS\}\}/g, pageCss)
-		.replace(/\{\{THEMES\}\}/g, JSON.stringify(THEMES))
-		.replace(/\{\{ID\}\}/g, id)
-		.replace(/\{\{TITLE\}\}/g, escapeHtml(title))
-		.replace(/\{\{BODY\}\}/g, bodyHtml)
-		.replace(/\{\{VERSION\}\}/g, escapeHtml(EXT_VERSION))
-		.replace(/\{\{VERSION_JSON\}\}/g, JSON.stringify(EXT_VERSION))
-		.replace(/\{\{ID_JSON\}\}/g, JSON.stringify(id))
-		.replace(/\{\{FULL_PATH_JSON\}\}/g, JSON.stringify(fullPath))
-		.replace(/\{\{REL_PATH_JSON\}\}/g, JSON.stringify(relPath))
-		.replace(/\{\{ROOT_DIR_JSON\}\}/g, JSON.stringify(rootDir || ''))
-		.replace(/\{\{FULL_PATH_ATTR\}\}/g, escapeHtml(fullPath))
-		.replace(/\{\{ROOT_DIR_ATTR\}\}/g, escapeHtml(rootDir || ''))
-		.replace(/\{\{PREACT_JS\}\}/g, preactJs);
+		.replace(/\{\{CSS\}\}/g, () => pageCss)
+		.replace(/\{\{THEMES\}\}/g, () => JSON.stringify(THEMES))
+		.replace(/\{\{ID\}\}/g, () => id)
+		.replace(/\{\{TITLE\}\}/g, () => escapeHtml(title))
+		.replace(/\{\{BODY\}\}/g, () => bodyHtml)
+		.replace(/\{\{VERSION\}\}/g, () => escapeHtml(EXT_VERSION))
+		.replace(/\{\{VERSION_JSON\}\}/g, () => JSON.stringify(EXT_VERSION))
+		.replace(/\{\{ID_JSON\}\}/g, () => JSON.stringify(id))
+		.replace(/\{\{FULL_PATH_JSON\}\}/g, () => JSON.stringify(fullPath))
+		.replace(/\{\{REL_PATH_JSON\}\}/g, () => JSON.stringify(relPath))
+		.replace(/\{\{ROOT_DIR_JSON\}\}/g, () => JSON.stringify(rootDir || ''))
+		.replace(/\{\{FULL_PATH_ATTR\}\}/g, () => escapeHtml(fullPath))
+		.replace(/\{\{ROOT_DIR_ATTR\}\}/g, () => escapeHtml(rootDir || ''))
+		.replace(/\{\{PREACT_JS\}\}/g, () => preactJs);
 }
 /**
  * HTML preview page: the user's HTML is already a complete page (with its own
@@ -421,13 +421,13 @@ function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullP
  */
 function htmlLiveReloadSnippet(id: string, title: string, fullPath: string, relPath: string): string {
 	return htmlSnippet
-		.replace(/\{\{CSS\}\}/g, pageCss)
-		.replace(/\{\{ID_JSON\}\}/g, JSON.stringify(id))
-		.replace(/\{\{TITLE_JSON\}\}/g, JSON.stringify(title))
-		.replace(/\{\{VERSION\}\}/g, escapeHtml(EXT_VERSION))
-		.replace(/\{\{FULL_PATH_JSON\}\}/g, JSON.stringify(fullPath))
-		.replace(/\{\{REL_PATH_JSON\}\}/g, JSON.stringify(relPath))
-		.replace(/\{\{TOC_JS\}\}/g, tocJs);
+		.replace(/\{\{CSS\}\}/g, () => pageCss)
+		.replace(/\{\{ID_JSON\}\}/g, () => JSON.stringify(id))
+		.replace(/\{\{TITLE_JSON\}\}/g, () => JSON.stringify(title))
+		.replace(/\{\{VERSION\}\}/g, () => escapeHtml(EXT_VERSION))
+		.replace(/\{\{FULL_PATH_JSON\}\}/g, () => JSON.stringify(fullPath))
+		.replace(/\{\{REL_PATH_JSON\}\}/g, () => JSON.stringify(relPath))
+		.replace(/\{\{TOC_JS\}\}/g, () => tocJs);
 }
 
 function htmlPageTemplate(id: string, rawHtml: string, title: string, fullPath: string, relPath: string, rootDir: string): string {
