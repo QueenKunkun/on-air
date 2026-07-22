@@ -53,20 +53,19 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
 .onair-md::-webkit-scrollbar-thumb, .onair-md ::-webkit-scrollbar-thumb, #toc-list::-webkit-scrollbar-thumb, #toc-related::-webkit-scrollbar-thumb, .ft-scroll::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; min-height: 80px; min-width: 80px; }
 .onair-md::-webkit-scrollbar-thumb:hover, .onair-md ::-webkit-scrollbar-thumb:hover, #toc-list::-webkit-scrollbar-thumb:hover, #toc-related::-webkit-scrollbar-thumb:hover, .ft-scroll::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); border: 2px solid transparent; background-clip: content-box; }
 .onair-md::-webkit-scrollbar-corner, .onair-md ::-webkit-scrollbar-corner, #toc-list::-webkit-scrollbar-corner, #toc-related::-webkit-scrollbar-corner, .ft-scroll::-webkit-scrollbar-corner { background: transparent; }
-.files-resizer, .toc-resizer { width: 4px; cursor: col-resize; flex-shrink: 0; background: var(--border); transition: background .15s; }
+.files-resizer, .toc-resizer { position: relative; width: 4px; cursor: col-resize; flex-shrink: 0; background: var(--border); transition: background .15s; }
 .files-resizer:hover, .files-resizer.active, .toc-resizer:hover, .toc-resizer.active { background: var(--link-c); }
-.panel-toggle { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); z-index: 40; width: 18px; height: 40px; border: 4px solid var(--border); border-left: none; border-radius: 0 6px 6px 0; background: var(--bg); color: var(--quote-c); font-size: 15px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select: none; }
-.panel-toggle:hover { background: var(--pre-bg); color: var(--text); border-color: var(--link-c); }
-#filesSide.collapsed { width: 24px !important; min-width: 24px; }
+.resizer-handle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 18px; height: 40px; cursor: pointer; z-index: 10; background: var(--bg); border: 4px solid var(--border); border-radius: 4px; color: var(--quote-c); font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center; user-select: none; transition: background .15s, color .15s, border-color .15s; }
+.resizer-handle:hover { background: var(--pre-bg); color: var(--text); border-color: var(--link-c); }
+.resizer-handle.hidden { display: none; }
+#filesSide.collapsed { width: 0 !important; min-width: 0; overflow: hidden; }
 #filesSide.collapsed #fileTree { display: none; }
-#filesSide.collapsed + .files-resizer { display: none; }
-#tocCol.collapsed { width: 24px !important; min-width: 24px; }
+#tocCol.collapsed { width: 0 !important; min-width: 0; overflow: hidden; }
 #tocCol.collapsed #toc { display: none; }
-#tocCol.collapsed + .toc-resizer { display: none; }
-#sidebarToggle { flex-shrink: 0; width: 24px; display: none; flex-direction: column; background: var(--bg); border-right: 1px solid var(--border); }
-#sidebarToggle.visible { display: flex; }
-#sidebarToggle button { flex: 1; writing-mode: vertical-rl; text-orientation: mixed; border: none; background: transparent; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--quote-c); display: flex; align-items: center; justify-content: center; user-select: none; }
-#sidebarToggle button:hover { background: var(--pre-bg); color: var(--link-c); }
+#edgeHandles { position: fixed; left: 0; top: 38px; z-index: 50; display: none; flex-direction: column; }
+#edgeHandles.visible { display: flex; }
+.edge-handle { writing-mode: vertical-rl; text-orientation: mixed; font-size: 12px; font-weight: 600; color: var(--quote-c); padding: 12px 6px; cursor: pointer; user-select: none; background: var(--bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); transition: background .15s, color .15s; }
+.edge-handle:hover { background: var(--pre-bg); color: var(--link-c); }
 .__otp #tocCol #toc { position: static !important; max-height: none !important; overflow: visible !important; display: block !important; padding: 0 !important; width: auto !important; font-size: 13px; }
 .__otp #toc-header { padding: 0 0 10px 0 !important; }
 .__otp #toc-related { overflow-y: auto; }
@@ -220,10 +219,3 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 .file-view-header .file-path { color: var(--quote-c); font-family: ui-monospace, monospace; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .file-binary { padding: 24px; text-align: center; color: var(--quote-c); }
 .file-view pre { margin: 0; }
-
-/* sidebarToggle scrollbar matching */
-#sidebarToggle::-webkit-scrollbar { width: var(--sb-w, 16px); height: var(--sb-w, 16px); }
-#sidebarToggle::-webkit-scrollbar-track { background: transparent; }
-#sidebarToggle::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
-#sidebarToggle::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); border: 2px solid transparent; background-clip: content-box; }
-#sidebarToggle::-webkit-scrollbar-corner { background: transparent; }
