@@ -278,7 +278,7 @@ export function FileTree({ id }: Props) {
   }
 
   return (
-    <div>
+    <div style="display:flex;flex-direction:column;height:100%">
       <div class="ft-filter">
         <label><input type="checkbox" checked={filters.gitignore} onChange={() => handleFilterChange('gitignore')} /> .gitignore</label>
         <label><input type="checkbox" checked={filters.mdOnly} onChange={() => handleFilterChange('mdOnly')} /> .md</label>

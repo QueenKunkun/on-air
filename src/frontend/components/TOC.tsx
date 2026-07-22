@@ -23,7 +23,10 @@ export function TOC({ contentEl, fullPath, relPath }: TOCProps) {
 		const master = buildTocHeader(toc, title, fullPath, relPath);
 
 		if (hs.length >= 2) {
-			buildTocTree(hs, toc);
+			const listDiv = document.createElement('div');
+			listDiv.id = 'toc-list';
+			toc.appendChild(listDiv);
+			buildTocTree(hs, listDiv);
 			initMasterToggle(toc, master);
 			bindTocInteractions(toc, contentEl);
 		}

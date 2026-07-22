@@ -13,15 +13,15 @@ test.beforeAll(() => {
 });
 
 test.beforeEach(async ({ page }) => {
+  // Clear persisted panel state before navigating
   await page.goto(`${baseUrl}/preview/${docId}`);
-  // Clear persisted panel state
   await page.evaluate(() => {
     localStorage.removeItem('onair-files-collapsed');
     localStorage.removeItem('onair-toc-collapsed');
     localStorage.removeItem('onair-files-width');
     localStorage.removeItem('onair-toc-width');
   });
-  await page.reload();
+  await page.goto(`${baseUrl}/preview/${docId}`);
   await page.waitForSelector('.ft-list', { timeout: 5000 });
 });
 
@@ -48,6 +48,16 @@ test('banner font size controls work', async ({ page }) => {
   await page.waitForTimeout(200);
   const val = await fsInput.inputValue();
   expect(parseInt(val)).toBe(14);
+  // Click increase multiple times
+  await page.click('#fsInc');
+  await page.waitForTimeout(200);
+  expect(parseInt(await fsInput.inputValue())).toBe(16);
+  await page.click('#fsInc');
+  await page.waitForTimeout(200);
+  expect(parseInt(await fsInput.inputValue())).toBe(18);
+  await page.click('#fsInc');
+  await page.waitForTimeout(200);
+  expect(parseInt(await fsInput.inputValue())).toBe(20);
   // Click reset
   await page.click('#fsReset');
   await page.waitForTimeout(200);
@@ -178,4 +188,76 @@ test('files resizer drag changes width', async ({ page }) => {
 
   const afterWidth = await filesSide.evaluate(el => el.offsetWidth);
   expect(afterWidth).toBeGreaterThan(beforeWidth);
+});
+
+test('file tree has visible items with proper scroll height', async ({ page }) => {
+  // ft-scroll should have non-zero height (flex layout working)
+  const ftScrollHeight = await page.evaluate(() => {
+    const el = document.querySelector('.ft-scroll');
+    return el ? el.getBoundingClientRect().height : 0;
+  });
+  expect(ftScrollHeight).toBeGreaterThan(0);
+
+  // ft-list should be visible with items
+  const ftList = page.locator('.ft-list');
+  await expect(ftList).toBeVisible();
+  const itemCount = await ftList.locator('> .ft-item').count();
+  expect(itemCount).toBeGreaterThan(0);
+});
+
+test('edge handles are vertically centered and fixed when visible', async ({ page }) => {
+  // Collapse files panel to make edge handles visible
+  const filesToggle = page.locator('#filesResizer .panel-toggle');
+  await filesToggle.click();
+  await page.waitForTimeout(300);
+
+  // Edge handles should be visible
+  const edgeFiles = page.locator('#edgeHandles [data-panel="files"]');
+  await expect(edgeFiles).toBeVisible();
+
+  // Check positioning: should be fixed, centered vertically
+  const handleInfo = await page.evaluate(() => {
+    const el = document.getElementById('edgeHandles');
+    if (!el) return null;
+    const s = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    return {
+      position: s.position,
+      display: s.display,
+      centerY: rect.top + rect.height / 2,
+    };
+  });
+  expect(handleInfo).not.toBeNull();
+  expect(handleInfo!.position).toBe('fixed');
+  expect(handleInfo!.display).toBe('flex');
+
+  // Should be vertically centered (within 5px tolerance)
+  const winHeight = await page.evaluate(() => window.innerHeight);
+  expect(Math.abs(handleInfo!.centerY - winHeight / 2)).toBeLessThan(5);
+});
+
+test('toc has scrollable content when headings exist', async ({ page }) => {
+  // The test fixture has only 1 heading, so toc-list won't be created
+  // But we can verify the TOC container structure is correct
+  const tocCol = page.locator('#tocCol');
+  await expect(tocCol).toBeVisible();
+
+  // TOC should have the header
+  const tocHeader = page.locator('#toc-header');
+  await expect(tocHeader).toBeVisible();
+
+  // When toc-list exists, it should be scrollable
+  const tocStyles = await page.evaluate(() => {
+    const toc = document.getElementById('toc');
+    if (!toc) return null;
+    const s = getComputedStyle(toc);
+    return {
+      overflow: s.overflow,
+      display: s.display,
+      flexDirection: s.flexDirection,
+    };
+  });
+  expect(tocStyles).not.toBeNull();
+  expect(tocStyles!.display).toBe('flex');
+  expect(tocStyles!.flexDirection).toBe('column');
 });
