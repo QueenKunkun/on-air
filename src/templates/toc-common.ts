@@ -40,7 +40,7 @@ export function buildTocTree(hs: NodeListOf<Element>, container: HTMLElement): H
 		const u = uls[i] as HTMLUListElement;
 		if (!u.children.length) { u.remove(); continue; }
 		const p = u.parentNode;
-		if (p && p.tagName === 'LI') {
+		if (p && (p as HTMLElement).tagName === 'LI') {
 			const r = (p as HTMLElement).querySelector('.r');
 			if (!r) continue;
 			const btn = document.createElement('button');
@@ -53,7 +53,7 @@ export function buildTocTree(hs: NodeListOf<Element>, container: HTMLElement): H
 					this.textContent = sub.classList.contains('c') ? '+' : '\u2212';
 					this.title = sub.classList.contains('c') ? 'Expand' : 'Collapse';
 				};
-			})(u);
+			})(u) as unknown as (this: GlobalEventHandlers, ev: PointerEvent) => any;
 			r.insertBefore(btn, r.firstChild);
 		}
 	}
@@ -126,7 +126,7 @@ export function initMasterToggle(tocContainer: HTMLElement, masterBtn: HTMLButto
 			(btns[i] as HTMLElement).textContent = collapsed ? '\u2212' : '+';
 			(btns[i] as HTMLElement).title = collapsed ? 'Collapse' : 'Expand';
 		}
-	};
+	} as unknown as (this: GlobalEventHandlers, ev: PointerEvent) => any;
 }
 
 export function bindTocInteractions(tocEl: HTMLElement, contentEl: HTMLElement, offset?: number): void {
