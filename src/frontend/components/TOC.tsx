@@ -6,9 +6,10 @@ interface TOCProps {
 	contentEl: HTMLElement | null;
 	fullPath: string;
 	relPath: string;
+	contentVersion: number;
 }
 
-export function TOC({ contentEl, fullPath, relPath }: TOCProps) {
+export function TOC({ contentEl, fullPath, relPath, contentVersion }: TOCProps) {
 	useEffect(() => {
 		const toc = document.getElementById('toc') as HTMLElement;
 		if (!toc || !contentEl) return;
@@ -32,7 +33,7 @@ export function TOC({ contentEl, fullPath, relPath }: TOCProps) {
 		}
 
 		buildRelatedLinks(toc, contentEl);
-	}, [contentEl, fullPath, relPath]);
+	}, [contentEl, fullPath, relPath, contentVersion]);
 
 	return null;
 }

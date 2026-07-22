@@ -7,7 +7,7 @@ interface CardEntry {
 	card: HTMLDivElement;
 }
 
-export function Annotations({ contentEl }: { contentEl: HTMLElement | null }) {
+export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElement | null; contentVersion: number }) {
 	const hoverOn = useRef(localStorage.getItem('onair-annot-hover') === '1');
 	const cardRegistry = useRef<CardEntry[]>([]);
 	const popRef = useRef<HTMLDivElement | null>(null);
@@ -239,7 +239,7 @@ export function Annotations({ contentEl }: { contentEl: HTMLElement | null }) {
 			document.removeEventListener('click', onDocClick);
 			pop.remove();
 		};
-	}, [contentEl]);
+	}, [contentEl, contentVersion]);
 
 	useEffect(() => {
 		const onResize = () => { layoutCards(); hidePopover(); };

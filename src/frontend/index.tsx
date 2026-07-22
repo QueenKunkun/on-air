@@ -11,7 +11,7 @@ function App() {
 	const [contentEl, setContentEl] = useState<HTMLElement | null>(null);
 	const [fullPath, setFullPath] = useState(window.__ONAIR__?.fullPath || '');
 	const [relPath, setRelPath] = useState(window.__ONAIR__?.relPath || '');
-	const [, forceUpdate] = useState(0);
+	const [contentVersion, setContentVersion] = useState(0);
 
 	const processFootnotes = useCallback((el: HTMLElement) => {
 		const sec = el.querySelector('section.footnotes');
@@ -54,7 +54,7 @@ function App() {
 		if (msg.title) document.title = msg.title + ' \u00b7 OnAir';
 		setContentEl(content);
 		processFootnotes(content);
-		forceUpdate(n => n + 1);
+		setContentVersion(n => n + 1);
 	}, [processFootnotes]);
 
 	useWebSocket(handleUpdate);
@@ -69,8 +69,8 @@ function App() {
 
 	return h(Layout, null,
 		h(Banner, null),
-		h(TOC, { contentEl, fullPath, relPath }),
-		h(Annotations, { contentEl }),
+		h(TOC, { contentEl, fullPath, relPath, contentVersion }),
+		h(Annotations, { contentEl, contentVersion }),
 	);
 }
 
