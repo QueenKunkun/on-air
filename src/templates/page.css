@@ -17,7 +17,8 @@
 [data-theme="hc-light"] { --bg:#FFFFFF; --text:#000000; --pre-bg:#e8e8e8; --border:#555; --quote-c:#333; --link-c:#0069CC; --hljs:#000000; --h-comment:#515151; --h-keyword:#b5200d; --h-number:#096d48; --h-string:#0F4A85; --h-title:#5e2cbc; --h-name:#185E73; --h-attr:#001080; --h-symbol:#0F4A85; --h-del:#5A5A5A; --h-builtin:#ccc; --bnr-bg:#FFFFFF; --bnr-c:#000000; --bnr-off-bg:#fff1e5; --bnr-off-c:#bc4c00; --btn-border:#555; --btn-c:#000; --btn-hover-bg:#e0e0e0; --btn-on-bg:#1f6feb; --btn-on-c:#fff; --btn-on-border:#1f6feb; --fm-bg:#e8e8e8; --fm-border:#555; --sb-thumb:#888; --sb-thumb-hover:#aaa; --mark-bg:#fff1a8; }
 body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); }
 #wrapper { display: flex; margin: 0 auto; padding: 0 24px; }
-#tocSide { position: sticky; top: 38px; align-self: flex-start; flex-shrink: 0; max-height: calc(100vh - 46px); display: flex; flex-direction: column; width: clamp(420px, 24vw, 560px); }
+#filesSide { position: sticky; top: 38px; align-self: flex-start; flex-shrink: 0; height: calc(100vh - 46px); display: flex; flex-direction: column; width: clamp(300px, 20vw, 440px); }
+#tocCol { position: sticky; top: 38px; align-self: flex-start; flex-shrink: 0; height: calc(100vh - 46px); display: flex; flex-direction: column; width: clamp(200px, 14vw, 320px); }
 #toc { width: 100%; flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding: 0; box-sizing: border-box; font-size: 14px; line-height: 1.5; }
 #toc-list { overflow: auto; flex: 1; min-height: 0; padding: 0 0 24px 6px; }
 #toc.no-tree .toc-m { display: none; }
@@ -47,20 +48,26 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
 #toc-related .toc-related-h { font-weight: 600; font-size: 13px; color: var(--quote-c); padding: 0 28px 6px 0; }
 #toc-related .toc-related-item { display: block; color: var(--link-c); text-decoration: none; padding: 3px 6px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #toc-related .toc-related-item:hover { background: var(--pre-bg); }
-.onair-md::-webkit-scrollbar, .onair-md ::-webkit-scrollbar, #toc-list::-webkit-scrollbar, #toc-related::-webkit-scrollbar { width: var(--sb-w, 16px); height: var(--sb-w, 16px); }
-.onair-md::-webkit-scrollbar-track, .onair-md ::-webkit-scrollbar-track, #toc-list::-webkit-scrollbar-track, #toc-related::-webkit-scrollbar-track { background: transparent; }
-.onair-md::-webkit-scrollbar-thumb, .onair-md ::-webkit-scrollbar-thumb, #toc-list::-webkit-scrollbar-thumb, #toc-related::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; min-height: 80px; min-width: 80px; }
-.onair-md::-webkit-scrollbar-thumb:hover, .onair-md ::-webkit-scrollbar-thumb:hover, #toc-list::-webkit-scrollbar-thumb:hover, #toc-related::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); border: 2px solid transparent; background-clip: content-box; }
-.onair-md::-webkit-scrollbar-corner, .onair-md ::-webkit-scrollbar-corner, #toc-list::-webkit-scrollbar-corner, #toc-related::-webkit-scrollbar-corner { background: transparent; }
-.toc-resizer { width: 4px; cursor: col-resize; flex-shrink: 0; background: var(--border); transition: background .15s; }
-.toc-resizer:hover, .toc-resizer.active { background: var(--link-c); }
-#tocToggle { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); z-index: 40; width: 18px; height: 40px; border: 4px solid var(--border); border-left: none; border-radius: 0 6px 6px 0; background: var(--bg); color: var(--quote-c); font-size: 15px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select: none; }
-#tocToggle:hover { background: var(--pre-bg); color: var(--text); border-color: var(--link-c); }
-#tocSide.collapsed { width: 0 !important; min-width: 0; overflow: hidden; }
-#tocSide.collapsed #toc { width: 0 !important; min-width: 0; }
-#tocSide.collapsed #tocToggle { position: fixed; left: 0; }
-#tocSide.collapsed + .toc-resizer { display: none; }
-.__otp #toc { position: static !important; max-height: none !important; overflow: visible !important; display: block !important; padding: 0 !important; width: auto !important; font-size: 13px; }
+.onair-md::-webkit-scrollbar, .onair-md ::-webkit-scrollbar, #toc-list::-webkit-scrollbar, #toc-related::-webkit-scrollbar, .ft-scroll::-webkit-scrollbar { width: var(--sb-w, 16px); height: var(--sb-w, 16px); }
+.onair-md::-webkit-scrollbar-track, .onair-md ::-webkit-scrollbar-track, #toc-list::-webkit-scrollbar-track, #toc-related::-webkit-scrollbar-track, .ft-scroll::-webkit-scrollbar-track { background: transparent; }
+.onair-md::-webkit-scrollbar-thumb, .onair-md ::-webkit-scrollbar-thumb, #toc-list::-webkit-scrollbar-thumb, #toc-related::-webkit-scrollbar-thumb, .ft-scroll::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; min-height: 80px; min-width: 80px; }
+.onair-md::-webkit-scrollbar-thumb:hover, .onair-md ::-webkit-scrollbar-thumb:hover, #toc-list::-webkit-scrollbar-thumb:hover, #toc-related::-webkit-scrollbar-thumb:hover, .ft-scroll::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); border: 2px solid transparent; background-clip: content-box; }
+.onair-md::-webkit-scrollbar-corner, .onair-md ::-webkit-scrollbar-corner, #toc-list::-webkit-scrollbar-corner, #toc-related::-webkit-scrollbar-corner, .ft-scroll::-webkit-scrollbar-corner { background: transparent; }
+.files-resizer, .toc-resizer { width: 4px; cursor: col-resize; flex-shrink: 0; background: var(--border); transition: background .15s; }
+.files-resizer:hover, .files-resizer.active, .toc-resizer:hover, .toc-resizer.active { background: var(--link-c); }
+.panel-toggle { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); z-index: 40; width: 18px; height: 40px; border: 4px solid var(--border); border-left: none; border-radius: 0 6px 6px 0; background: var(--bg); color: var(--quote-c); font-size: 15px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select: none; }
+.panel-toggle:hover { background: var(--pre-bg); color: var(--text); border-color: var(--link-c); }
+#filesSide.collapsed { width: 24px !important; min-width: 24px; }
+#filesSide.collapsed #fileTree { display: none; }
+#filesSide.collapsed + .files-resizer { display: none; }
+#tocCol.collapsed { width: 24px !important; min-width: 24px; }
+#tocCol.collapsed #toc { display: none; }
+#tocCol.collapsed + .toc-resizer { display: none; }
+#sidebarToggle { flex-shrink: 0; width: 24px; display: none; flex-direction: column; background: var(--bg); border-right: 1px solid var(--border); }
+#sidebarToggle.visible { display: flex; }
+#sidebarToggle button { flex: 1; writing-mode: vertical-rl; text-orientation: mixed; border: none; background: transparent; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--quote-c); display: flex; align-items: center; justify-content: center; user-select: none; }
+#sidebarToggle button:hover { background: var(--pre-bg); color: var(--link-c); }
+.__otp #tocCol #toc { position: static !important; max-height: none !important; overflow: visible !important; display: block !important; padding: 0 !important; width: auto !important; font-size: 13px; }
 .__otp #toc-header { padding: 0 0 10px 0 !important; }
 .__otp #toc-related { overflow-y: auto; }
 .annot-resizer { width: 4px; cursor: col-resize; flex-shrink: 0; background: var(--border); transition: background .15s; }
@@ -155,16 +162,8 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
 /* Lock background scroll while the menu is open so wheeling over it scrolls the menu, not the page behind. */
 body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 
-/* ---- sidebar tab bar ---- */
-.sidebar-tabs { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--border); padding: 0; background: var(--bg); }
-.sidebar-tab { flex: 1; padding: 6px 8px; font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; user-select: none; color: var(--quote-c); border: none; background: transparent; transition: background .15s, color .15s; }
-.sidebar-tab:hover { background: var(--pre-bg); color: var(--text); }
-.sidebar-tab.active { color: var(--link-c); border-bottom: 2px solid var(--link-c); background: var(--bg); }
-
 /* ---- file tree panel ---- */
-#fileTree { display: none; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; font-size: 13px; line-height: 1.6; width: 100%; box-sizing: border-box; }
-#tocSide .sidebar-tabs ~ #fileTree,
-#tocSide .sidebar-tabs ~ #toc { flex: 1; min-height: 0; }
+#fileTree { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; font-size: 13px; line-height: 1.6; width: 100%; box-sizing: border-box; }
 
 /* Filter row */
 .ft-filter { display: flex; align-items: center; gap: 6px; padding: 6px 8px; flex-shrink: 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
@@ -177,7 +176,7 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 .ft-locate-btn:hover { background: var(--pre-bg); color: var(--link-c); }
 
 /* Tree scroll container */
-.ft-scroll { flex: 1; overflow-y: auto; padding: 4px 0 24px 4px; }
+.ft-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 0 24px 4px; }
 .ft-list { list-style: none; padding: 0; margin: 0; }
 
 /* Tree items with grid for toggle + name + children stacking */
@@ -222,6 +221,9 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 .file-binary { padding: 24px; text-align: center; color: var(--quote-c); }
 .file-view pre { margin: 0; }
 
-/* Hide file tree and tab bar when sidebar collapsed */
-#tocSide.collapsed #fileTree,
-#tocSide.collapsed .sidebar-tabs { display: none; }
+/* sidebarToggle scrollbar matching */
+#sidebarToggle::-webkit-scrollbar { width: var(--sb-w, 16px); height: var(--sb-w, 16px); }
+#sidebarToggle::-webkit-scrollbar-track { background: transparent; }
+#sidebarToggle::-webkit-scrollbar-thumb { background: var(--sb-thumb); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
+#sidebarToggle::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); border: 2px solid transparent; background-clip: content-box; }
+#sidebarToggle::-webkit-scrollbar-corner { background: transparent; }

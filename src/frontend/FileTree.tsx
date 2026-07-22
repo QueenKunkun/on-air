@@ -109,7 +109,16 @@ export function FileTree({ id }: Props) {
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             const el = document.querySelector('.ft-item.ft-current');
-            if (el) el.scrollIntoView({ block: 'center' });
+            if (el) {
+              const scrollContainer = el.closest('.ft-scroll');
+              if (scrollContainer) {
+                const elRect = el.getBoundingClientRect();
+                const contRect = scrollContainer.getBoundingClientRect();
+                scrollContainer.scrollTop += elRect.top - contRect.top - contRect.height / 2 + elRect.height / 2;
+              } else {
+                el.scrollIntoView({ block: 'center' });
+              }
+            }
             resolve();
           });
         });

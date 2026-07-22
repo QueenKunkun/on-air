@@ -14,8 +14,6 @@ test.beforeAll(() => {
 
 test.beforeEach(async ({ page }) => {
   await page.goto(`${baseUrl}/preview/${docId}`);
-  // Click Files tab to show the tree
-  await page.click('#tabTree');
   // Wait for tree to load
   await page.waitForSelector('.ft-list', { timeout: 5000 });
 });
