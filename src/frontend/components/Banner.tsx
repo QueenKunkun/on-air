@@ -1,26 +1,28 @@
 import { h } from 'preact';
-import { useEffect } from 'preact/hooks';
+import { useEffect, useRef } from 'preact/hooks';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-
-function withScrollAnchor(fn: () => void) {
-	const se = document.scrollingElement || document.documentElement;
-	const contentEl = document.getElementById('content');
-	if (!contentEl) { fn(); return; }
-	const kids = contentEl.children;
-	let anchor: Element | null = null;
-	for (let i = 0; i < kids.length; i++) {
-		if (kids[i].getBoundingClientRect().bottom > 0) { anchor = kids[i]; break; }
-	}
-	const before = anchor ? anchor.getBoundingClientRect().top : 0;
-	fn();
-	if (anchor) se.scrollTop += anchor.getBoundingClientRect().top - before;
-}
 
 export function Banner() {
 	const [theme, setTheme] = useLocalStorage('onair-theme', 'auto');
 	const [fs, setFs] = useLocalStorage('onair-font-size', '16');
 	const [sbw, setSbw] = useLocalStorage('onair-scrollbar-width', '16');
 	const [mw, setMw] = useLocalStorage('onair-max-width', '920');
+
+	// Refs to always have latest state in event handlers
+	const themeRef = useRef(theme);
+	const fsRef = useRef(fs);
+	const sbwRef = useRef(sbw);
+	const mwRef = useRef(mw);
+	useEffect(() => { themeRef.current = theme; }, [theme]);
+	useEffect(() => { fsRef.current = fs; }, [fs]);
+	useEffect(() => { sbwRef.current = sbw; }, [sbw]);
+	useEffect(() => { mwRef.current = mw; }, [mw]);
+
+	// Setters as refs too, since they're stable but we want clean handler code
+	const setFsRef = useRef(setFs);
+	const setSbwRef = useRef(setSbw);
+	const setMwRef = useRef(setMw);
+	const setThemeRef = useRef(setTheme);
 
 	useEffect(() => {
 		const html = document.documentElement;
@@ -61,21 +63,21 @@ export function Banner() {
 			if (val === 'auto') html.removeAttribute('data-theme');
 			else html.setAttribute('data-theme', val);
 		}
-		themeSelect.value = theme;
-		applyTheme(theme);
+		themeSelect.value = themeRef.current;
+		applyTheme(themeRef.current);
 
 		// Apply saved values
-		if (contentEl) contentEl.style.fontSize = fs + 'px';
-		document.documentElement.style.setProperty('--sb-w', sbw + 'px');
-		if (contentEl) contentEl.style.maxWidth = mw !== '0' ? mw + 'px' : 'none';
-		if (fsInput) fsInput.value = fs;
-		if (sbInput) sbInput.value = sbw;
-		if (mwInput) mwInput.value = mw;
+		if (contentEl) contentEl.style.fontSize = fsRef.current + 'px';
+		document.documentElement.style.setProperty('--sb-w', sbwRef.current + 'px');
+		if (contentEl) contentEl.style.maxWidth = mwRef.current !== '0' ? mwRef.current + 'px' : 'none';
+		if (fsInput) fsInput.value = fsRef.current;
+		if (sbInput) sbInput.value = sbwRef.current;
+		if (mwInput) mwInput.value = mwRef.current;
 
-		// Event handlers
+		// Event handlers — read from refs so they always have latest values
 		function onThemeChange() {
 			const val = themeSelect.value;
-			setTheme(val);
+			setThemeRef.current(val);
 			applyTheme(val);
 		}
 		function onWpClick() {
@@ -83,29 +85,29 @@ export function Banner() {
 			wpBtn!.textContent = wpBtn!.classList.contains('on') ? 'Unwrap code' : 'Wrap code';
 			contentEl?.classList.toggle('wp');
 		}
-		function onFsDec() { setFs(String(Math.max(12, Math.min(28, parseInt(fs) - 2)))); }
-		function onFsInc() { setFs(String(Math.max(12, Math.min(28, parseInt(fs) + 2)))); }
-		function onFsReset() { setFs('16'); }
-		function onFsInput() {
+		function onFsDec() { setFsRef.current(String(Math.max(12, Math.min(28, parseInt(fsRef.current) - 2)))); }
+		function onFsInc() { setFsRef.current(String(Math.max(12, Math.min(28, parseInt(fsRef.current) + 2)))); }
+		function onFsReset() { setFsRef.current('16'); }
+		function onFsChange() {
 			const v = parseInt(fsInput.value);
-			if (!isNaN(v)) setFs(String(Math.max(12, Math.min(28, v))));
-			else fsInput.value = fs;
+			if (!isNaN(v)) setFsRef.current(String(Math.max(12, Math.min(28, v))));
+			else fsInput.value = fsRef.current;
 		}
-		function onSbDec() { setSbw(String(Math.max(0, parseInt(sbw) - 4))); }
-		function onSbInc() { setSbw(String(Math.max(0, parseInt(sbw) + 4))); }
-		function onSbReset() { setSbw('16'); }
-		function onSbInput() {
+		function onSbDec() { setSbwRef.current(String(Math.max(0, parseInt(sbwRef.current) - 4))); }
+		function onSbInc() { setSbwRef.current(String(Math.max(0, parseInt(sbwRef.current) + 4))); }
+		function onSbReset() { setSbwRef.current('16'); }
+		function onSbChange() {
 			const v = parseInt(sbInput.value);
-			if (!isNaN(v)) setSbw(String(Math.max(0, v)));
-			else sbInput.value = sbw;
+			if (!isNaN(v)) setSbwRef.current(String(Math.max(0, v)));
+			else sbInput.value = sbwRef.current;
 		}
-		function onMwDec() { setMw(String(Math.max(0, parseInt(mw) - 20))); }
-		function onMwInc() { setMw(String(Math.max(0, parseInt(mw) + 20))); }
-		function onMwReset() { setMw('920'); }
-		function onMwInput() {
+		function onMwDec() { setMwRef.current(String(Math.max(0, parseInt(mwRef.current) - 20))); }
+		function onMwInc() { setMwRef.current(String(Math.max(0, parseInt(mwRef.current) + 20))); }
+		function onMwReset() { setMwRef.current('920'); }
+		function onMwChange() {
 			const v = parseInt(mwInput.value);
-			if (!isNaN(v) && v >= 0) setMw(String(v));
-			else mwInput.value = mw;
+			if (!isNaN(v) && v >= 0) setMwRef.current(String(v));
+			else mwInput.value = mwRef.current;
 		}
 		function onVerClick() {
 			const version = window.__ONAIR__?.version || 'dev';
@@ -115,9 +117,6 @@ export function Banner() {
 			} catch { /* ignore */ }
 			setTimeout(() => { verBadge!.textContent = 'v' + version; }, 1200);
 		}
-		function onFsChange() { onFsInput(); }
-		function onSbChange() { onSbInput(); }
-		function onMwChange() { onMwInput(); }
 
 		themeSelect.addEventListener('change', onThemeChange);
 		wpBtn?.addEventListener('click', onWpClick);
@@ -183,5 +182,5 @@ export function Banner() {
 		if (themeSelect) themeSelect.value = theme;
 	}, [theme]);
 
-	return null; // No Preact VDOM rendered
+	return null;
 }

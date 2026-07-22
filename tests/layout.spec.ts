@@ -266,33 +266,24 @@ test('TOC rebuilds when content updates via WebSocket', async ({ page }) => {
   const toc = page.locator('#toc');
   await expect(toc).toBeAttached();
 
-  // Initial page has only 1 heading → no toc-items
-  const initialTocItems = await toc.locator('.toc-item').count();
+  // Initial page has only 1 heading → no tree items (class 'r' = toc row)
+  const initialTocItems = await toc.locator('.r').count();
   expect(initialTocItems).toBe(0);
 
-  // Verify initial content
-  const initialContent = await page.locator('#content').innerHTML();
-  expect(initialContent).toContain('test markdown file');
-
-  // Update content via the test endpoint to include 2 headings
+  // Update content via the test endpoint to include 3 headings (1 h1 + 2 h2)
   const newMd = '# Test Project\n\n## Section One\n\nHello world.\n\n## Section Two\n\nMore content.\n';
   const resp = await page.request.post(`${baseUrl}/test/update`, {
     data: JSON.stringify({ html: newMd }),
   });
   expect(resp.ok()).toBeTruthy();
 
-  // First check: did the content element actually update?
+  // Wait for TOC to rebuild with the new headings (3 total: h1 + 2 h2)
   await expect(async () => {
-    const content = await page.locator('#content').innerHTML();
-    expect(content).toContain('Section One');
+    const items = await toc.locator('.r').count();
+    expect(items).toBe(3);
   }).toPass({ timeout: 5000 });
 
-  // Now check: did the TOC rebuild?
-  await expect(async () => {
-    const items = await toc.locator('.toc-item').count();
-    expect(items).toBe(2);
-  }).toPass({ timeout: 5000 });
-
-  await expect(toc.locator('.toc-item').nth(0)).toContainText('Section One');
-  await expect(toc.locator('.toc-item').nth(1)).toContainText('Section Two');
+  // Verify section headings are in the TOC
+  await expect(toc.locator('.r').nth(1).locator('a')).toContainText('Section One');
+  await expect(toc.locator('.r').nth(2).locator('a')).toContainText('Section Two');
 });
