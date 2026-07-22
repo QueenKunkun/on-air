@@ -403,13 +403,13 @@ function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullP
 		.replace(/\{\{TITLE\}\}/g, escapeHtml(title))
 		.replace(/\{\{BODY\}\}/g, bodyHtml)
 		.replace(/\{\{VERSION\}\}/g, escapeHtml(EXT_VERSION))
+		.replace(/\{\{VERSION_JSON\}\}/g, JSON.stringify(EXT_VERSION))
 		.replace(/\{\{ID_JSON\}\}/g, JSON.stringify(id))
 		.replace(/\{\{FULL_PATH_JSON\}\}/g, JSON.stringify(fullPath))
 		.replace(/\{\{REL_PATH_JSON\}\}/g, JSON.stringify(relPath))
 		.replace(/\{\{ROOT_DIR_JSON\}\}/g, JSON.stringify(rootDir || ''))
 		.replace(/\{\{FULL_PATH_ATTR\}\}/g, escapeHtml(fullPath))
 		.replace(/\{\{ROOT_DIR_ATTR\}\}/g, escapeHtml(rootDir || ''))
-		.replace(/\{\{TOC_JS\}\}/g, tocJs)
 		.replace(/\{\{PREACT_JS\}\}/g, preactJs);
 }
 /**

@@ -1,17 +1,15 @@
-import { h, render } from 'preact';
-import { FileTree } from './FileTree';
-import { Banner } from './components/Banner';
+import { h } from 'preact';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { Layout } from './components/Layout';
+import { Banner } from './components/Banner';
 import { TOC } from './components/TOC';
 import { Annotations } from './components/Annotations';
 import { useWebSocket } from './hooks/useWebSocket';
-import { useCallback, useEffect, useState } from 'preact/hooks';
 
-function App() {
+export function App() {
 	const [contentEl, setContentEl] = useState<HTMLElement | null>(null);
 	const [fullPath, setFullPath] = useState(window.__ONAIR__?.fullPath || '');
 	const [relPath, setRelPath] = useState(window.__ONAIR__?.relPath || '');
-	const [, forceUpdate] = useState(0);
 
 	const processFootnotes = useCallback((el: HTMLElement) => {
 		const sec = el.querySelector('section.footnotes');
@@ -54,11 +52,15 @@ function App() {
 		if (msg.title) document.title = msg.title + ' \u00b7 OnAir';
 		setContentEl(content);
 		processFootnotes(content);
-		forceUpdate(n => n + 1);
+		// Rebuild TOC by triggering a re-render
+		forceUpdate();
 	}, [processFootnotes]);
+
+	const [, forceUpdate] = useState(0);
 
 	useWebSocket(handleUpdate);
 
+	// Initial mount
 	useEffect(() => {
 		const content = document.getElementById('content');
 		if (content) {
@@ -73,17 +75,3 @@ function App() {
 		h(Annotations, { contentEl }),
 	);
 }
-
-// Mount FileTree into #ft-preact-root
-const ftRoot = document.getElementById('ft-preact-root');
-if (ftRoot) {
-	const id = ftRoot.getAttribute('data-id') || '';
-	render(h(FileTree, { id }), ftRoot);
-}
-
-// Mount App into hidden container (binds behavior to existing DOM)
-const container = document.createElement('div');
-container.id = 'onair-preact';
-container.style.display = 'none';
-document.body.appendChild(container);
-render(h(App, null), container);

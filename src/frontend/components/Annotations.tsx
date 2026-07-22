@@ -1,0 +1,260 @@
+import { h } from 'preact';
+import { useEffect, useRef, useState, useCallback } from 'preact/hooks';
+
+interface CardEntry {
+	id: string;
+	mark: HTMLElement;
+	card: HTMLDivElement;
+}
+
+export function Annotations({ contentEl }: { contentEl: HTMLElement | null }) {
+	const hoverOn = useRef(localStorage.getItem('onair-annot-hover') === '1');
+	const cardRegistry = useRef<CardEntry[]>([]);
+	const popRef = useRef<HTMLDivElement | null>(null);
+	const [, forceUpdate] = useState(0);
+
+	const hidePopover = useCallback(() => {
+		if (popRef.current) popRef.current.style.display = 'none';
+	}, []);
+
+	const showPopover = useCallback((evt: MouseEvent, htmlStr: string) => {
+		const pop = popRef.current;
+		if (!pop) return;
+		pop.innerHTML = htmlStr;
+		pop.style.display = 'block';
+		pop.style.left = '0px';
+		pop.style.top = '0px';
+		const el = (evt.currentTarget || evt.target) as HTMLElement;
+		const r = el.getBoundingClientRect();
+		const ph = pop.offsetHeight;
+		const pw = pop.offsetWidth;
+		const gap = 30;
+		let top = r.bottom + gap;
+		if (top + ph > window.innerHeight - 8) {
+			top = Math.max(8, r.top - ph - 12);
+		}
+		let left = r.left;
+		if (left + pw > window.innerWidth - 8) left = Math.max(8, window.innerWidth - pw - 8);
+		pop.style.top = (top + window.pageYOffset) + 'px';
+		pop.style.left = (left + window.pageXOffset) + 'px';
+	}, []);
+
+	const annotColumnVisible = useCallback(() => {
+		const side = document.getElementById('annotSide');
+		return side && getComputedStyle(side).display !== 'none' && !side.classList.contains('collapsed');
+	}, []);
+
+	const activate = useCallback((aid: string, scroll: boolean) => {
+		for (const entry of cardRegistry.current) {
+			const on = entry.id === aid;
+			entry.mark.classList.toggle('active', on);
+			entry.card.classList.toggle('active', on);
+			entry.card.style.zIndex = on ? '5' : '';
+			if (on && scroll) entry.card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+		}
+	}, []);
+
+	const markDocY = useCallback((el: Element) => {
+		return el.getBoundingClientRect().top + window.pageYOffset;
+	}, []);
+
+	const layoutCards = useCallback(() => {
+		const registry = cardRegistry.current;
+		if (!registry.length) return;
+		const side = document.getElementById('annotSide');
+		if (side?.classList.contains('collapsed')) return;
+		const annots = document.getElementById('annots');
+		const contentEl = document.getElementById('content');
+		if (!annots || !contentEl) return;
+		annots.style.minHeight = contentEl.offsetHeight + 'px';
+		const base = markDocY(annots);
+		const items = registry.slice().sort((a, b) => markDocY(a.mark) - markDocY(b.mark));
+		let prevBottom = -1e9;
+		const gap = 12;
+		for (const item of items) {
+			const natural = markDocY(item.mark) - base;
+			const y = Math.max(natural, prevBottom + gap);
+			item.card.style.top = y + 'px';
+			prevBottom = y + item.card.offsetHeight;
+		}
+	}, [markDocY]);
+
+	const prevMark = useCallback((ref: Element): Element | null => {
+		let n = ref.previousSibling;
+		while (n && n.nodeType === 3 && !/\S/.test(n.textContent || '')) n = n.previousSibling;
+		if (n && n.nodeType === 1 && (n as Element).tagName === 'MARK') return n;
+		return null;
+	}, []);
+
+	useEffect(() => {
+		if (!contentEl) return;
+
+		const pop = document.createElement('div');
+		pop.id = 'annot-pop';
+		pop.style.display = 'none';
+		document.body.appendChild(pop);
+		popRef.current = pop;
+
+		const side = document.getElementById('annotSide');
+		const annots = document.getElementById('annots');
+		const resizer = document.getElementById('annotResizer');
+
+		function buildAnnotations() {
+			if (!annots || !side) return;
+			annots.innerHTML = '';
+			cardRegistry.current = [];
+
+			const refs = contentEl!.querySelectorAll('sup.footnote-ref');
+			const sec = contentEl!.querySelector('section.footnotes');
+			const liById: Record<string, HTMLLIElement> = {};
+			if (sec) {
+				const lis = sec.querySelectorAll('li.footnote-item');
+				for (let i = 0; i < lis.length; i++) liById[lis[i].id] = lis[i] as HTMLLIElement;
+			}
+
+			let annId = 0;
+			for (let r = 0; r < refs.length; r++) {
+				const ref = refs[r];
+				const markEl = prevMark(ref);
+				if (!markEl) {
+					const a = ref.querySelector('a');
+					const fli = a && liById[(a.getAttribute('href') || '').replace(/^#/, '')];
+					if (fli) {
+						const fclone = fli.cloneNode(true) as HTMLLIElement;
+						const fback = fclone.querySelector('.footnote-backref');
+						if (fback) fback.parentNode?.removeChild(fback);
+						const htmlStr = fclone.innerHTML;
+						(markEl as HTMLElement).onmouseenter = (e: MouseEvent) => { if (hoverOn.current) showPopover(e, htmlStr); };
+						(markEl as HTMLElement).onmouseleave = () => { if (hoverOn.current) hidePopover(); };
+					}
+					continue;
+				}
+				const a = ref.querySelector('a');
+				if (!a) continue;
+				const fnId = (a.getAttribute('href') || '').replace(/^#/, '');
+				const li = liById[fnId];
+				if (!li) continue;
+
+				annId++;
+				const aid = 'a' + annId;
+				(markEl as HTMLElement).setAttribute('data-annot-id', aid);
+				(markEl as HTMLElement).classList.add('annot-mark');
+				(ref as HTMLElement).style.display = 'none';
+
+				const card = document.createElement('div');
+				card.className = 'annot-card';
+				card.setAttribute('data-annot-id', aid);
+				const clone = li.cloneNode(true) as HTMLLIElement;
+				const back = clone.querySelector('.footnote-backref');
+				if (back) back.parentNode?.removeChild(back);
+				card.innerHTML = clone.innerHTML;
+				annots.appendChild(card);
+				li.parentNode?.removeChild(li);
+
+				cardRegistry.current.push({ id: aid, mark: markEl as HTMLElement, card });
+
+				((id: string, mark: HTMLElement, cardEl: HTMLDivElement, htmlStr: string) => {
+					mark.onclick = (e: MouseEvent) => {
+						if (annotColumnVisible()) { activate(id, true); }
+						else { showPopover(e, htmlStr); e.stopPropagation(); }
+					};
+					cardEl.onclick = () => { activate(id, false); };
+					mark.onmouseenter = (e: MouseEvent) => {
+						if (!hoverOn.current) return;
+						if (annotColumnVisible()) activate(id, false); else showPopover(e, htmlStr);
+					};
+					mark.onmouseleave = () => { if (hoverOn.current && !annotColumnVisible()) hidePopover(); };
+					cardEl.onmouseenter = () => { if (hoverOn.current) activate(id, false); };
+				})(aid, markEl as HTMLElement, card, card.innerHTML);
+			}
+
+			if (sec && !sec.querySelector('li.footnote-item')) {
+				const sep = contentEl!.querySelector('hr.footnotes-sep');
+				if (sep) sep.parentNode?.removeChild(sep);
+				sec.parentNode?.removeChild(sec);
+			}
+
+			const has = cardRegistry.current.length > 0;
+			side.style.display = has ? '' : 'none';
+			if (resizer) resizer.style.display = (has && !side.classList.contains('collapsed')) ? '' : 'none';
+			if (has) layoutCards();
+		}
+
+		// Annotation column resize
+		if (resizer && side) {
+			let startPos = 0;
+			let startSize = 0;
+			resizer.addEventListener('mousedown', (e: MouseEvent) => {
+				startPos = e.clientX;
+				startSize = side.offsetWidth;
+				resizer.classList.add('active');
+				const saved = parseInt(localStorage.getItem('onair-annot-width') || '', 10);
+				if (!isNaN(saved)) side.style.width = saved + 'px';
+
+				function onMove(ev: MouseEvent) {
+					const size = Math.max(120, startSize - (ev.clientX - startPos));
+					side!.style.width = size + 'px';
+				}
+				function onUp() {
+					resizer!.classList.remove('active');
+					localStorage.setItem('onair-annot-width', String(side!.offsetWidth));
+					document.removeEventListener('mousemove', onMove);
+					document.removeEventListener('mouseup', onUp);
+				}
+				document.addEventListener('mousemove', onMove);
+				document.addEventListener('mouseup', onUp);
+				e.preventDefault();
+			});
+		}
+
+		// Annotation column collapse handle
+		const handle = document.getElementById('annotToggle');
+		if (handle && side) {
+			function setAnnotCollapsed(c: boolean) {
+				side!.classList.toggle('collapsed', c);
+				handle!.textContent = c ? '<' : '>';
+				handle!.title = c ? 'Show annotations' : 'Hide annotations';
+				if (cardRegistry.current.length && resizer) resizer.style.display = c ? 'none' : '';
+				localStorage.setItem('onair-annot-collapsed', c ? '1' : '0');
+				if (!c) layoutCards();
+			}
+			setAnnotCollapsed(localStorage.getItem('onair-annot-collapsed') === '1');
+			handle.onclick = () => setAnnotCollapsed(!side!.classList.contains('collapsed'));
+		}
+
+		// Hover preview
+		const hoverBtn = document.getElementById('hoverBtn');
+		if (hoverBtn) {
+			if (hoverOn.current) hoverBtn.classList.add('on');
+			hoverBtn.onclick = () => {
+				hoverOn.current = !hoverOn.current;
+				hoverBtn.classList.toggle('on', hoverOn.current);
+				localStorage.setItem('onair-annot-hover', hoverOn.current ? '1' : '0');
+				if (!hoverOn.current) hidePopover();
+			};
+		}
+
+		// Click outside popover to close
+		const onDocClick = (e: MouseEvent) => {
+			if (pop.style.display !== 'none' && !pop.contains(e.target as Node) && !(e.target as HTMLElement)?.closest?.('.annot-mark')) {
+				hidePopover();
+			}
+		};
+		document.addEventListener('click', onDocClick);
+
+		buildAnnotations();
+
+		return () => {
+			document.removeEventListener('click', onDocClick);
+			pop.remove();
+		};
+	}, [contentEl, activate, annotColumnVisible, hidePopover, layoutCards, prevMark, showPopover]);
+
+	useEffect(() => {
+		const onResize = () => { layoutCards(); hidePopover(); };
+		window.addEventListener('resize', onResize);
+		return () => window.removeEventListener('resize', onResize);
+	}, [layoutCards, hidePopover]);
+
+	return null;
+}
