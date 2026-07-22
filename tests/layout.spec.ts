@@ -55,6 +55,29 @@ test('banner font size controls work', async ({ page }) => {
   expect(parseInt(val2)).toBe(16);
 });
 
+test('banner font size direct input works', async ({ page }) => {
+  const fsInput = page.locator('#fsInput');
+  await expect(fsInput).toBeVisible();
+  // Type a custom value
+  await fsInput.fill('20');
+  await fsInput.press('Enter');
+  await page.waitForTimeout(200);
+  const val = await fsInput.inputValue();
+  expect(parseInt(val)).toBe(20);
+  // Verify it clamps to max 28
+  await fsInput.fill('30');
+  await fsInput.press('Enter');
+  await page.waitForTimeout(200);
+  const val2 = await fsInput.inputValue();
+  expect(parseInt(val2)).toBe(28);
+  // Verify it clamps to min 12
+  await fsInput.fill('5');
+  await fsInput.press('Enter');
+  await page.waitForTimeout(200);
+  const val3 = await fsInput.inputValue();
+  expect(parseInt(val3)).toBe(12);
+});
+
 test('banner scrollbar width controls work', async ({ page }) => {
   const sbInput = page.locator('#sbInput');
   await expect(sbInput).toBeVisible();
@@ -68,6 +91,34 @@ test('banner scrollbar width controls work', async ({ page }) => {
   await page.waitForTimeout(200);
   const val2 = await sbInput.inputValue();
   expect(parseInt(val2)).toBe(16);
+});
+
+test('banner scrollbar direct input works', async ({ page }) => {
+  const sbInput = page.locator('#sbInput');
+  await expect(sbInput).toBeVisible();
+  // Type a custom value
+  await sbInput.fill('24');
+  await sbInput.press('Enter');
+  await page.waitForTimeout(200);
+  const val = await sbInput.inputValue();
+  expect(parseInt(val)).toBe(24);
+});
+
+test('banner max width direct input works', async ({ page }) => {
+  const mwInput = page.locator('#mwInput');
+  await expect(mwInput).toBeVisible();
+  // Type a custom value
+  await mwInput.fill('600');
+  await mwInput.press('Enter');
+  await page.waitForTimeout(200);
+  const val = await mwInput.inputValue();
+  expect(parseInt(val)).toBe(600);
+  // Verify 0 means no limit
+  await mwInput.fill('0');
+  await mwInput.press('Enter');
+  await page.waitForTimeout(200);
+  const val2 = await mwInput.inputValue();
+  expect(parseInt(val2)).toBe(0);
 });
 
 test('files toggle collapses and expands panel', async ({ page }) => {
