@@ -46,6 +46,30 @@ async function main() {
   fs.writeFileSync(infoPath, JSON.stringify(info));
   console.log(`Server ready on port ${server.port}`);
 
+  // Test-only endpoint: simulate a content update (calls updateDocument and sends WS)
+  const httpServer = server.server;
+  const origHandler = httpServer.listeners('request')[0];
+  httpServer.removeAllListeners('request');
+  httpServer.on('request', (req, res) => {
+    if (req.method === 'POST' && req.url === '/test/update') {
+      let body = '';
+      req.on('data', (chunk) => { body += chunk; });
+      req.on('end', () => {
+        try {
+          const { html } = JSON.parse(body);
+          server.updateDocument('test://README.md', 'Test README', html, 'markdown', path.join(FIXTURE_DIR, 'README.md'));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end('{"ok":true}');
+        } catch (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: String(err) }));
+        }
+      });
+      return;
+    }
+    origHandler(req, res);
+  });
+
   // Keep alive
   process.on('SIGTERM', () => { server.stop(); process.exit(0); });
   process.on('SIGINT', () => { server.stop(); process.exit(0); });

@@ -261,3 +261,38 @@ test('toc has scrollable content when headings exist', async ({ page }) => {
   expect(tocStyles!.display).toBe('flex');
   expect(tocStyles!.flexDirection).toBe('column');
 });
+
+test('TOC rebuilds when content updates via WebSocket', async ({ page }) => {
+  const toc = page.locator('#toc');
+  await expect(toc).toBeAttached();
+
+  // Initial page has only 1 heading → no toc-items
+  const initialTocItems = await toc.locator('.toc-item').count();
+  expect(initialTocItems).toBe(0);
+
+  // Verify initial content
+  const initialContent = await page.locator('#content').innerHTML();
+  expect(initialContent).toContain('test markdown file');
+
+  // Update content via the test endpoint to include 2 headings
+  const newMd = '# Test Project\n\n## Section One\n\nHello world.\n\n## Section Two\n\nMore content.\n';
+  const resp = await page.request.post(`${baseUrl}/test/update`, {
+    data: JSON.stringify({ html: newMd }),
+  });
+  expect(resp.ok()).toBeTruthy();
+
+  // First check: did the content element actually update?
+  await expect(async () => {
+    const content = await page.locator('#content').innerHTML();
+    expect(content).toContain('Section One');
+  }).toPass({ timeout: 5000 });
+
+  // Now check: did the TOC rebuild?
+  await expect(async () => {
+    const items = await toc.locator('.toc-item').count();
+    expect(items).toBe(2);
+  }).toPass({ timeout: 5000 });
+
+  await expect(toc.locator('.toc-item').nth(0)).toContainText('Section One');
+  await expect(toc.locator('.toc-item').nth(1)).toContainText('Section Two');
+});
