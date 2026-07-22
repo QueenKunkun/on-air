@@ -89,10 +89,12 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 
 		function onFilesToggle(e: Event) {
 			e.stopPropagation();
+			if (filesResizerRef.current?.getAttribute('data-dragging')) return;
 			toggleFiles();
 		}
 		function onTocToggle(e: Event) {
 			e.stopPropagation();
+			if (tocResizerRef.current?.getAttribute('data-dragging')) return;
 			toggleToc();
 		}
 
