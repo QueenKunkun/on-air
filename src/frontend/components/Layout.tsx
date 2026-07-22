@@ -118,5 +118,21 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		};
 	}, [expandFiles, expandToc]);
 
+	// Update CSS custom properties for toggle handle positioning
+	useEffect(() => {
+		const filesEl = filesSideRef.current;
+		const tocEl = tocColRef.current;
+		if (!filesEl || !tocEl) return;
+		function updateVars() {
+			document.body.style.setProperty('--onair-files-w', filesEl!.offsetWidth + 'px');
+			document.body.style.setProperty('--onair-toc-w', tocEl!.offsetWidth + 'px');
+		}
+		updateVars();
+		const ro = new ResizeObserver(updateVars);
+		ro.observe(filesEl);
+		ro.observe(tocEl);
+		return () => ro.disconnect();
+	}, []);
+
 	return h(Fragment, null, children);
 }
