@@ -10,3 +10,4 @@ private/
 .git*/
 docs/
 test-results/
+*.zip
