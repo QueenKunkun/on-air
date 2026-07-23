@@ -98,6 +98,54 @@ test('filter toggle does not empty the tree (regression)', async ({ page }) => {
   expect(items).toBeGreaterThan(0);
 });
 
+test('gitignore filter hides .log files when checked', async ({ page }) => {
+  // debug.log is in fixture root. With gitignore ON (*.log), it should be hidden.
+  // With gitignore OFF, it should appear.
+  const filesBefore = await page.locator('.ft-item.ft-file .ft-name').allTextContents();
+  console.log('Files (gitignore ON):', filesBefore);
+  expect(filesBefore.some(t => t.includes('debug.log'))).toBeFalsy();
+
+  // Uncheck gitignore — tree should re-fetch and show debug.log
+  await page.locator('.ft-filter label:has-text(".gitignore") input[type="checkbox"]').click();
+  await page.waitForTimeout(1000);
+
+  const filesAfter = await page.locator('.ft-item.ft-file .ft-name').allTextContents();
+  console.log('Files (gitignore OFF):', filesAfter);
+  expect(filesAfter.some(t => t.includes('debug.log'))).toBeTruthy();
+});
+
+test('mdOnly filter hides non-.md files', async ({ page }) => {
+  // Initially: should see non-.md files like README.md (root), and directories
+  // Toggle mdOnly on: only .md files remain
+  const mdCheckbox = page.locator('.ft-filter label:has-text(".md") input[type="checkbox"]');
+  await mdCheckbox.click();
+  await page.waitForTimeout(500);
+
+  const files = await page.locator('.ft-item.ft-file .ft-name').allTextContents();
+  console.log('Files with mdOnly ON:', files);
+  for (const f of files) {
+    expect(f.trim().endsWith('.md')).toBeTruthy();
+  }
+});
+
+test('toggling filter does not restore previously expanded dirs', async ({ page }) => {
+  // Expand src/ directory
+  await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))');
+  await page.waitForSelector('.ft-children .ft-item');
+  const childrenBefore = await page.locator('.ft-children .ft-item').count();
+  expect(childrenBefore).toBeGreaterThan(0);
+
+  // Toggle a filter — tree should re-render and collapse everything
+  const giCheckbox = page.locator('.ft-filter label:has-text(".gitignore") input[type="checkbox"]');
+  await giCheckbox.click();
+  await page.waitForTimeout(500);
+
+  // src/ should be collapsed again (no children visible)
+  const childrenAfter = await page.locator('.ft-children .ft-item').count();
+  console.log('Children after filter toggle:', childrenAfter);
+  expect(childrenAfter).toBe(0);
+});
+
 test('hovering file does not highlight parent directory', async ({ page }) => {
   // Expand src/ directory
   await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))');

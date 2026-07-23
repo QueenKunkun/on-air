@@ -187,8 +187,11 @@ export function FileTree({ id }: Props) {
           }
         } catch {}
       }
-      setLoaded(true);
-      await expandToCurrentFile(true);
+      setLoaded(false);
+      requestAnimationFrame(() => {
+        setLoaded(true);
+        expandToCurrentFile(true);
+      });
     })();
   }, [filters]);
 
