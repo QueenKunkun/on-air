@@ -45,11 +45,7 @@ function App() {
 		const content = document.getElementById('content');
 		if (!content) return;
 		if (msg.html != null) content.innerHTML = msg.html;
-		if (msg.fullPath) {
-			setFullPath(msg.fullPath);
-			const ftRoot = document.getElementById('ft-preact-root');
-			if (ftRoot) ftRoot.setAttribute('data-fullpath', msg.fullPath);
-		}
+		if (msg.fullPath) setFullPath(msg.fullPath);
 		if (msg.relPath != null) setRelPath(msg.relPath);
 		if (msg.title) document.title = msg.title + ' \u00b7 OnAir';
 		setContentEl(content);
