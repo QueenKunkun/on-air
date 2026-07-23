@@ -148,7 +148,12 @@ export function bindTocInteractions(tocEl: HTMLElement, contentEl: HTMLElement, 
 			else break;
 		}
 		for (let m = 0; m < map.length; m++) map[m][1].classList.toggle('active', map[m][1] === active);
-		if (active) (active as HTMLElement).scrollIntoView({ block: 'nearest' });
+		if (active) {
+			const scrollEl = (active as HTMLElement).closest('#toc-list') as HTMLElement | null;
+			const sl = scrollEl?.scrollLeft ?? 0;
+			(active as HTMLElement).scrollIntoView({ block: 'nearest' });
+			if (scrollEl) scrollEl.scrollLeft = sl;
+		}
 	}
 
 	let ticking = false;
@@ -368,7 +373,12 @@ function bindTocInteractions(tocEl, contentEl, offset) {
 			else break;
 		}
 		for (var m = 0; m < map.length; m++) map[m][1].classList.toggle('active', map[m][1] === active);
-		if (active) active.scrollIntoView({ block: 'nearest' });
+		if (active) {
+			var scrollEl = active.closest ? active.closest('#toc-list') : null;
+			var sl = scrollEl ? scrollEl.scrollLeft : 0;
+			active.scrollIntoView({ block: 'nearest' });
+			if (scrollEl) scrollEl.scrollLeft = sl;
+		}
 	}
 	var ticking = false;
 	document.addEventListener('scroll', function () {

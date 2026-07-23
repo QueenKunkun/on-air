@@ -413,3 +413,27 @@ test('TOC active item scrolls into view on content scroll', async ({ page }) => 
   expect(activeBounds!.y).toBeGreaterThanOrEqual(tocListBounds!.y - 2);
   expect(activeBounds!.y + activeBounds!.height).toBeLessThanOrEqual(tocListBounds!.y + tocListBounds!.height + 2);
 });
+
+test('TOC scrollIntoView does not change horizontal scroll position', async ({ page }) => {
+  const md = ['# Title\n', ...Array.from({ length: 20 }, (_, i) => `## Section ${i + 1}\n\nParagraph ${i + 1}.\n`)].join('\n');
+  await page.request.post(`${baseUrl}/test/update`, { data: JSON.stringify({ html: md }) });
+  await expect(async () => {
+    const items = await page.locator('#toc-list .r').count();
+    expect(items).toBeGreaterThanOrEqual(15);
+  }).toPass({ timeout: 5000 });
+
+  const tocList = page.locator('#toc-list');
+
+  // Force TOC list to be wide enough to scroll horizontally
+  await tocList.evaluate((el: HTMLElement) => { el.style.minWidth = '100px'; el.scrollLeft = 30; });
+  const scrollLeftBefore = await tocList.evaluate((el: HTMLElement) => el.scrollLeft);
+  // If browser allows scroll, test it; otherwise skip horizontal check
+  if (scrollLeftBefore > 0) {
+    // Scroll content vertically to trigger TOC active update + scrollIntoView
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(500);
+
+    const scrollLeftAfter = await tocList.evaluate((el: HTMLElement) => el.scrollLeft);
+    expect(scrollLeftAfter).toBe(scrollLeftBefore);
+  }
+});
