@@ -6,12 +6,14 @@ const infoPath = path.join(__dirname, '.server-info.json');
 let baseUrl: string;
 let docId: string;
 let docId2: string;
+let docId3: string;
 
 test.beforeAll(() => {
   const info = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
   baseUrl = info.baseUrl;
   docId = info.id;
   docId2 = info.id2;
+  docId3 = info.id3;
 });
 
 test.describe('expandToCurrentFile', () => {
@@ -120,6 +122,37 @@ test.describe('expandToCurrentFile', () => {
     if (scrollBox!.height < await scrollContainer.evaluate(el => el.scrollHeight)) {
       expect(scrolled).toBeTruthy();
     }
+
+    // Current file must be within the visible scroll area
+    expect(currentBox!.y).toBeGreaterThanOrEqual(scrollBox!.y - 2);
+    expect(currentBox!.y + currentBox!.height).toBeLessThanOrEqual(scrollBox!.y + scrollBox!.height + 2);
+  });
+
+  test('deep tree: current file is scrolled into view (100+ items)', async ({ page }) => {
+    // many-dirs has 10 root dirs x 10 subdirs x 1 leaf = 110 items
+    // Target: many-dirs/j/j/leaf.md (deep in the tree, near the bottom)
+    await page.goto(`${baseUrl}/preview/${docId3}`);
+    await page.waitForSelector('.ft-list', { timeout: 5000 });
+
+    // Wait for expansion
+    await expect(page.locator('.ft-item.ft-current')).toHaveCount(1, { timeout: 5000 });
+
+    const current = page.locator('.ft-item.ft-current');
+    await expect(current).toBeVisible();
+
+    const scrollContainer = page.locator('.ft-scroll');
+    const scrollBox = await scrollContainer.boundingBox();
+    const currentBox = await current.boundingBox();
+    expect(scrollBox).not.toBeNull();
+    expect(currentBox).not.toBeNull();
+
+    // Tree must be tall enough to require scrolling
+    const scrollHeight = await scrollContainer.evaluate(el => el.scrollHeight);
+    expect(scrollHeight).toBeGreaterThan(scrollBox!.height);
+
+    // The scroll container should have scrolled
+    const scrollTop = await scrollContainer.evaluate(el => el.scrollTop);
+    expect(scrollTop).toBeGreaterThan(0);
 
     // Current file must be within the visible scroll area
     expect(currentBox!.y).toBeGreaterThanOrEqual(scrollBox!.y - 2);

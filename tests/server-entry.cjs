@@ -51,7 +51,17 @@ async function main() {
     helloPath
   );
 
-  const info = { port: server.port, id, id2, baseUrl: `http://127.0.0.1:${server.port}` };
+  const deepPath = path.join(FIXTURE_DIR, 'many-dirs', 'j', 'j', 'j', 'leaf.md');
+  const id3 = server.registerDocument(
+    'test://many-dirs/j/j/j/leaf.md',
+    'Deep Leaf',
+    fs.readFileSync(deepPath, 'utf8'),
+    'markdown',
+    FIXTURE_DIR,
+    deepPath
+  );
+
+  const info = { port: server.port, id, id2, id3, baseUrl: `http://127.0.0.1:${server.port}` };
   const infoPath = path.join(__dirname, '.server-info.json');
   fs.writeFileSync(infoPath, JSON.stringify(info));
   console.log(`Server ready on port ${server.port}`);

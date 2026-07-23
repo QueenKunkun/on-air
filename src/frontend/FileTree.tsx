@@ -114,7 +114,12 @@ export function FileTree({ id }: Props) {
               if (scrollContainer) {
                 const elRect = el.getBoundingClientRect();
                 const contRect = scrollContainer.getBoundingClientRect();
-                scrollContainer.scrollTop += elRect.top - contRect.top - contRect.height / 2 + elRect.height / 2;
+                const offset = elRect.top - contRect.top - contRect.height / 2 + elRect.height / 2;
+                scrollContainer.scrollTop += offset;
+                // Fallback: if scrollTop didn't move (e.g. layout not ready), use scrollIntoView
+                if (scrollContainer.scrollTop === 0 && offset > 0) {
+                  el.scrollIntoView({ block: 'center' });
+                }
               } else {
                 el.scrollIntoView({ block: 'center' });
               }
@@ -183,7 +188,7 @@ export function FileTree({ id }: Props) {
         } catch {}
       }
       setLoaded(true);
-      await expandToCurrentFile(false);
+      await expandToCurrentFile(true);
     })();
   }, [filters]);
 
