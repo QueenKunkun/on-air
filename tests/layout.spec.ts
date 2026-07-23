@@ -307,14 +307,13 @@ test('TOC toggle aligns with TOC resizer when files collapsed', async ({ page })
   const tocToggle = page.locator('.panel-toggle[data-panel="toc"]');
   const tocToggleLeft = await tocToggle.evaluate(el => el.getBoundingClientRect().left);
 
-  // Get TOC resizer right edge
+  // Get TOC resizer left edge
   const tocResizer = page.locator('.toc-resizer');
   const resizerBox = await tocResizer.boundingBox();
   expect(resizerBox).not.toBeNull();
-  const resizerRight = resizerBox!.x + resizerBox!.width;
 
-  // They should be equal (within 1px tolerance for subpixel rendering)
-  expect(Math.abs(tocToggleLeft - resizerRight)).toBeLessThanOrEqual(1);
+  // Toggle left should match resizer left (toggle covers resizer via border-left)
+  expect(Math.abs(tocToggleLeft - resizerBox!.x)).toBeLessThanOrEqual(1);
 });
 
 test('TOC toggle aligns with TOC resizer in default state (both panels open)', async ({ page }) => {
@@ -324,22 +323,22 @@ test('TOC toggle aligns with TOC resizer in default state (both panels open)', a
   const tocResizer = page.locator('.toc-resizer');
   const resizerBox = await tocResizer.boundingBox();
   expect(resizerBox).not.toBeNull();
-  const resizerRight = resizerBox!.x + resizerBox!.width;
 
-  // Toggle left edge should align with resizer right edge (within 1px)
-  expect(Math.abs(tocToggleLeft - resizerRight)).toBeLessThanOrEqual(1);
+  // Toggle left should match resizer left (toggle covers resizer via border-left)
+  expect(Math.abs(tocToggleLeft - resizerBox!.x)).toBeLessThanOrEqual(1);
 });
 
 test('Files toggle aligns with files resizer in default state', async ({ page }) => {
+  // Toggle should OVERLAP the resizer (left edge = resizer left edge)
   const filesToggle = page.locator('.panel-toggle[data-panel="files"]');
   const filesToggleLeft = await filesToggle.evaluate(el => el.getBoundingClientRect().left);
 
   const filesResizer = page.locator('.files-resizer');
   const resizerBox = await filesResizer.boundingBox();
   expect(resizerBox).not.toBeNull();
-  const resizerRight = resizerBox!.x + resizerBox!.width;
 
-  expect(Math.abs(filesToggleLeft - resizerRight)).toBeLessThanOrEqual(1);
+  // Toggle left should match resizer left (toggle covers resizer via border-left)
+  expect(Math.abs(filesToggleLeft - resizerBox!.x)).toBeLessThanOrEqual(1);
 });
 
 test('TOC toggle aligns after files re-expands', async ({ page }) => {
@@ -360,9 +359,8 @@ test('TOC toggle aligns after files re-expands', async ({ page }) => {
   const tocResizer = page.locator('.toc-resizer');
   const resizerBox = await tocResizer.boundingBox();
   expect(resizerBox).not.toBeNull();
-  const resizerRight = resizerBox!.x + resizerBox!.width;
 
-  expect(Math.abs(tocToggleLeft - resizerRight)).toBeLessThanOrEqual(1);
+  expect(Math.abs(tocToggleLeft - resizerBox!.x)).toBeLessThanOrEqual(1);
 });
 
 test('Files toggle aligns when TOC collapsed', async ({ page }) => {
@@ -376,9 +374,8 @@ test('Files toggle aligns when TOC collapsed', async ({ page }) => {
   const filesResizer = page.locator('.files-resizer');
   const resizerBox = await filesResizer.boundingBox();
   expect(resizerBox).not.toBeNull();
-  const resizerRight = resizerBox!.x + resizerBox!.width;
 
-  expect(Math.abs(filesToggleLeft - resizerRight)).toBeLessThanOrEqual(1);
+  expect(Math.abs(filesToggleLeft - resizerBox!.x)).toBeLessThanOrEqual(1);
 });
 
 test('TOC active item scrolls into view on content scroll', async ({ page }) => {
