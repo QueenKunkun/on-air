@@ -41,7 +41,17 @@ async function main() {
     mdPath
   );
 
-  const info = { port: server.port, id, baseUrl: `http://127.0.0.1:${server.port}` };
+  const helloPath = path.join(FIXTURE_DIR, 'programming', 'react', 'hello.md');
+  const id2 = server.registerDocument(
+    'test://programming/react/hello.md',
+    'React Hello',
+    fs.readFileSync(helloPath, 'utf8'),
+    'markdown',
+    FIXTURE_DIR,
+    helloPath
+  );
+
+  const info = { port: server.port, id, id2, baseUrl: `http://127.0.0.1:${server.port}` };
   const infoPath = path.join(__dirname, '.server-info.json');
   fs.writeFileSync(infoPath, JSON.stringify(info));
   console.log(`Server ready on port ${server.port}`);
