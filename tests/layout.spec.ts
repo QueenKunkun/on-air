@@ -342,6 +342,45 @@ test('Files toggle aligns with files resizer in default state', async ({ page })
   expect(Math.abs(filesToggleLeft - resizerRight)).toBeLessThanOrEqual(1);
 });
 
+test('TOC toggle aligns after files re-expands', async ({ page }) => {
+  // Collapse files
+  const filesToggle = page.locator('.panel-toggle[data-panel="files"]');
+  await filesToggle.click();
+  await page.waitForTimeout(300);
+
+  // Re-expand files via edge handle
+  const edgeFiles = page.locator('.edge-handle[data-panel="files"]');
+  await expect(edgeFiles).toBeVisible({ timeout: 2000 });
+  await edgeFiles.click();
+  await page.waitForTimeout(500);
+
+  const tocToggle = page.locator('.panel-toggle[data-panel="toc"]');
+  const tocToggleLeft = await tocToggle.evaluate(el => el.getBoundingClientRect().left);
+
+  const tocResizer = page.locator('.toc-resizer');
+  const resizerBox = await tocResizer.boundingBox();
+  expect(resizerBox).not.toBeNull();
+  const resizerRight = resizerBox!.x + resizerBox!.width;
+
+  expect(Math.abs(tocToggleLeft - resizerRight)).toBeLessThanOrEqual(1);
+});
+
+test('Files toggle aligns when TOC collapsed', async ({ page }) => {
+  const tocToggle = page.locator('.panel-toggle[data-panel="toc"]');
+  await tocToggle.click();
+  await page.waitForTimeout(300);
+
+  const filesToggle = page.locator('.panel-toggle[data-panel="files"]');
+  const filesToggleLeft = await filesToggle.evaluate(el => el.getBoundingClientRect().left);
+
+  const filesResizer = page.locator('.files-resizer');
+  const resizerBox = await filesResizer.boundingBox();
+  expect(resizerBox).not.toBeNull();
+  const resizerRight = resizerBox!.x + resizerBox!.width;
+
+  expect(Math.abs(filesToggleLeft - resizerRight)).toBeLessThanOrEqual(1);
+});
+
 test('TOC active item scrolls into view on content scroll', async ({ page }) => {
   // Update content to have many headings so TOC scrolls
   const md = ['# Title\n', ...Array.from({ length: 20 }, (_, i) => `## Section ${i + 1}\n\nParagraph ${i + 1}.\n`)].join('\n');
