@@ -263,8 +263,10 @@ export function FileTree({ id }: Props) {
         const isExpanded = !!expandedRef.current[e.path];
         return (
           <li class={'ft-item ft-directory' + (isExpanded ? ' ft-expanded' : '')} onClick={(ev: h.JSX.TargetedMouseEvent<HTMLLIElement>) => { ev.stopPropagation(); toggleDir(e.path); }}>
-            <span class="ft-toggle">{isExpanded ? '\u25BC' : '\u25B6'}</span>
-            <span class="ft-name">{e.name}</span>
+            <div class="ft-row">
+              <span class="ft-toggle">{isExpanded ? '\u25BC' : '\u25B6'}</span>
+              <span class="ft-name">{e.name}</span>
+            </div>
             {isExpanded && (
               <ul class="ft-children">
                 {renderDir(e.path)}

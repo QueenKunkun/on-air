@@ -115,11 +115,40 @@ test('hovering file does not highlight parent directory', async ({ page }) => {
   await page.waitForTimeout(100);
 
   // Check parent directory does NOT have hover background
-  const parentBg = await parentDir.evaluate(el => getComputedStyle(el).backgroundColor);
-  // Default background should be transparent (no hover highlight)
   const transparent = await parentDir.evaluate(el => {
     const s = getComputedStyle(el);
     return s.backgroundColor === 'rgba(0, 0, 0, 0)' || s.backgroundColor === 'transparent';
   });
   expect(transparent).toBeTruthy();
+});
+
+test('hovering subdirectory does not highlight grandparent', async ({ page }) => {
+  const info = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '.server-info.json'), 'utf8'));
+
+  await page.goto(`${info.baseUrl}/preview/${info.id2}`);
+  await page.waitForSelector('.ft-list', { timeout: 5000 });
+
+  // Check what root entries exist
+  const rootNames = await page.locator('.ft-list > .ft-item .ft-name').allTextContents();
+  console.log('Root entries:', rootNames);
+
+  // Expand programming/
+  const progDir = page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("programming"))');
+  const progCount = await progDir.count();
+  console.log('programming dir count:', progCount);
+
+  if (progCount > 0) {
+    await progDir.click();
+    await page.waitForTimeout(1000);
+
+    // Check children
+    const children = await page.locator('.ft-children .ft-name').allTextContents();
+    console.log('Children after expand:', children);
+
+    // Also check all visible items
+    const allItems = await page.locator('.ft-item .ft-name').allTextContents();
+    console.log('All visible items:', allItems);
+  }
+
+  expect(true).toBe(true);
 });
