@@ -14,6 +14,8 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 	const edgeHandlesRef = useRef(document.getElementById('edgeHandles'));
 	const edgeFilesRef = useRef(document.querySelector('#edgeHandles [data-panel="files"]') as HTMLElement);
 	const edgeTocRef = useRef(document.querySelector('#edgeHandles [data-panel="toc"]') as HTMLElement);
+	const filesToggleRef = useRef(document.querySelector('#toggle-layer [data-panel="files"]') as HTMLElement);
+	const tocToggleRef = useRef(document.querySelector('#toggle-layer [data-panel="toc"]') as HTMLElement);
 
 	const fc = filesCollapsed === '1';
 	const tc = tocCollapsed === '1';
@@ -21,13 +23,13 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 	useResizer(filesResizerRef, filesSideRef, {
 		axis: 'x', invert: false, key: 'onair-files-width', def: null, min: 120, max: Infinity,
 		get: (el) => el.offsetWidth,
-		set: (el, v) => { el.style.width = v + 'px'; },
+		set: (_, v) => { document.documentElement.style.setProperty('--files-w', v + 'px'); },
 	}, []);
 
 	useResizer(tocResizerRef, tocColRef, {
 		axis: 'x', invert: false, key: 'onair-toc-width', def: null, min: 120, max: Infinity,
 		get: (el) => el.offsetWidth,
-		set: (el, v) => { el.style.width = v + 'px'; },
+		set: (_, v) => { document.documentElement.style.setProperty('--toc-w', v + 'px'); },
 	}, []);
 
 	const toggleFiles = useCallback(() => {
@@ -62,14 +64,14 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 	useEffect(() => {
 		const el = filesSideRef.current;
 		if (el) el.classList.toggle('collapsed', fc);
-		const toggle = filesResizerRef.current?.querySelector('.panel-toggle') as HTMLElement;
+		const toggle = filesToggleRef.current;
 		if (toggle) toggle.classList.toggle('hidden', fc);
 	}, [fc]);
 
 	useEffect(() => {
 		const el = tocColRef.current;
 		if (el) el.classList.toggle('collapsed', tc);
-		const toggle = tocResizerRef.current?.querySelector('.panel-toggle') as HTMLElement;
+		const toggle = tocToggleRef.current;
 		if (toggle) toggle.classList.toggle('hidden', tc);
 	}, [tc]);
 
@@ -84,8 +86,8 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 
 	// Bind toggle click handlers
 	useEffect(() => {
-		const filesToggle = filesResizerRef.current?.querySelector('.panel-toggle');
-		const tocToggle = tocResizerRef.current?.querySelector('.panel-toggle');
+		const filesToggle = filesToggleRef.current;
+		const tocToggle = tocToggleRef.current;
 
 		function onFilesToggle(e: Event) {
 			e.stopPropagation();
@@ -118,20 +120,16 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		};
 	}, [expandFiles, expandToc]);
 
-	// Update CSS custom properties for toggle handle positioning
+	// Hydrate CSS variables from initial DOM widths
 	useEffect(() => {
 		const filesEl = filesSideRef.current;
 		const tocEl = tocColRef.current;
-		if (!filesEl || !tocEl) return;
-		function updateVars() {
-			document.body.style.setProperty('--onair-files-w', filesEl!.offsetWidth + 'px');
-			document.body.style.setProperty('--onair-toc-w', tocEl!.offsetWidth + 'px');
+		if (filesEl) {
+			document.documentElement.style.setProperty('--files-w', filesEl.offsetWidth + 'px');
 		}
-		updateVars();
-		const ro = new ResizeObserver(updateVars);
-		ro.observe(filesEl);
-		ro.observe(tocEl);
-		return () => ro.disconnect();
+		if (tocEl) {
+			document.documentElement.style.setProperty('--toc-w', tocEl.offsetWidth + 'px');
+		}
 	}, []);
 
 	return h(Fragment, null, children);

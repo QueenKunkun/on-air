@@ -133,7 +133,7 @@ test('banner max width direct input works', async ({ page }) => {
 
 test('files toggle collapses and expands panel', async ({ page }) => {
   const filesSide = page.locator('#filesSide');
-  const toggle = page.locator('#filesResizer .panel-toggle');
+  const toggle = page.locator('#toggle-layer [data-panel="files"]');
   await expect(toggle).toBeVisible();
 
   // Click toggle to collapse
@@ -153,7 +153,7 @@ test('files toggle collapses and expands panel', async ({ page }) => {
 
 test('toc toggle collapses and expands panel', async ({ page }) => {
   const tocCol = page.locator('#tocCol');
-  const toggle = page.locator('#tocResizer .panel-toggle');
+  const toggle = page.locator('#toggle-layer [data-panel="toc"]');
   await expect(toggle).toBeVisible();
 
   // Click toggle to collapse
@@ -207,7 +207,7 @@ test('file tree has visible items with proper scroll height', async ({ page }) =
 
 test('edge handles are vertically centered and fixed when visible', async ({ page }) => {
   // Collapse files panel to make edge handles visible
-  const filesToggle = page.locator('#filesResizer .panel-toggle');
+  const filesToggle = page.locator('#toggle-layer [data-panel="files"]');
   await filesToggle.click();
   await page.waitForTimeout(300);
 
