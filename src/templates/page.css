@@ -57,8 +57,8 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
 .files-resizer:hover, .files-resizer.active, .toc-resizer:hover, .toc-resizer.active { background: var(--link-c); }
 #toggle-layer { position: fixed; inset: 0; pointer-events: none; z-index: var(--z-toggle); }
 .panel-toggle { position: absolute; top: 50%; transform: translateY(-50%); pointer-events: auto; width: 18px; height: 40px; cursor: pointer; z-index: var(--z-toggle); background: var(--bg); color: var(--quote-c); font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center; user-select: none; transition: background .15s, color .15s, border-color .15s; }
-#toggle-layer [data-panel="files"] { left: calc(var(--page-left) + var(--files-w) - 14px); border: var(--resizer-w) solid var(--border); border-left: none; border-radius: 0 4px 4px 0; }
-#toggle-layer [data-panel="toc"] { left: calc(var(--page-left) + var(--files-w) + var(--toc-w)); border: var(--resizer-w) solid var(--border); border-right: none; border-radius: 4px 0 0 4px; }
+#toggle-layer [data-panel="files"] { left: calc(var(--page-left) + var(--files-w)); border: var(--resizer-w) solid var(--border); border-left: none; border-radius: 0 4px 4px 0; }
+#toggle-layer [data-panel="toc"] { left: calc(var(--page-left) + var(--files-w) + var(--resizer-w) + var(--toc-w) - 18px); border: var(--resizer-w) solid var(--border); border-left: none; border-radius: 0 4px 4px 0; }
 .panel-toggle:hover { background: var(--pre-bg); color: var(--text); border-color: var(--link-c); }
 .panel-toggle.hidden { display: none; }
 #filesSide.collapsed { width: 0 !important; min-width: 0; overflow: hidden; }

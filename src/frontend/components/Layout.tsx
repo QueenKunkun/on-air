@@ -37,6 +37,7 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		setFilesCollapsed(next ? '1' : '0');
 		const el = filesSideRef.current;
 		if (el) el.classList.toggle('collapsed', next);
+		document.documentElement.style.setProperty('--files-w', next ? '0px' : (localStorage.getItem('onair-files-width') || '300') + 'px');
 		if (!next) window.dispatchEvent(new CustomEvent('onair:tree-activate'));
 	}, [filesCollapsed, setFilesCollapsed]);
 
@@ -45,12 +46,14 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		setTocCollapsed(next ? '1' : '0');
 		const el = tocColRef.current;
 		if (el) el.classList.toggle('collapsed', next);
+		document.documentElement.style.setProperty('--toc-w', next ? '0px' : (localStorage.getItem('onair-toc-width') || '200') + 'px');
 	}, [tocCollapsed, setTocCollapsed]);
 
 	const expandFiles = useCallback(() => {
 		setFilesCollapsed('0');
 		const el = filesSideRef.current;
 		if (el) el.classList.remove('collapsed');
+		document.documentElement.style.setProperty('--files-w', (localStorage.getItem('onair-files-width') || '300') + 'px');
 		window.dispatchEvent(new CustomEvent('onair:tree-activate'));
 	}, [setFilesCollapsed]);
 
@@ -58,6 +61,7 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		setTocCollapsed('0');
 		const el = tocColRef.current;
 		if (el) el.classList.remove('collapsed');
+		document.documentElement.style.setProperty('--toc-w', (localStorage.getItem('onair-toc-width') || '200') + 'px');
 	}, [setTocCollapsed]);
 
 	// Sync collapsed classes on mount and when state changes

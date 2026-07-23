@@ -177,12 +177,13 @@ test('files resizer drag changes width', async ({ page }) => {
   await expect(resizer).toBeVisible();
 
   const beforeWidth = await filesSide.evaluate(el => el.offsetWidth);
-  // Drag resizer to the right
+  // Drag resizer to the right (from near top to avoid sticky positioning issues)
   const box = await resizer.boundingBox();
   if (!box) throw new Error('resizer not visible');
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  const startY = box.y + 60;
+  await page.mouse.move(box.x + box.width / 2, startY);
   await page.mouse.down();
-  await page.mouse.move(box.x + 50, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.move(box.x + 50, startY, { steps: 5 });
   await page.mouse.up();
   await page.waitForTimeout(200);
 
