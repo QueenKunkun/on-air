@@ -206,9 +206,9 @@ export function FileTree({ id }: Props) {
       setLoaded(false);
       await fetchDir('');
       setLoaded(true);
-      await expandToCurrentFile(false);
+      await expandToCurrentFile(true);
     };
-    const hActivate = () => { expandToCurrentFile(false); };
+    const hActivate = () => { expandToCurrentFile(true); };
     window.addEventListener('onair:tree-refresh', hRefresh);
     window.addEventListener('onair:tree-activate', hActivate);
     return () => {

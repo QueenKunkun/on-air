@@ -97,4 +97,32 @@ test.describe('expandToCurrentFile', () => {
     const countAfter = await page.locator('.ft-list > .ft-item').count();
     expect(countAfter).toBeGreaterThan(1);
   });
+
+  test('current file is scrolled into view after tree expands', async ({ page }) => {
+    await page.goto(`${baseUrl}/preview/${docId2}`);
+    await page.waitForSelector('.ft-list', { timeout: 5000 });
+
+    // Wait for expansion
+    await expect(page.locator('.ft-item.ft-current')).toHaveCount(1, { timeout: 5000 });
+
+    // The current file should be visible within the scroll container
+    const current = page.locator('.ft-item.ft-current');
+    await expect(current).toBeVisible();
+
+    const scrollContainer = page.locator('.ft-scroll');
+
+    // Check that the scroll container scrolled (scrollTop > 0) if tree is tall enough
+    const scrolled = await scrollContainer.evaluate(el => el.scrollTop > 0);
+    const currentBox = await current.boundingBox();
+    const scrollBox = await scrollContainer.boundingBox();
+
+    // If the tree is tall enough to require scrolling, verify the file is in view
+    if (scrollBox!.height < await scrollContainer.evaluate(el => el.scrollHeight)) {
+      expect(scrolled).toBeTruthy();
+    }
+
+    // Current file must be within the visible scroll area
+    expect(currentBox!.y).toBeGreaterThanOrEqual(scrollBox!.y - 2);
+    expect(currentBox!.y + currentBox!.height).toBeLessThanOrEqual(scrollBox!.y + scrollBox!.height + 2);
+  });
 });
