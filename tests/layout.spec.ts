@@ -199,6 +199,14 @@ test('file tree has visible items with proper scroll height', async ({ page }) =
   });
   expect(ftScrollHeight).toBeGreaterThan(0);
 
+  // ft-scroll height should be most of the filesSide height (not collapsed to just padding)
+  const filesSideHeight = await page.evaluate(() => {
+    const el = document.getElementById('filesSide');
+    return el ? el.getBoundingClientRect().height : 0;
+  });
+  // ft-scroll should be at least 50% of filesSide (filter bar takes ~30px)
+  expect(ftScrollHeight).toBeGreaterThan(filesSideHeight * 0.5);
+
   // ft-list should be visible with items
   const ftList = page.locator('.ft-list');
   await expect(ftList).toBeVisible();

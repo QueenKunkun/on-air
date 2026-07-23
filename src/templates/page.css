@@ -169,6 +169,7 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 /* ---- file tree panel ---- */
 #fileTree { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; font-size: 13px; line-height: 1.6; width: 100%; box-sizing: border-box; }
 #ft-preact-root { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.ft-root { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 
 /* Filter row */
 .ft-filter { display: flex; align-items: center; gap: 6px; padding: 6px 8px; flex-shrink: 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }

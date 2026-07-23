@@ -163,6 +163,7 @@ export function FileTree({ id }: Props) {
 
   // Initial load + refetch on filter change
   useEffect(() => {
+    console.log('[ FileTree ] initial load effect, filters:', filters);
     cacheRef.current = {};
     (async () => {
       await fetchDir('');
@@ -171,6 +172,7 @@ export function FileTree({ id }: Props) {
         try {
           const paths: string[] = JSON.parse(saved);
           if (paths.length) {
+            console.log('[ FileTree ] restoring expanded from localStorage:', paths);
             const restore: Record<string, boolean> = {};
             for (const p of paths) {
               if (!cacheRef.current[p]) await fetchDir(p);
@@ -243,6 +245,10 @@ export function FileTree({ id }: Props) {
   function renderDir(path: string): h.JSX.Element[] {
     const entries = cacheRef.current[path];
     if (!entries) return [];
+    if (path === '') {
+      console.log('[ renderDir ] root entries:', entries.length, entries.map(e => e.name + '(' + e.type + ')'));
+      console.log('[ renderDir ] expanded keys:', Object.keys(expandedRef.current).filter(k => expandedRef.current[k]));
+    }
     const dirs: TreeEntry[] = [];
     const files: TreeEntry[] = [];
     for (const e of entries) {
@@ -278,7 +284,7 @@ export function FileTree({ id }: Props) {
   }
 
   return (
-    <div>
+    <div class="ft-root">
       <div class="ft-filter">
         <label><input type="checkbox" checked={filters.gitignore} onChange={() => handleFilterChange('gitignore')} /> .gitignore</label>
         <label><input type="checkbox" checked={filters.mdOnly} onChange={() => handleFilterChange('mdOnly')} /> .md</label>
