@@ -296,3 +296,48 @@ test('TOC rebuilds when content updates via WebSocket', async ({ page }) => {
   await expect(toc.locator('.r').nth(1).locator('a')).toContainText('Section One');
   await expect(toc.locator('.r').nth(2).locator('a')).toContainText('Section Two');
 });
+
+test('TOC toggle aligns with TOC resizer when files collapsed', async ({ page }) => {
+  // Collapse files panel
+  const filesToggle = page.locator('.panel-toggle[data-panel="files"]');
+  await filesToggle.click();
+  await page.waitForTimeout(300);
+
+  // Get TOC toggle left position
+  const tocToggle = page.locator('.panel-toggle[data-panel="toc"]');
+  const tocToggleLeft = await tocToggle.evaluate(el => el.getBoundingClientRect().left);
+
+  // Get TOC resizer right edge
+  const tocResizer = page.locator('.toc-resizer');
+  const resizerBox = await tocResizer.boundingBox();
+  expect(resizerBox).not.toBeNull();
+  const resizerRight = resizerBox!.x + resizerBox!.width;
+
+  // They should be equal (within 1px tolerance for subpixel rendering)
+  expect(Math.abs(tocToggleLeft - resizerRight)).toBeLessThanOrEqual(1);
+});
+
+test('TOC toggle aligns with TOC resizer in default state (both panels open)', async ({ page }) => {
+  const tocToggle = page.locator('.panel-toggle[data-panel="toc"]');
+  const tocToggleLeft = await tocToggle.evaluate(el => el.getBoundingClientRect().left);
+
+  const tocResizer = page.locator('.toc-resizer');
+  const resizerBox = await tocResizer.boundingBox();
+  expect(resizerBox).not.toBeNull();
+  const resizerRight = resizerBox!.x + resizerBox!.width;
+
+  // Toggle left edge should align with resizer right edge (within 1px)
+  expect(Math.abs(tocToggleLeft - resizerRight)).toBeLessThanOrEqual(1);
+});
+
+test('Files toggle aligns with files resizer in default state', async ({ page }) => {
+  const filesToggle = page.locator('.panel-toggle[data-panel="files"]');
+  const filesToggleLeft = await filesToggle.evaluate(el => el.getBoundingClientRect().left);
+
+  const filesResizer = page.locator('.files-resizer');
+  const resizerBox = await filesResizer.boundingBox();
+  expect(resizerBox).not.toBeNull();
+  const resizerRight = resizerBox!.x + resizerBox!.width;
+
+  expect(Math.abs(filesToggleLeft - resizerRight)).toBeLessThanOrEqual(1);
+});

@@ -38,6 +38,7 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		const el = filesSideRef.current;
 		if (el) el.classList.toggle('collapsed', next);
 		document.documentElement.style.setProperty('--files-w', next ? '0px' : (localStorage.getItem('onair-files-width') || '300') + 'px');
+		document.documentElement.style.setProperty('--files-resizer-w', next ? '0px' : 'var(--resizer-w)');
 		if (!next) window.dispatchEvent(new CustomEvent('onair:tree-activate'));
 	}, [filesCollapsed, setFilesCollapsed]);
 
@@ -47,6 +48,7 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		const el = tocColRef.current;
 		if (el) el.classList.toggle('collapsed', next);
 		document.documentElement.style.setProperty('--toc-w', next ? '0px' : (localStorage.getItem('onair-toc-width') || '200') + 'px');
+		document.documentElement.style.setProperty('--toc-resizer-w', next ? '0px' : 'var(--resizer-w)');
 	}, [tocCollapsed, setTocCollapsed]);
 
 	const expandFiles = useCallback(() => {
@@ -54,6 +56,7 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		const el = filesSideRef.current;
 		if (el) el.classList.remove('collapsed');
 		document.documentElement.style.setProperty('--files-w', (localStorage.getItem('onair-files-width') || '300') + 'px');
+		document.documentElement.style.setProperty('--files-resizer-w', 'var(--resizer-w)');
 		window.dispatchEvent(new CustomEvent('onair:tree-activate'));
 	}, [setFilesCollapsed]);
 
@@ -62,6 +65,7 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		const el = tocColRef.current;
 		if (el) el.classList.remove('collapsed');
 		document.documentElement.style.setProperty('--toc-w', (localStorage.getItem('onair-toc-width') || '200') + 'px');
+		document.documentElement.style.setProperty('--toc-resizer-w', 'var(--resizer-w)');
 	}, [setTocCollapsed]);
 
 	// Sync collapsed classes on mount and when state changes
