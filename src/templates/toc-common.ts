@@ -148,6 +148,7 @@ export function bindTocInteractions(tocEl: HTMLElement, contentEl: HTMLElement, 
 			else break;
 		}
 		for (let m = 0; m < map.length; m++) map[m][1].classList.toggle('active', map[m][1] === active);
+		if (active) (active as HTMLElement).scrollIntoView({ block: 'nearest' });
 	}
 
 	let ticking = false;
@@ -367,6 +368,7 @@ function bindTocInteractions(tocEl, contentEl, offset) {
 			else break;
 		}
 		for (var m = 0; m < map.length; m++) map[m][1].classList.toggle('active', map[m][1] === active);
+		if (active) active.scrollIntoView({ block: 'nearest' });
 	}
 	var ticking = false;
 	document.addEventListener('scroll', function () {

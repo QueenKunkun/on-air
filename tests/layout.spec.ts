@@ -341,3 +341,36 @@ test('Files toggle aligns with files resizer in default state', async ({ page })
 
   expect(Math.abs(filesToggleLeft - resizerRight)).toBeLessThanOrEqual(1);
 });
+
+test('TOC active item scrolls into view on content scroll', async ({ page }) => {
+  // Update content to have many headings so TOC scrolls
+  const md = ['# Title\n', ...Array.from({ length: 20 }, (_, i) => `## Section ${i + 1}\n\nParagraph ${i + 1}.\n`)].join('\n');
+  await page.request.post(`${baseUrl}/test/update`, { data: JSON.stringify({ html: md }) });
+
+  // Wait for TOC to rebuild
+  await expect(async () => {
+    const items = await page.locator('#toc-list .r').count();
+    expect(items).toBeGreaterThanOrEqual(15);
+  }).toPass({ timeout: 5000 });
+
+  // Scroll document to bottom so last heading becomes active
+  await page.evaluate(() => {
+    window.scrollTo(0, document.body.scrollHeight);
+  });
+  await page.waitForTimeout(500);
+
+  // The last TOC link should have .active class
+  const activeLink = page.locator('#toc-list a.active');
+  await expect(activeLink).toHaveCount(1);
+
+  // The active link should be visible within the TOC scroll container
+  const tocList = page.locator('#toc-list');
+  const tocListBounds = await tocList.boundingBox();
+  const activeBounds = await activeLink.boundingBox();
+  expect(tocListBounds).not.toBeNull();
+  expect(activeBounds).not.toBeNull();
+
+  // Active link must be within the visible area of #toc-list
+  expect(activeBounds!.y).toBeGreaterThanOrEqual(tocListBounds!.y - 2);
+  expect(activeBounds!.y + activeBounds!.height).toBeLessThanOrEqual(tocListBounds!.y + tocListBounds!.height + 2);
+});
