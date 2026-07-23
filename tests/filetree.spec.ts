@@ -97,3 +97,29 @@ test('filter toggle does not empty the tree (regression)', async ({ page }) => {
   const items = await page.locator('.ft-list .ft-item').count();
   expect(items).toBeGreaterThan(0);
 });
+
+test('hovering file does not highlight parent directory', async ({ page }) => {
+  // Expand src/ directory
+  await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))');
+  await page.waitForSelector('.ft-children .ft-item');
+
+  // Find a file child and the parent directory
+  const fileItem = page.locator('.ft-children .ft-item.ft-file').first();
+  await expect(fileItem).toBeVisible();
+
+  // Get the parent directory <li>
+  const parentDir = page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))');
+
+  // Hover over the file child
+  await fileItem.hover();
+  await page.waitForTimeout(100);
+
+  // Check parent directory does NOT have hover background
+  const parentBg = await parentDir.evaluate(el => getComputedStyle(el).backgroundColor);
+  // Default background should be transparent (no hover highlight)
+  const transparent = await parentDir.evaluate(el => {
+    const s = getComputedStyle(el);
+    return s.backgroundColor === 'rgba(0, 0, 0, 0)' || s.backgroundColor === 'transparent';
+  });
+  expect(transparent).toBeTruthy();
+});
