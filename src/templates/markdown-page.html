@@ -8,26 +8,7 @@
 <style>{{CSS}}</style>
 </head>
 <body>
-	<div class="md-online-banner" id="banner"><span id="bannerTxt" title="Connected, live preview active…"><span id="bannerIcon">🔌</span><span id="bannerMsg" class="banner-msg">Connected, live preview active…</span></span>
-	<div class="tb-center">	<select class="bp-select" id="themeSelect" title="Theme"></select>
-	<button class="wp-btn" id="wpBtn" title="Toggle word wrapping for code blocks">Wrap code</button>
-	<button class="wp-btn" id="hoverBtn" title="Toggle hover preview for footnote/annotation notes">Hover notes</button>
-	<span class="bp-group"><span class="bp-label" title="Font size">A</span>
-		<button class="bp-btn" id="fsDec" title="Decrease font size">−</button>
-		<input class="fs-input" id="fsInput" type="number" min="12" max="28" value="16" title="Font size (12-28)">
-		<button class="bp-btn" id="fsReset" title="Reset font size to default">↺</button>
-		<button class="bp-btn" id="fsInc" title="Increase font size">+</button></span>
-	<span class="bp-group"><span class="bp-label" title="Scrollbar width">‖</span>
-		<button class="bp-btn" id="sbDec" title="Thinner scrollbars">−</button>
-		<input class="fs-input" id="sbInput" type="number" min="0" step="4" value="16" title="Scrollbar width">
-		<button class="bp-btn" id="sbReset" title="Reset scrollbar width to default">↺</button>
-		<button class="bp-btn" id="sbInc" title="Thicker scrollbars">+</button></span>
-	<span class="bp-group"><span class="bp-label" title="Max content width (0 = no limit)">W</span>
-		<button class="bp-btn" id="mwDec" title="Narrower content">−</button>
-		<input class="fs-input" id="mwInput" type="number" min="0" step="20" value="920" title="Max content width in px (0 = no limit)">
-		<button class="bp-btn" id="mwReset" title="Reset max width to default">↺</button>
-		<button class="bp-btn" id="mwInc" title="Wider content">+</button></span></div>
-	<div class="ver-badge" id="verBadge" data-version="v{{VERSION}}" title="Click to copy version">v{{VERSION}}</div></div>
+	<div class="md-online-banner" id="banner"></div>
 	<div id="toggle-layer"><div class="panel-toggle" data-panel="files" title="Toggle file tree">‹</div><div class="panel-toggle" data-panel="toc" title="Toggle table of contents">‹</div></div>
 	<div id="wrapper"><div id="filesSide"><div id="fileTree"><div id="ft-preact-root" data-id="{{ID}}" data-fullpath="{{FULL_PATH_ATTR}}" data-rootdir="{{ROOT_DIR_ATTR}}"></div></div></div><div class="files-resizer" id="filesResizer"></div><div id="tocCol"><nav id="toc" class="toc"></nav></div><div class="toc-resizer" id="tocResizer"></div><div id="edgeHandles"><div class="edge-handle" data-panel="files" title="Show file tree">Files</div><div class="edge-handle" data-panel="toc" title="Show table of contents">TOC</div></div><article class="markdown-body" id="content">{{BODY}}</article><div class="annot-resizer" id="annotResizer"></div><div id="annotSide"><div id="annots"></div><button id="annotToggle" class="annot-toggle" aria-label="Toggle annotations">&gt;</button></div></div>
 	<script>
