@@ -388,3 +388,49 @@ test('search hides expanded directories with no matching children', async ({ pag
   const srcRestored = await page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))').count();
   expect(srcRestored).toBe(1);
 });
+
+test('search *.md hides directories without .md files', async ({ page }) => {
+  // Expand programming/ to see its children
+  await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("programming"))');
+  await page.waitForSelector('.ft-children .ft-item');
+
+  // Before search: src/ should be visible at root
+  const srcBefore = await page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))').count();
+  expect(srcBefore).toBe(1);
+
+  // Search *.md — src/ has no .md files, should be hidden
+  const search = page.locator('.ft-search');
+  await search.fill('*.md');
+  await page.waitForTimeout(500);
+
+  const srcAfter = await page.locator('.ft-item.ft-directory:has(.ft-name:text("src"))').count();
+  expect(srcAfter).toBe(0);
+
+  // programming/ has app.md, should still be visible
+  const progAfter = await page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("programming"))').count();
+  expect(progAfter).toBe(1);
+
+  // guide/ has setup.md, should still be visible
+  const guideAfter = await page.locator('.ft-item.ft-directory:has(.ft-name:text("guide"))').count();
+  expect(guideAfter).toBe(1);
+});
+
+test('search *.md shows only .md files from visible directories', async ({ page }) => {
+  // Search *.md
+  const search = page.locator('.ft-search');
+  await search.fill('*.md');
+  await page.waitForTimeout(500);
+
+  // All visible files should be .md
+  const files = await page.locator('.ft-item.ft-file .ft-name').allTextContents();
+  for (const f of files) {
+    expect(f.trim().endsWith('.md')).toBeTruthy();
+  }
+  // Root README.md should be visible
+  expect(files.some(t => t.includes('README.md'))).toBeTruthy();
+
+  // Directories containing .md should be visible (even if collapsed)
+  const dirs = await page.locator('.ft-item.ft-directory .ft-name').allTextContents();
+  expect(dirs.some(t => t.includes('programming'))).toBeTruthy();
+  expect(dirs.some(t => t.includes('guide'))).toBeTruthy();
+});
