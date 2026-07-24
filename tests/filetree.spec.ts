@@ -202,52 +202,52 @@ test('hovering file does not highlight parent directory', async ({ page }) => {
   await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))');
   await page.waitForSelector('.ft-children .ft-item');
 
-  // Find a file child and the parent directory
   const fileItem = page.locator('.ft-children .ft-item.ft-file').first();
   await expect(fileItem).toBeVisible();
-
-  // Get the parent directory <li>
-  const parentDir = page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))');
 
   // Hover over the file child
   await fileItem.hover();
   await page.waitForTimeout(100);
 
-  // Check parent directory does NOT have hover background
-  const transparent = await parentDir.evaluate(el => {
-    const s = getComputedStyle(el);
-    return s.backgroundColor === 'rgba(0, 0, 0, 0)' || s.backgroundColor === 'transparent';
-  });
-  expect(transparent).toBeTruthy();
+  // Parent directory's .ft-row should NOT have hover background
+  const parentDir = page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))');
+  const parentRow = parentDir.locator(':scope > .ft-row');
+  const bg = await parentRow.evaluate(el => getComputedStyle(el).backgroundColor);
+  console.log('Parent row bg on file hover:', bg);
+  expect(bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent').toBeTruthy();
 });
 
-test('hovering subdirectory does not highlight grandparent', async ({ page }) => {
-  const info = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '.server-info.json'), 'utf8'));
+test('hovering subdirectory does not highlight parent', async ({ page }) => {
+  // programming/ contains react/ which contains images/
+  // Expand programming/ then react/
+  await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("programming"))');
+  await page.waitForTimeout(500);
+  await page.click('.ft-children .ft-item.ft-directory:has(.ft-name:text("react"))');
+  await page.waitForTimeout(500);
 
-  await page.goto(`${info.baseUrl}/preview/${info.id2}`);
-  await page.waitForSelector('.ft-list', { timeout: 5000 });
+  // Hover over images/ (3rd level)
+  const imagesDir = page.locator('.ft-children .ft-children .ft-item.ft-directory:has(.ft-name:text("images"))');
+  await expect(imagesDir).toBeVisible();
+  await imagesDir.hover();
+  await page.waitForTimeout(100);
 
-  // Check what root entries exist
-  const rootNames = await page.locator('.ft-list > .ft-item .ft-name').allTextContents();
-  console.log('Root entries:', rootNames);
+  // images/'s own .ft-row SHOULD have hover background
+  const imagesRow = imagesDir.locator(':scope > .ft-row');
+  const imagesBg = await imagesRow.evaluate(el => getComputedStyle(el).backgroundColor);
+  console.log('images/ own row bg:', imagesBg);
+  expect(imagesBg).not.toBe('rgba(0, 0, 0, 0)');
 
-  // Expand programming/
+  // react/'s .ft-row should NOT have hover background
+  const reactDir = page.locator('.ft-children .ft-item.ft-directory:has(.ft-name:text("react"))');
+  const reactRow = reactDir.locator(':scope > .ft-row');
+  const reactBg = await reactRow.evaluate(el => getComputedStyle(el).backgroundColor);
+  console.log('react/ row bg on images/ hover:', reactBg);
+  expect(reactBg === 'rgba(0, 0, 0, 0)' || reactBg === 'transparent').toBeTruthy();
+
+  // programming/'s .ft-row should NOT have hover background
   const progDir = page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("programming"))');
-  const progCount = await progDir.count();
-  console.log('programming dir count:', progCount);
-
-  if (progCount > 0) {
-    await progDir.click();
-    await page.waitForTimeout(1000);
-
-    // Check children
-    const children = await page.locator('.ft-children .ft-name').allTextContents();
-    console.log('Children after expand:', children);
-
-    // Also check all visible items
-    const allItems = await page.locator('.ft-item .ft-name').allTextContents();
-    console.log('All visible items:', allItems);
-  }
-
-  expect(true).toBe(true);
+  const progRow = progDir.locator(':scope > .ft-row');
+  const progBg = await progRow.evaluate(el => getComputedStyle(el).backgroundColor);
+  console.log('programming/ row bg on images/ hover:', progBg);
+  expect(progBg === 'rgba(0, 0, 0, 0)' || progBg === 'transparent').toBeTruthy();
 });
