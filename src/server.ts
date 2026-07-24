@@ -722,6 +722,38 @@ export class PreviewServer {
 				if (e.isDirectory()) {
 					if (e.name === 'node_modules' || e.name === '.git' || e.name === '.vscode') {continue;}
 					if (ig && ig.ignores(relPath + '/')) {continue;}
+					// Check if directory has any visible children
+					try {
+						const subEntries = fs.readdirSync(full, { withFileTypes: true });
+						const hasVisible = subEntries.some(se => {
+							if (se.name.startsWith('.')) return false;
+							if (se.isDirectory()) {
+								if (se.name === 'node_modules' || se.name === '.git' || se.name === '.vscode') return false;
+								if (ig && ig.ignores(relPath + '/' + se.name + '/')) return false;
+								return true;
+							}
+							if (!se.isFile()) return false;
+							const ext = path.extname(se.name).toLowerCase();
+							if (extFilter && ext !== '.' + extFilter.replace(/^\./, '')) return false;
+							if (ig && ig.ignores(relPath + '/' + se.name)) return false;
+							if (hideBinary) {
+								const supportedExts = new Set(['.md', '.markdown', '.html', '.htm', '.txt', '.log', '.json', '.js', '.css', '.ts', '.tsx', '.jsx', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico', '.pdf']);
+								const imageExts = new Set(['.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico']);
+								if (!supportedExts.has(ext)) return false;
+								if (!imageExts.has(ext)) {
+									try {
+										const fd = fs.openSync(path.join(full, se.name), 'r');
+										const buf = Buffer.alloc(8192);
+										const bytesRead = fs.readSync(fd, buf, 0, 8192, 0);
+										fs.closeSync(fd);
+										if (buf.subarray(0, bytesRead).includes(0)) return false;
+									} catch { return false; }
+								}
+							}
+							return true;
+						});
+						if (!hasVisible) continue;
+					} catch { continue; }
 					result.push({ name: e.name, type: 'directory', path: relPath, ext: '' });
 				} else if (e.isFile()) {
 					const ext = path.extname(e.name).toLowerCase();
