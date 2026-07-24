@@ -1,6 +1,9 @@
 import { h } from 'preact';
-import { useEffect } from 'preact/hooks';
-import { buildTocTree, buildTocHeader, initMasterToggle, bindTocInteractions, buildRelatedLinks } from '../../templates/toc-common';
+import { useState, useEffect, useRef, useMemo } from 'preact/hooks';
+import { TocHeader } from './TocHeader';
+import { TocNode, buildTocData, type TocEntry } from './TocNode';
+import { RelatedLinks, findRelatedLinks } from './RelatedLinks';
+import { useScrollSpy } from '../hooks/useScrollSpy';
 
 interface TOCProps {
 	contentEl: HTMLElement | null;
@@ -10,30 +13,74 @@ interface TOCProps {
 }
 
 export function TOC({ contentEl, fullPath, relPath, contentVersion }: TOCProps) {
+	const [collapsedAll, setCollapsedAll] = useState(false);
+	const [tocEntries, setTocEntries] = useState<TocEntry[]>([]);
+	const [relatedItems, setRelatedItems] = useState<{ href: string; label: string }[]>([]);
+	const [hasHeadings, setHasHeadings] = useState(false);
+	const rootRef = useRef<HTMLDivElement>(null);
+	const tocListRef = useRef<HTMLDivElement>(null);
+
 	useEffect(() => {
-		const toc = document.getElementById('toc') as HTMLElement;
-		if (!toc || !contentEl) return;
+		if (!contentEl) return;
+
+		const hs = contentEl.querySelectorAll('h1,h2,h3,h4,h5,h6');
+		setHasHeadings(hs.length >= 2);
+		setTocEntries(buildTocData(Array.from(hs)));
+		setRelatedItems(findRelatedLinks(contentEl, contentEl));
+
+		// Toggle no-tree class
+		const toc = document.getElementById('toc');
+		if (toc) toc.classList.toggle('no-tree', hs.length < 2);
+	}, [contentEl, contentVersion]);
+
+	const title = useMemo(() => document.title.replace(/ \u00b7 OnAir$/, ''), []);
+
+	const links = useMemo(() => {
+		if (!tocListRef.current) return [];
+		return Array.from(tocListRef.current.querySelectorAll('a'));
+	}, [tocListRef.current, tocEntries, collapsedAll]);
+
+	const headings = useMemo(() => {
+		if (!contentEl) return [];
+		return Array.from(contentEl.querySelectorAll('h1,h2,h3,h4,h5,h6'));
+	}, [contentEl, contentVersion]);
+
+	useScrollSpy(contentEl, headings, links);
+
+	// Portal-like: append rendered content to #toc
+	useEffect(() => {
+		const toc = document.getElementById('toc');
+		const root = rootRef.current;
+		if (!toc || !root) return;
 
 		// Clear previous content
 		while (toc.firstChild) toc.removeChild(toc.firstChild);
+		toc.appendChild(root);
 
-		const title = document.title.replace(/ \u00b7 OnAir$/, '');
-		const hs = contentEl.querySelectorAll('h1,h2,h3,h4,h5,h6');
-		toc.classList.toggle('no-tree', hs.length < 2);
+		return () => {
+			if (root.parentNode === toc) toc.removeChild(root);
+		};
+	});
 
-		const master = buildTocHeader(toc, title, fullPath, relPath);
-
-		if (hs.length >= 2) {
-			const listDiv = document.createElement('div');
-			listDiv.id = 'toc-list';
-			toc.appendChild(listDiv);
-			buildTocTree(hs, listDiv);
-			initMasterToggle(toc, master);
-			bindTocInteractions(toc, contentEl);
-		}
-
-		buildRelatedLinks(toc, contentEl);
-	}, [contentEl, fullPath, relPath, contentVersion]);
-
-	return null;
+	return (
+		<div ref={rootRef}>
+			<TocHeader
+				title={title}
+				fullPath={fullPath}
+				relPath={relPath}
+				collapsedAll={collapsedAll}
+				onToggleAll={() => setCollapsedAll(prev => !prev)}
+			/>
+			{hasHeadings && (
+				<div id="toc-list" ref={tocListRef}>
+					<ul>
+						{tocEntries.map(entry => (
+							<TocNode key={entry.id} entry={entry} collapsedAll={collapsedAll} />
+						))}
+					</ul>
+				</div>
+			)}
+			<RelatedLinks items={relatedItems} />
+		</div>
+	);
 }
