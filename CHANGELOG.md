@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.13.0] - 2026-07-24
+
+- feat: Add project file tree panel with search, filter, and expand-to-current-file
+- feat: Multi-theme preset system with 8 themes (Auto, Dark, Light, Abyss, Kimbie Dark, Monokai Dimmed, Red, Quiet Light, HC Black, HC Light)
+- feat: Split Files & TOC into independent side-by-side panels
+
+
 ## [0.12.0] - 2026-07-20
 
 - feat: link bare .md references to a path-proximity picker (xref)
