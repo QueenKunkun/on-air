@@ -434,3 +434,20 @@ test('search *.md shows only .md files from visible directories', async ({ page 
   expect(dirs.some(t => t.includes('programming'))).toBeTruthy();
   expect(dirs.some(t => t.includes('guide'))).toBeTruthy();
 });
+
+test('all filters on: empty directories are hidden', async ({ page }) => {
+  // Check mdOnly checkbox
+  const mdOnly = page.locator('.ft-filter label:has-text(".md") input');
+  await mdOnly.check();
+  await page.waitForTimeout(300);
+
+  // Expand programming/ → react/
+  await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("programming"))');
+  await page.waitForSelector('.ft-children .ft-item');
+  await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("react"))');
+  await page.waitForSelector('.ft-children .ft-item');
+
+  // images/ has no .md files — should not expand
+  const imagesExpanded = await page.locator('.ft-item.ft-directory.ft-expanded:has(.ft-name:text("images"))').count();
+  expect(imagesExpanded).toBe(0);
+});

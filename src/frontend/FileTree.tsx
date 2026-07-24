@@ -83,7 +83,6 @@ export function FileTree({ id }: Props) {
   const [fileIndex, setFileIndex] = useState<FileIndexEntry[]>([]);
   const cacheRef = useRef<Record<string, TreeEntry[]>>({});
   const expandedRef = useRef<Record<string, boolean>>({});
-  const emptyDirsRef = useRef<Set<string>>(new Set());
 
   const fetchDir = useCallback(async (path: string): Promise<TreeEntry[] | null> => {
     if (cacheRef.current[path]) return cacheRef.current[path];
@@ -92,9 +91,6 @@ export function FileTree({ id }: Props) {
       const json = await res.json();
       if (json.error) throw new Error(json.error);
       cacheRef.current[path] = json.entries;
-      if (json.entries.length === 0 && path !== '') {
-        emptyDirsRef.current.add(path);
-      }
       return json.entries;
     } catch {
       return null;
@@ -118,7 +114,8 @@ export function FileTree({ id }: Props) {
       setBothExpanded(prev => { const n = { ...prev }; delete n[path]; return n; });
     } else {
       await fetchNeeded(path);
-      if (emptyDirsRef.current.has(path)) return;
+      const entries = cacheRef.current[path];
+      if (entries && entries.length === 0) return;
       setBothExpanded(prev => ({ ...prev, [path]: true }));
     }
   }, [fetchNeeded, setBothExpanded]);
@@ -137,6 +134,8 @@ export function FileTree({ id }: Props) {
     for (let i = 0; i < parts.length; i++) {
       const dirPath = parts.slice(0, i + 1).join('/');
       if (!cacheRef.current[dirPath]) await fetchDir(dirPath);
+      const entries = cacheRef.current[dirPath];
+      if (entries && entries.length === 0) continue;
       setBothExpanded(prev => ({ ...prev, [dirPath]: true }));
     }
 
@@ -191,7 +190,6 @@ export function FileTree({ id }: Props) {
     });
     setExpanded({});
     expandedRef.current = {};
-    emptyDirsRef.current = new Set();
   }, []);
 
   // Sync currentPath from DOM attribute via MutationObserver
@@ -223,7 +221,6 @@ export function FileTree({ id }: Props) {
   useEffect(() => {
     console.log('[ FileTree ] initial load effect, filters:', filters);
     cacheRef.current = {};
-    emptyDirsRef.current = new Set();
     (async () => {
       await fetchDir('');
       const saved = localStorage.getItem('onair-ft-expanded');
@@ -235,6 +232,8 @@ export function FileTree({ id }: Props) {
             const restore: Record<string, boolean> = {};
             for (const p of paths) {
               if (!cacheRef.current[p]) await fetchDir(p);
+              const entries = cacheRef.current[p];
+              if (entries && entries.length === 0) continue;
               restore[p] = true;
             }
             setBothExpanded(() => restore);
@@ -339,7 +338,8 @@ export function FileTree({ id }: Props) {
         if (visibleDirs) {
           if (!visibleDirs.has(e.path)) continue;
         }
-        if (emptyDirsRef.current.has(e.path)) continue;
+        const childEntries = cacheRef.current[e.path];
+        if (childEntries && childEntries.length === 0) continue;
         dirs.push(e);
       } else {
         if (!searchRegex || searchRegex.test(e.name)) {
