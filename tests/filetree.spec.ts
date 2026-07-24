@@ -142,8 +142,9 @@ test('mdOnly filter hides non-.md files', async ({ page }) => {
   }
 });
 
-test('hideBinary hides image files but shows text files in same dir', async ({ page }) => {
-  // programming/react/images/ has photo.png (binary) and readme.txt (text)
+test('hide unsupported keeps images visible, hides .wasm', async ({ page }) => {
+  // programming/react/images/ has photo.png (image) and readme.txt (text)
+  // programming/react/ also has hello.md
   // Expand the directory
   await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("programming"))');
   await page.waitForTimeout(300);
@@ -152,31 +153,21 @@ test('hideBinary hides image files but shows text files in same dir', async ({ p
   await page.click('.ft-children .ft-children .ft-item.ft-directory:has(.ft-name:text("images"))');
   await page.waitForTimeout(500);
 
-  // With hideBinary ON (default): photo.png hidden, readme.txt visible
-  // Use the images directory's direct children only
+  // With hideBinary ON (default): images are always visible, .wasm is hidden
   const imagesDir = page.locator('.ft-item.ft-directory:has(.ft-name:text("images"))');
   const childrenOn = await imagesDir.locator('.ft-children .ft-item.ft-file .ft-name').allTextContents();
   console.log('images/ children (hideBinary ON):', childrenOn);
   expect(childrenOn.some(t => t.includes('readme.txt'))).toBeTruthy();
-  expect(childrenOn.some(t => t.includes('photo.png'))).toBeFalsy();
+  expect(childrenOn.some(t => t.includes('photo.png'))).toBeTruthy(); // images always visible
 
-  // Turn off hideBinary — tree collapses, re-expand
-  await page.locator('.ft-filter label:has-text("Hide unsupported") input[type="checkbox"]').click();
+  // Also verify .wasm is hidden in src/
+  await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))');
   await page.waitForTimeout(500);
-
-  // Re-expand the tree
-  await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("programming"))');
-  await page.waitForTimeout(300);
-  await page.click('.ft-children .ft-item.ft-directory:has(.ft-name:text("react"))');
-  await page.waitForTimeout(300);
-  await page.click('.ft-children .ft-children .ft-item.ft-directory:has(.ft-name:text("images"))');
-  await page.waitForTimeout(500);
-
-  const imagesDirAfter = page.locator('.ft-item.ft-directory:has(.ft-name:text("images"))');
-  const childrenOff = await imagesDirAfter.locator('.ft-children .ft-item.ft-file .ft-name').allTextContents();
-  console.log('images/ children (hideBinary OFF):', childrenOff);
-  expect(childrenOff.some(t => t.includes('photo.png'))).toBeTruthy();
-  expect(childrenOff.some(t => t.includes('readme.txt'))).toBeTruthy();
+  const srcDir = page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))');
+  const srcChildren = await srcDir.locator('.ft-children .ft-item.ft-file .ft-name').allTextContents();
+  console.log('src/ children (hideBinary ON):', srcChildren);
+  expect(srcChildren.some(t => t.includes('module.wasm'))).toBeFalsy(); // unsupported hidden
+  expect(srcChildren.some(t => t.includes('util.js'))).toBeTruthy(); // supported visible
 });
 
 test('toggling filter does not restore previously expanded dirs', async ({ page }) => {
@@ -195,6 +186,29 @@ test('toggling filter does not restore previously expanded dirs', async ({ page 
   const childrenAfter = await page.locator('.ft-children .ft-item').count();
   console.log('Children after filter toggle:', childrenAfter);
   expect(childrenAfter).toBe(0);
+});
+
+test('clicking image file shows image preview', async ({ page }) => {
+  // Expand programming/react/images/
+  await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("programming"))');
+  await page.waitForTimeout(300);
+  await page.click('.ft-children .ft-item.ft-directory:has(.ft-name:text("react"))');
+  await page.waitForTimeout(300);
+  await page.click('.ft-children .ft-children .ft-item.ft-directory:has(.ft-name:text("images"))');
+  await page.waitForTimeout(500);
+
+  // Click photo.png
+  const imgFile = page.locator('.ft-children .ft-children .ft-item.ft-file:has(.ft-name:text("photo.png"))');
+  await expect(imgFile).toBeVisible();
+  await imgFile.click();
+  await page.waitForTimeout(500);
+
+  // Should show an <img> element, not "Binary file"
+  const img = page.locator('#content img');
+  await expect(img).toBeVisible();
+  const src = await img.getAttribute('src');
+  expect(src).toContain('photo.png');
+  expect(await page.locator('#content .file-binary').count()).toBe(0);
 });
 
 test('hovering file does not highlight parent directory', async ({ page }) => {

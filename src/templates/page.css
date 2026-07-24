@@ -209,7 +209,8 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 
 /* Children container: hidden by default, shown when parent is expanded */
 .ft-children { list-style: none; padding: 0; margin: 0; display: none; }
-.ft-expanded > .ft-children { display: block; }
+.ft-expanded > .ft-children { display: flex; flex-direction: column; }
+.ft-expanded > .ft-children > :last-child { margin-bottom: 4px; }
 
 /* Current file highlight — left accent bar */
 .ft-item.ft-current { background: var(--pre-bg); box-shadow: inset 3px 0 0 var(--link-c); border-radius: 0 4px 4px 0; }
@@ -226,4 +227,6 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 .file-view-header button:hover { background: var(--btn-hover-bg); }
 .file-view-header .file-path { color: var(--quote-c); font-family: ui-monospace, monospace; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .file-binary { padding: 24px; text-align: center; color: var(--quote-c); }
+.file-image { text-align: center; padding: 16px 0; }
+.file-image img { max-width: 100%; max-height: calc(100vh - 120px); border-radius: 4px; }
 .file-view pre { margin: 0; }

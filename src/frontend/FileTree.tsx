@@ -21,6 +21,11 @@ function isTextFile(p: string): boolean {
   return l.endsWith('.md') || l.endsWith('.markdown');
 }
 
+function isImageFile(p: string): boolean {
+  const l = p.toLowerCase();
+  return /\.(png|jpe?g|gif|webp|avif|bmp|ico|svg)$/.test(l);
+}
+
 function escapeHtml(s: string): string {
   return String(s).replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
 }
@@ -230,6 +235,10 @@ export function FileTree({ id }: Props) {
     if (!contentEl) return;
     if (isTextFile(filePath)) {
       location.href = '/preview/' + id + '/' + encodeURIComponent(filePath);
+    } else if (isImageFile(filePath)) {
+      const back = '<button onclick="document.getElementById(\'tabTree\').click()">← Back</button>';
+      const imgSrc = '/preview/' + id + '/' + encodeURIComponent(filePath);
+      contentEl.innerHTML = '<div class="file-view"><div class="file-view-header">' + back + '<span class="file-path">' + escapeHtml(filePath) + '</span></div><div class="file-image"><img src="' + imgSrc + '" /></div></div>';
     } else {
       const params = 'id=' + encodeURIComponent(id) + '&path=' + encodeURIComponent(filePath);
       fetch('/api/file?' + params).then(r => r.json()).then(data => {

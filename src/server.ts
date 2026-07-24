@@ -729,14 +729,17 @@ export class PreviewServer {
 					if (ig && ig.ignores(relPath)) {continue;}
 					if (hideBinary) {
 						const supportedExts = new Set(['.md', '.markdown', '.html', '.htm', '.txt', '.log', '.json', '.js', '.css', '.ts', '.tsx', '.jsx', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico', '.pdf']);
+						const imageExts = new Set(['.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico']);
 						if (!supportedExts.has(ext)) { continue; }
-						try {
-							const fd = fs.openSync(full, 'r');
-							const buf = Buffer.alloc(8192);
-							const bytesRead = fs.readSync(fd, buf, 0, 8192, 0);
-							fs.closeSync(fd);
-							if (buf.subarray(0, bytesRead).includes(0)) {continue;}
-						} catch { continue; }
+						if (!imageExts.has(ext)) {
+							try {
+								const fd = fs.openSync(full, 'r');
+								const buf = Buffer.alloc(8192);
+								const bytesRead = fs.readSync(fd, buf, 0, 8192, 0);
+								fs.closeSync(fd);
+								if (buf.subarray(0, bytesRead).includes(0)) {continue;}
+							} catch { continue; }
+						}
 					}
 					result.push({ name: e.name, type: 'file', path: relPath, ext, size: fs.statSync(full).size });
 				}
