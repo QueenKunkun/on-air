@@ -26,6 +26,12 @@ function isImageFile(p: string): boolean {
   return /\.(png|jpe?g|gif|webp|avif|bmp|ico|svg)$/.test(l);
 }
 
+function globToRegex(glob: string): RegExp {
+  const escaped = glob.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  const pattern = escaped.replace(/\*/g, '.*').replace(/\?/g, '.');
+  return new RegExp('^' + pattern + '$', 'i');
+}
+
 function escapeHtml(s: string): string {
   return String(s).replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
 }
@@ -43,6 +49,7 @@ export function FileTree({ id }: Props) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [loaded, setLoaded] = useState(false);
   const [currentPath, setCurrentPath] = useState<string>(readCurrentPath);
+  const [searchQuery, setSearchQuery] = useState('');
   const cacheRef = useRef<Record<string, TreeEntry[]>>({});
   const expandedRef = useRef<Record<string, boolean>>({});
 
@@ -266,11 +273,17 @@ export function FileTree({ id }: Props) {
       console.log('[ renderDir ] root entries:', entries.length, entries.map(e => e.name + '(' + e.type + ')'));
       console.log('[ renderDir ] expanded keys:', Object.keys(expandedRef.current).filter(k => expandedRef.current[k]));
     }
+    const searchRegex = searchQuery ? globToRegex(searchQuery) : null;
     const dirs: TreeEntry[] = [];
     const files: TreeEntry[] = [];
     for (const e of entries) {
-      if (e.type === 'directory') dirs.push(e);
-      else files.push(e);
+      if (e.type === 'directory') {
+        dirs.push(e);
+      } else {
+        if (!searchRegex || searchRegex.test(e.name)) {
+          files.push(e);
+        }
+      }
     }
     dirs.sort((a, b) => a.name.localeCompare(b.name));
     files.sort((a, b) => a.name.localeCompare(b.name));
@@ -309,6 +322,7 @@ export function FileTree({ id }: Props) {
         <label><input type="checkbox" checked={filters.mdOnly} onChange={() => handleFilterChange('mdOnly')} /> .md</label>
         <label><input type="checkbox" checked={filters.hideBinary} onChange={() => handleFilterChange('hideBinary')} /> Hide unsupported</label>
         <span class="ft-filter-spacer"></span>
+        <input class="ft-search" type="text" placeholder="Filter: *.svg" value={searchQuery} onInput={(e: h.JSX.TargetedEvent<HTMLInputElement>) => setSearchQuery((e.target as HTMLInputElement).value)} onKeydown={(e: h.JSX.TargetedKeyboardEvent<HTMLInputElement>) => { if (e.key === 'Escape') setSearchQuery(''); }} />
         <button class="ft-locate-btn" onClick={handleLocate} title="Scroll to current file">📍</button>
       </div>
       <div class="ft-scroll">

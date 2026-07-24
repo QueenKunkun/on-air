@@ -292,3 +292,71 @@ test('hovering in ft-children gap does not highlight parent', async ({ page }) =
   console.log('src/ row bg on gap hover:', bg);
   expect(bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent').toBeTruthy();
 });
+
+test('search *.md shows only markdown files', async ({ page }) => {
+  // Before search: should see non-.md files
+  const beforeFiles = await page.locator('.ft-item.ft-file .ft-name').allTextContents();
+  expect(beforeFiles.some(t => t.includes('README.md'))).toBeTruthy();
+
+  // Type *.md in search
+  const search = page.locator('.ft-search');
+  await search.fill('*.md');
+  await page.waitForTimeout(300);
+
+  // Only .md files should be visible, directories still visible
+  const files = await page.locator('.ft-item.ft-file .ft-name').allTextContents();
+  console.log('Files after *.md search:', files);
+  for (const f of files) {
+    expect(f.trim().endsWith('.md')).toBeTruthy();
+  }
+  // Directories should still be visible
+  const dirs = await page.locator('.ft-item.ft-directory .ft-name').allTextContents();
+  expect(dirs.length).toBeGreaterThan(0);
+});
+
+test('search *.svg shows only svg files', async ({ page }) => {
+  // No .svg files in fixture, so search should show no files
+  const search = page.locator('.ft-search');
+  await search.fill('*.svg');
+  await page.waitForTimeout(300);
+
+  const files = await page.locator('.ft-item.ft-file .ft-name').allTextContents();
+  console.log('Files after *.svg search:', files);
+  expect(files.length).toBe(0);
+  // Directories should still be visible
+  const dirs = await page.locator('.ft-item.ft-directory .ft-name').allTextContents();
+  expect(dirs.length).toBeGreaterThan(0);
+});
+
+test('Escape clears search and restores all files', async ({ page }) => {
+  // Search for *.md
+  const search = page.locator('.ft-search');
+  await search.fill('*.md');
+  await page.waitForTimeout(300);
+
+  const filtered = await page.locator('.ft-item.ft-file .ft-name').allTextContents();
+  expect(filtered.every(t => t.trim().endsWith('.md'))).toBeTruthy();
+
+  // Press Escape
+  await search.press('Escape');
+  await page.waitForTimeout(300);
+
+  // Search input should be cleared
+  expect(await search.inputValue()).toBe('');
+
+  // Root-level non-.md files should be back (README.md is at root)
+  const restored = await page.locator('.ft-item.ft-file .ft-name').allTextContents();
+  console.log('Files after Escape:', restored);
+  expect(restored.some(t => t.includes('README.md'))).toBeTruthy();
+});
+
+test('search with no match shows only directories', async ({ page }) => {
+  const search = page.locator('.ft-search');
+  await search.fill('nonexistent_pattern_!!!');
+  await page.waitForTimeout(300);
+
+  const files = await page.locator('.ft-item.ft-file .ft-name').allTextContents();
+  expect(files.length).toBe(0);
+  const dirs = await page.locator('.ft-item.ft-directory .ft-name').allTextContents();
+  expect(dirs.length).toBeGreaterThan(0);
+});
