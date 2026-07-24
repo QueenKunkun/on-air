@@ -360,3 +360,30 @@ test('search with no match shows only directories', async ({ page }) => {
   const dirs = await page.locator('.ft-item.ft-directory .ft-name').allTextContents();
   expect(dirs.length).toBeGreaterThan(0);
 });
+
+test('search hides expanded directories with no matching children', async ({ page }) => {
+  // Expand src/ which has index.ts, util.js, module.wasm (no .md files)
+  await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))');
+  await page.waitForSelector('.ft-children .ft-item');
+  const srcBefore = await page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))').count();
+  expect(srcBefore).toBe(1);
+
+  // Search *.md — src/ has no .md files, should be hidden
+  const search = page.locator('.ft-search');
+  await search.fill('*.md');
+  await page.waitForTimeout(500);
+
+  const srcAfter = await page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))').count();
+  console.log('src/ visible after *.md search:', srcAfter);
+  expect(srcAfter).toBe(0);
+
+  // programming/ has app.md, should still be visible
+  const progAfter = await page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("programming"))').count();
+  expect(progAfter).toBe(1);
+
+  // Clear search — src/ should reappear
+  await search.press('Escape');
+  await page.waitForTimeout(500);
+  const srcRestored = await page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))').count();
+  expect(srcRestored).toBe(1);
+});

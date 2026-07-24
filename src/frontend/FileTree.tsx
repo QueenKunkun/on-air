@@ -278,6 +278,15 @@ export function FileTree({ id }: Props) {
     const files: TreeEntry[] = [];
     for (const e of entries) {
       if (e.type === 'directory') {
+        if (searchRegex) {
+          const isExpanded = !!expandedRef.current[e.path];
+          if (isExpanded && cacheRef.current[e.path]) {
+            const hasMatch = cacheRef.current[e.path].some(child =>
+              child.type === 'file' && searchRegex.test(child.name)
+            );
+            if (!hasMatch) continue;
+          }
+        }
         dirs.push(e);
       } else {
         if (!searchRegex || searchRegex.test(e.name)) {
