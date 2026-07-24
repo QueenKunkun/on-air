@@ -8,6 +8,14 @@ interface Props {
 
 type Filters = { gitignore: boolean; mdOnly: boolean; hideBinary: boolean };
 
+interface FileIndexEntry {
+  name: string;
+  type: string;
+  path: string;
+  ext: string;
+  size: number;
+}
+
 function makeFilterParams(id: string, dir: string, f: Filters): string {
   const p = new URLSearchParams({ id, dir });
   if (f.gitignore) p.set('respectGitignore', '1');
@@ -44,12 +52,27 @@ function readCurrentPath(): string {
   return cur.replace(root, '').replace(/^[/\\]/, '');
 }
 
+function computeVisibleDirs(index: FileIndexEntry[], searchRegex: RegExp): Set<string> {
+  const dirs = new Set<string>();
+  dirs.add('');
+  for (const e of index) {
+    if (e.type !== 'file') continue;
+    if (!searchRegex.test(e.name)) continue;
+    const parts = e.path.split('/');
+    for (let i = 1; i < parts.length; i++) {
+      dirs.add(parts.slice(0, i).join('/'));
+    }
+  }
+  return dirs;
+}
+
 export function FileTree({ id }: Props) {
   const [filters, setFilters] = useState<Filters>({ gitignore: true, mdOnly: false, hideBinary: true });
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [loaded, setLoaded] = useState(false);
   const [currentPath, setCurrentPath] = useState<string>(readCurrentPath);
   const [searchQuery, setSearchQuery] = useState('');
+  const [fileIndex, setFileIndex] = useState<FileIndexEntry[]>([]);
   const cacheRef = useRef<Record<string, TreeEntry[]>>({});
   const expandedRef = useRef<Record<string, boolean>>({});
 
@@ -205,6 +228,16 @@ export function FileTree({ id }: Props) {
         expandToCurrentFile(true);
       });
     })();
+    // Fetch file index in background (for search)
+    fetch('/api/file-index?id=' + encodeURIComponent(id))
+      .then(r => r.json())
+      .then(data => {
+        if (data.entries) {
+          setFileIndex(data.entries);
+          console.log('[ FileTree ] file index loaded:', data.entries.length, 'entries');
+        }
+      })
+      .catch(() => {});
   }, [filters]);
 
   // Persist expanded state
@@ -227,6 +260,11 @@ export function FileTree({ id }: Props) {
       await fetchDir('');
       setLoaded(true);
       await expandToCurrentFile(true);
+      // Re-fetch file index
+      fetch('/api/file-index?id=' + encodeURIComponent(id))
+        .then(r => r.json())
+        .then(data => { if (data.entries) setFileIndex(data.entries); })
+        .catch(() => {});
     };
     const hActivate = () => { expandToCurrentFile(true); };
     window.addEventListener('onair:tree-refresh', hRefresh);
@@ -235,7 +273,7 @@ export function FileTree({ id }: Props) {
       window.removeEventListener('onair:tree-refresh', hRefresh);
       window.removeEventListener('onair:tree-activate', hActivate);
     };
-  }, [expandToCurrentFile, fetchDir]);
+  }, [expandToCurrentFile, fetchDir, id]);
 
   function openFile(filePath: string) {
     const contentEl = document.getElementById('content');
@@ -266,26 +304,21 @@ export function FileTree({ id }: Props) {
     }
   }
 
-  function renderDir(path: string): h.JSX.Element[] {
-    const entries = cacheRef.current[path];
+  function renderDir(dirPath: string): h.JSX.Element[] {
+    const entries = cacheRef.current[dirPath];
     if (!entries) return [];
-    if (path === '') {
+    if (dirPath === '') {
       console.log('[ renderDir ] root entries:', entries.length, entries.map(e => e.name + '(' + e.type + ')'));
       console.log('[ renderDir ] expanded keys:', Object.keys(expandedRef.current).filter(k => expandedRef.current[k]));
     }
     const searchRegex = searchQuery ? globToRegex(searchQuery) : null;
+    const visibleDirs = searchRegex && fileIndex.length ? computeVisibleDirs(fileIndex, searchRegex) : null;
     const dirs: TreeEntry[] = [];
     const files: TreeEntry[] = [];
     for (const e of entries) {
       if (e.type === 'directory') {
-        if (searchRegex) {
-          const isExpanded = !!expandedRef.current[e.path];
-          if (isExpanded && cacheRef.current[e.path]) {
-            const hasMatch = cacheRef.current[e.path].some(child =>
-              child.type === 'file' && searchRegex.test(child.name)
-            );
-            if (!hasMatch) continue;
-          }
+        if (visibleDirs) {
+          if (!visibleDirs.has(e.path)) continue;
         }
         dirs.push(e);
       } else {

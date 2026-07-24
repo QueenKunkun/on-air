@@ -782,6 +782,72 @@ export class PreviewServer {
 			return;
 		}
 
+		// ---- file index API: return flat recursive file list ----
+		if (pathname === '/api/file-index') {
+			const id = sp.get('id') || '';
+			const entry = this.docs.get(id);
+			if (!entry) {
+				res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
+				res.end(JSON.stringify({ error: 'Preview not found' }));
+				return;
+			}
+
+			const rootDirResolved = path.resolve(entry.rootDir);
+			const index: Array<{ name: string; type: string; path: string; ext: string; size: number }> = [];
+
+			const ig: ReturnType<typeof ignore> | null = (() => {
+				try {
+					return ignore().add(fs.readFileSync(path.join(rootDirResolved, '.gitignore'), 'utf8'));
+				} catch { return null; }
+			})();
+
+			const skipDirs = new Set(['node_modules', '.git', '.vscode']);
+			const supportedExts = new Set(['.md', '.markdown', '.html', '.htm', '.txt', '.log', '.json', '.js', '.css', '.ts', '.tsx', '.jsx', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico', '.pdf']);
+			const imageExts = new Set(['.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico']);
+
+			const walk = (dir: string) => {
+				let dirents: fs.Dirent[];
+				try { dirents = fs.readdirSync(dir, { withFileTypes: true }); }
+				catch { return; }
+
+				for (const e of dirents) {
+					if (e.name.startsWith('.')) continue;
+					if (e.isDirectory()) {
+						if (skipDirs.has(e.name)) continue;
+						const rel = toPosix(path.relative(rootDirResolved, path.join(dir, e.name)));
+						if (ig && ig.ignores(rel + '/')) continue;
+						index.push({ name: e.name, type: 'directory', path: rel, ext: '', size: 0 });
+						walk(path.join(dir, e.name));
+					} else if (e.isFile()) {
+						const ext = path.extname(e.name).toLowerCase();
+						const full = path.join(dir, e.name);
+						const rel = toPosix(path.relative(rootDirResolved, full));
+						if (ig && ig.ignores(rel)) continue;
+						if (!supportedExts.has(ext)) continue;
+						if (!imageExts.has(ext)) {
+							try {
+								const fd = fs.openSync(full, 'r');
+								const buf = Buffer.alloc(8192);
+								const bytesRead = fs.readSync(fd, buf, 0, 8192, 0);
+								fs.closeSync(fd);
+								if (buf.subarray(0, bytesRead).includes(0)) continue;
+							} catch { continue; }
+						}
+						try {
+							const stat = fs.statSync(full);
+							index.push({ name: e.name, type: 'file', path: rel, ext, size: stat.size });
+						} catch { /* skip */ }
+					}
+				}
+			};
+
+			walk(rootDirResolved);
+
+			res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+			res.end(JSON.stringify({ entries: index }));
+			return;
+		}
+
 		// Static assets alongside the source file, e.g. /preview/<id>/images/foo.png,
 		// referenced via relative paths like `images/foo.png` or `embeds/x.html` in the
 		// source document. Checked before the bare preview-page route below.

@@ -315,7 +315,7 @@ test('search *.md shows only markdown files', async ({ page }) => {
 });
 
 test('search *.svg shows only svg files', async ({ page }) => {
-  // No .svg files in fixture, so search should show no files
+  // No .svg files in fixture, so search should show no files and no directories
   const search = page.locator('.ft-search');
   await search.fill('*.svg');
   await page.waitForTimeout(300);
@@ -323,9 +323,9 @@ test('search *.svg shows only svg files', async ({ page }) => {
   const files = await page.locator('.ft-item.ft-file .ft-name').allTextContents();
   console.log('Files after *.svg search:', files);
   expect(files.length).toBe(0);
-  // Directories should still be visible
+  // No directories either (none contain .svg files)
   const dirs = await page.locator('.ft-item.ft-directory .ft-name').allTextContents();
-  expect(dirs.length).toBeGreaterThan(0);
+  expect(dirs.length).toBe(0);
 });
 
 test('Escape clears search and restores all files', async ({ page }) => {
@@ -350,15 +350,16 @@ test('Escape clears search and restores all files', async ({ page }) => {
   expect(restored.some(t => t.includes('README.md'))).toBeTruthy();
 });
 
-test('search with no match shows only directories', async ({ page }) => {
+test('search with no match shows no directories', async ({ page }) => {
   const search = page.locator('.ft-search');
   await search.fill('nonexistent_pattern_!!!');
   await page.waitForTimeout(300);
 
   const files = await page.locator('.ft-item.ft-file .ft-name').allTextContents();
   expect(files.length).toBe(0);
+  // No directories either (none contain matching files)
   const dirs = await page.locator('.ft-item.ft-directory .ft-name').allTextContents();
-  expect(dirs.length).toBeGreaterThan(0);
+  expect(dirs.length).toBe(0);
 });
 
 test('search hides expanded directories with no matching children', async ({ page }) => {
