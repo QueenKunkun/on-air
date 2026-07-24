@@ -245,12 +245,12 @@ function renderMarkdown(source: string, docDir: string, rootDir: string, fromId?
 }
 
 /**
- * Turn bare `NAME.md` / `NAME.markdown` tokens in already-rendered HTML into
+ * Turn bare `NAME.md` / `NAME.markdown` / `NAME.mdx` tokens in already-rendered HTML into
  * in-project cross-reference links. Bare tokens (no `[text](…)` syntax) are not
  * matched by markdown's link rules, and with fuzzy linkify disabled they stay plain
  * text — so we re-link them here as `<a class="onair-xref" href="/xref?…">`.
  *
- * Scoped to `.md`/`.markdown` only. Skips tokens already inside an `<a>` or
+ * Scoped to `.md`/`.markdown`/`.mdx` only. Skips tokens already inside an `<a>` or
  * `<code>`/`<pre>` (the negative lookbehind avoids `href="…"` and `>` from a
  * preceding close tag), so existing links and inline code are untouched.
  */
@@ -260,7 +260,7 @@ function linkifyMdTokens(html: string, fromId?: string): string {
 		const from = fromId ? `&from=${encodeURIComponent(fromId)}` : '';
 		return `<a class="onair-xref" target="_blank" href="/xref?q=${q}${from}">${name}</a>`;
 	};
-	return html.replace(/(^|[\s<("'])([\w-]*\.(?:markdown|md))(?!\w)(?=$|\s|<)/gi, (_m, pre, name) => {
+	return html.replace(/(^|[\s<("'])([\w-]*\.(?:markdown|mdx|md))(?!\w)(?=$|\s|<)/gi, (_m, pre, name) => {
 		if (pre === '>' || pre === '"' || pre === "'" || pre === '.') { return _m; }
 		return pre + xref(name);
 	});
@@ -310,6 +310,7 @@ const MIME_TYPES: Record<string, string> = {
 	'.js': 'text/javascript; charset=utf-8',
 	'.json': 'application/json; charset=utf-8',
 	'.md': 'text/markdown; charset=utf-8',
+	'.mdx': 'text/markdown; charset=utf-8',
 	'.txt': 'text/plain; charset=utf-8',
 	'.svg': 'image/svg+xml',
 	'.png': 'image/png',
@@ -370,7 +371,7 @@ function resolveStaticPath(rootDir: string, relPath: string): string | null {
 }
 function kindFromPath(p: string): DocKind | null {
 	const ext = path.extname(p).toLowerCase();
-	if (ext === '.md' || ext === '.markdown') { return 'markdown'; }
+	if (ext === '.md' || ext === '.markdown' || ext === '.mdx') { return 'markdown'; }
 	if (ext === '.html' || ext === '.htm') { return 'html'; }
 	return null;
 }
@@ -595,7 +596,7 @@ export class PreviewServer {
 	/**
 	 * In-project cross-reference resolver. A bare `NAME.md` token in a document is
 	 * linked to `/xref?q=NAME.md&from=<id>` (see `linkifyMdTokens`). This
-	 * resolves it: walks the source document's rootDir for `.md`/`.markdown` files
+	 * resolves it: walks the source document's rootDir for `.md`/`.markdown`/`.mdx` files
 	 * whose basename matches, sorts by path proximity to the source, then either
 	 * 302-redirects to the single match's preview, or renders a minimal picker
 	 * page (also embedded in a popover client-side). The picker and the full-page
@@ -631,7 +632,7 @@ export class PreviewServer {
 						walk(full);
 					} else if (e.isFile()) {
 						const ext = path.extname(e.name).toLowerCase();
-						if ((ext === '.md' || ext === '.markdown') && e.name.toLowerCase() === q.toLowerCase()) {
+						if ((ext === '.md' || ext === '.markdown' || ext === '.mdx') && e.name.toLowerCase() === q.toLowerCase()) {
 							matches.push(full);
 						}
 					}
@@ -734,10 +735,10 @@ export class PreviewServer {
 							}
 							if (!se.isFile()) return false;
 							const ext = path.extname(se.name).toLowerCase();
-							if (extFilter && ext !== '.' + extFilter.replace(/^\./, '')) return false;
+							if (extFilter && !extFilter.split(',').includes(ext)) return false;
 							if (ig && ig.ignores(relPath + '/' + se.name)) return false;
 							if (hideBinary) {
-								const supportedExts = new Set(['.md', '.markdown', '.html', '.htm', '.txt', '.log', '.json', '.js', '.css', '.ts', '.tsx', '.jsx', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico', '.pdf']);
+								const supportedExts = new Set(['.md', '.markdown', '.mdx', '.html', '.htm', '.txt', '.log', '.json', '.js', '.css', '.ts', '.tsx', '.jsx', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico', '.pdf']);
 								const imageExts = new Set(['.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico']);
 								if (!supportedExts.has(ext)) return false;
 								if (!imageExts.has(ext)) {
@@ -757,10 +758,10 @@ export class PreviewServer {
 					result.push({ name: e.name, type: 'directory', path: relPath, ext: '' });
 				} else if (e.isFile()) {
 					const ext = path.extname(e.name).toLowerCase();
-					if (extFilter && ext !== '.' + extFilter.replace(/^\./, '')) {continue;}
+					if (extFilter && !extFilter.split(',').includes(ext)) {continue;}
 					if (ig && ig.ignores(relPath)) {continue;}
 					if (hideBinary) {
-						const supportedExts = new Set(['.md', '.markdown', '.html', '.htm', '.txt', '.log', '.json', '.js', '.css', '.ts', '.tsx', '.jsx', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico', '.pdf']);
+						const supportedExts = new Set(['.md', '.markdown', '.mdx', '.html', '.htm', '.txt', '.log', '.json', '.js', '.css', '.ts', '.tsx', '.jsx', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico', '.pdf']);
 						const imageExts = new Set(['.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico']);
 						if (!supportedExts.has(ext)) { continue; }
 						if (!imageExts.has(ext)) {
@@ -834,7 +835,7 @@ export class PreviewServer {
 			})();
 
 			const skipDirs = new Set(['node_modules', '.git', '.vscode']);
-			const supportedExts = new Set(['.md', '.markdown', '.html', '.htm', '.txt', '.log', '.json', '.js', '.css', '.ts', '.tsx', '.jsx', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico', '.pdf']);
+			const supportedExts = new Set(['.md', '.markdown', '.mdx', '.html', '.htm', '.txt', '.log', '.json', '.js', '.css', '.ts', '.tsx', '.jsx', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico', '.pdf']);
 			const imageExts = new Set(['.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico']);
 
 			const walk = (dir: string) => {
