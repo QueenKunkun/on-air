@@ -74,6 +74,17 @@ function computeVisibleDirs(index: FileIndexEntry[], searchRegex: RegExp): Set<s
   return dirs;
 }
 
+function dirHasVisibleFiles(dirPath: string, index: FileIndexEntry[], filters: Filters): boolean {
+  const prefix = dirPath ? dirPath + '/' : '';
+  return index.some(e => {
+    if (e.type !== 'file') return false;
+    if (prefix && !e.path.startsWith(prefix)) return false;
+    if (!prefix && e.path.includes('/')) return false;
+    if (filters.mdOnly && e.ext !== '.md') return false;
+    return true;
+  });
+}
+
 export function FileTree({ id }: Props) {
   const [filters, setFilters] = useState<Filters>(readFilters);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -338,6 +349,7 @@ export function FileTree({ id }: Props) {
         if (visibleDirs) {
           if (!visibleDirs.has(e.path)) continue;
         }
+        if (fileIndex.length > 0 && !dirHasVisibleFiles(e.path, fileIndex, filters)) continue;
         const childEntries = cacheRef.current[e.path];
         if (childEntries && childEntries.length === 0) continue;
         dirs.push(e);
