@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 
 interface WebSocketMessage {
 	type: string;
@@ -8,8 +8,19 @@ interface WebSocketMessage {
 	relPath?: string;
 }
 
+export interface ConnectionStatus {
+	icon: string;
+	message: string;
+	offline: boolean;
+}
+
 export function useWebSocket(onUpdate: (msg: WebSocketMessage) => void) {
 	const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const [status, setStatus] = useState<ConnectionStatus>({
+		icon: '\uD83D\uDD0C',
+		message: 'Connected, live preview active\u2026',
+		offline: false,
+	});
 
 	useEffect(() => {
 		const id = window.__ONAIR__?.id;
@@ -18,22 +29,14 @@ export function useWebSocket(onUpdate: (msg: WebSocketMessage) => void) {
 		const proto = location.protocol === 'https:' ? 'wss' : 'ws';
 		let ws: WebSocket | null = null;
 
-		const bannerIcon = document.getElementById('bannerIcon');
-		const bannerMsg = document.getElementById('bannerMsg');
-		const bannerTxt = document.getElementById('bannerTxt');
-		const bannerEl = document.getElementById('banner');
-
-		function setStatus(icon: string, msg: string, offline: boolean) {
-			if (bannerIcon) bannerIcon.textContent = icon;
-			if (bannerMsg) bannerMsg.textContent = msg;
-			if (bannerTxt) bannerTxt.title = msg;
-			bannerEl?.classList.toggle('offline', offline);
+		function updateStatus(icon: string, msg: string, offline: boolean) {
+			setStatus({ icon, message: msg, offline });
 		}
 
 		function connect() {
 			ws = new WebSocket(proto + '://' + location.host + '/ws/' + id);
 			ws.onopen = () => {
-				setStatus('\uD83D\uDD0C', 'Connected, live preview active\u2026', false);
+				updateStatus('\uD83D\uDD0C', 'Connected, live preview active\u2026', false);
 				if (reconnectTimer.current) { clearTimeout(reconnectTimer.current); reconnectTimer.current = null; }
 			};
 			ws.onmessage = (ev) => {
@@ -44,12 +47,12 @@ export function useWebSocket(onUpdate: (msg: WebSocketMessage) => void) {
 					} else if (msg.type === 'filetree-changed') {
 						window.dispatchEvent(new CustomEvent('onair:tree-refresh'));
 					} else if (msg.type === 'closed') {
-						setStatus('\u26A0\uFE0F', 'Source file was closed in VS Code, preview will no longer update', true);
+						updateStatus('\u26A0\uFE0F', 'Source file was closed in VS Code, preview will no longer update', true);
 					}
 				} catch { /* ignore malformed message */ }
 			};
 			ws.onclose = () => {
-				setStatus('\u26A0\uFE0F', 'Connection lost, reconnecting\u2026', true);
+				updateStatus('\u26A0\uFE0F', 'Connection lost, reconnecting\u2026', true);
 				reconnectTimer.current = setTimeout(connect, 1500);
 			};
 		}
@@ -61,4 +64,6 @@ export function useWebSocket(onUpdate: (msg: WebSocketMessage) => void) {
 			if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
 		};
 	}, [onUpdate]);
+
+	return status;
 }

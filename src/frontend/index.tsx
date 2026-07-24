@@ -5,6 +5,7 @@ import { Layout } from './components/Layout';
 import { TOC } from './components/TOC';
 import { Annotations } from './components/Annotations';
 import { FootnotesBlock } from './components/FootnotesBlock';
+import { ConnectionStatus } from './components/ConnectionStatus';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 
@@ -25,15 +26,20 @@ function App() {
 		setContentVersion(n => n + 1);
 	}, []);
 
-	useWebSocket(handleUpdate);
+	const connStatus = useWebSocket(handleUpdate);
 
 	useEffect(() => {
 		const content = document.getElementById('content');
 		if (content) setContentEl(content);
 	}, []);
 
+	const banner = document.getElementById('banner');
+	if (banner) {
+		banner.classList.toggle('offline', connStatus.offline);
+	}
+
 	return h(Layout, null,
-		h(Banner, null),
+		h(Banner, { connStatus }),
 		h(TOC, { contentEl, fullPath, relPath, contentVersion }),
 		h(FootnotesBlock, { contentEl }),
 		h(Annotations, { contentEl, contentVersion }),

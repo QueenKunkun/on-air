@@ -1,8 +1,14 @@
 import { h } from 'preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { ConnectionStatus } from './ConnectionStatus';
+import type { ConnectionStatus as ConnectionStatusType } from '../hooks/useWebSocket';
 
-export function Banner() {
+interface BannerProps {
+	connStatus?: ConnectionStatusType;
+}
+
+export function Banner({ connStatus }: BannerProps) {
 	const [theme, setTheme] = useLocalStorage('onair-theme', 'auto');
 	const [fs, setFs] = useLocalStorage('onair-font-size', '16');
 	const [sbw, setSbw] = useLocalStorage('onair-scrollbar-width', '16');
@@ -65,10 +71,7 @@ export function Banner() {
 
 	return (
 		<div ref={rootRef} style={{ display: 'contents' }}>
-			<span title="Connected, live preview active…">
-				<span id="bannerIcon">🔌</span>
-				<span class="banner-msg">Connected, live preview active…</span>
-			</span>
+			{connStatus && <ConnectionStatus icon={connStatus.icon} message={connStatus.message} offline={connStatus.offline} />}
 			<div class="tb-center">
 				<select class="bp-select" id="themeSelect" title="Theme"
 					value={theme}
