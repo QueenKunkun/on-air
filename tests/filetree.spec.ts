@@ -48,33 +48,47 @@ test('locate button applies ft-current to current file', async ({ page }) => {
   expect(text).toContain('README.md');
 });
 
-test('filter hide binary removes .js files', async ({ page }) => {
-  // First expand src/ to see .js files
+test('filter hide unsupported removes .wasm files', async ({ page }) => {
+  // Verify server returns .wasm when hideBinary is OFF
+  const apiRes = await page.evaluate(async (id) => {
+    const res = await fetch('/api/tree?id=' + encodeURIComponent(id) + '&dir=src');
+    const json = await res.json();
+    return json.entries.map((e: any) => e.name);
+  }, docId);
+  console.log('API src/ (no hideBinary):', apiRes);
+  expect(apiRes.some((n: string) => n === 'module.wasm')).toBeTruthy();
+
+  // Verify server hides .wasm when hideBinary is ON
+  const apiRes2 = await page.evaluate(async (id) => {
+    const res = await fetch('/api/tree?id=' + encodeURIComponent(id) + '&dir=src&hideBinary=1');
+    const json = await res.json();
+    return json.entries.map((e: any) => e.name);
+  }, docId);
+  console.log('API src/ (hideBinary ON):', apiRes2);
+  expect(apiRes2.some((n: string) => n === 'module.wasm')).toBeFalsy();
+
+  // Expand src/ and verify .wasm is hidden in the tree
   await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))');
   await page.waitForSelector('.ft-children .ft-item');
-  // util.js should be visible
-  await expect(page.locator('.ft-name:text("util.js")')).toBeVisible();
+  const beforeItems = await page.locator('.ft-children .ft-item.ft-file .ft-name').allTextContents();
+  console.log('src/ children (hideBinary ON):', beforeItems);
+  expect(beforeItems.some(t => t.includes('module.wasm'))).toBeFalsy();
 
-  // Uncheck "Hide binary" — .js files should appear (they're already there)
-  // Actually, let's check: "Hide binary" is checked by default, so .js might be hidden
-  // Let me check what the initial state shows
-  const beforeItems = await page.locator('.ft-item.ft-file').allTextContents();
-  const hasJs = beforeItems.some(t => t.includes('util.js'));
+  // Toggle "Hide unsupported" off — .wasm should appear
+  await page.click('label:has-text("Hide unsupported") input[type="checkbox"]');
+  await page.waitForTimeout(1000);
 
-  // Toggle "Hide binary" checkbox
-  await page.click('label:has-text("Hide binary") input[type="checkbox"]');
-  // Wait for re-render
+  // Re-expand src/ after filter toggle collapsed everything
+  await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))');
   await page.waitForTimeout(500);
 
-  const afterItems = await page.locator('.ft-item.ft-file').allTextContents();
-  const hasJsAfter = afterItems.some(t => t.includes('util.js'));
-
-  // The state should have flipped
-  expect(hasJsAfter).not.toBe(hasJs);
+  const afterItems = await page.locator('.ft-children .ft-item.ft-file .ft-name').allTextContents();
+  console.log('src/ children (hideBinary OFF):', afterItems);
+  expect(afterItems.some(t => t.includes('module.wasm'))).toBeTruthy();
 });
 
 test('filter .md shows only markdown files', async ({ page }) => {
-  // Check "Hide binary" first to clean up (it's checked by default)
+  // Check "Hide unsupported" first to clean up (it's checked by default)
   // Toggle .md filter on
   await page.click('label:has-text(".md") input[type="checkbox"]');
   await page.waitForTimeout(500);
@@ -89,8 +103,8 @@ test('filter .md shows only markdown files', async ({ page }) => {
 });
 
 test('filter toggle does not empty the tree (regression)', async ({ page }) => {
-  // Toggle "Hide binary" — tree should NOT become empty
-  await page.click('label:has-text("Hide binary") input[type="checkbox"]');
+  // Toggle "Hide unsupported" — tree should NOT become empty
+  await page.click('label:has-text("Hide unsupported") input[type="checkbox"]');
   await page.waitForTimeout(500);
 
   // Tree should still have items
@@ -126,6 +140,43 @@ test('mdOnly filter hides non-.md files', async ({ page }) => {
   for (const f of files) {
     expect(f.trim().endsWith('.md')).toBeTruthy();
   }
+});
+
+test('hideBinary hides image files but shows text files in same dir', async ({ page }) => {
+  // programming/react/images/ has photo.png (binary) and readme.txt (text)
+  // Expand the directory
+  await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("programming"))');
+  await page.waitForTimeout(300);
+  await page.click('.ft-children .ft-item.ft-directory:has(.ft-name:text("react"))');
+  await page.waitForTimeout(300);
+  await page.click('.ft-children .ft-children .ft-item.ft-directory:has(.ft-name:text("images"))');
+  await page.waitForTimeout(500);
+
+  // With hideBinary ON (default): photo.png hidden, readme.txt visible
+  // Use the images directory's direct children only
+  const imagesDir = page.locator('.ft-item.ft-directory:has(.ft-name:text("images"))');
+  const childrenOn = await imagesDir.locator('.ft-children .ft-item.ft-file .ft-name').allTextContents();
+  console.log('images/ children (hideBinary ON):', childrenOn);
+  expect(childrenOn.some(t => t.includes('readme.txt'))).toBeTruthy();
+  expect(childrenOn.some(t => t.includes('photo.png'))).toBeFalsy();
+
+  // Turn off hideBinary — tree collapses, re-expand
+  await page.locator('.ft-filter label:has-text("Hide unsupported") input[type="checkbox"]').click();
+  await page.waitForTimeout(500);
+
+  // Re-expand the tree
+  await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("programming"))');
+  await page.waitForTimeout(300);
+  await page.click('.ft-children .ft-item.ft-directory:has(.ft-name:text("react"))');
+  await page.waitForTimeout(300);
+  await page.click('.ft-children .ft-children .ft-item.ft-directory:has(.ft-name:text("images"))');
+  await page.waitForTimeout(500);
+
+  const imagesDirAfter = page.locator('.ft-item.ft-directory:has(.ft-name:text("images"))');
+  const childrenOff = await imagesDirAfter.locator('.ft-children .ft-item.ft-file .ft-name').allTextContents();
+  console.log('images/ children (hideBinary OFF):', childrenOff);
+  expect(childrenOff.some(t => t.includes('photo.png'))).toBeTruthy();
+  expect(childrenOff.some(t => t.includes('readme.txt'))).toBeTruthy();
 });
 
 test('toggling filter does not restore previously expanded dirs', async ({ page }) => {

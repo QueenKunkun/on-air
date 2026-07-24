@@ -298,7 +298,7 @@ export function FileTree({ id }: Props) {
       <div class="ft-filter">
         <label><input type="checkbox" checked={filters.gitignore} onChange={() => handleFilterChange('gitignore')} /> .gitignore</label>
         <label><input type="checkbox" checked={filters.mdOnly} onChange={() => handleFilterChange('mdOnly')} /> .md</label>
-        <label><input type="checkbox" checked={filters.hideBinary} onChange={() => handleFilterChange('hideBinary')} /> Hide binary</label>
+        <label><input type="checkbox" checked={filters.hideBinary} onChange={() => handleFilterChange('hideBinary')} /> Hide unsupported</label>
         <span class="ft-filter-spacer"></span>
         <button class="ft-locate-btn" onClick={handleLocate} title="Scroll to current file">📍</button>
       </div>

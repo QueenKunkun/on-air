@@ -728,6 +728,8 @@ export class PreviewServer {
 					if (extFilter && ext !== '.' + extFilter.replace(/^\./, '')) {continue;}
 					if (ig && ig.ignores(relPath)) {continue;}
 					if (hideBinary) {
+						const supportedExts = new Set(['.md', '.markdown', '.html', '.htm', '.txt', '.log', '.json', '.js', '.css', '.ts', '.tsx', '.jsx', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico', '.pdf']);
+						if (!supportedExts.has(ext)) { continue; }
 						try {
 							const fd = fs.openSync(full, 'r');
 							const buf = Buffer.alloc(8192);
