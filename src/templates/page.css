@@ -199,18 +199,17 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 /* Directory name / file name */
 .ft-name { overflow: hidden; text-overflow: ellipsis; }
 .ft-item.ft-file:hover,
-.ft-item.ft-directory:hover:not(:has(.ft-item:hover)) .ft-row {
+.ft-row:hover {
     background: var(--pre-bg);
 }
 .ft-item.ft-file:hover .ft-name,
-.ft-item.ft-directory:hover:not(:has(.ft-item:hover)) .ft-row .ft-name {
+.ft-row:hover .ft-name {
     color: var(--link-c);
 }
 
 /* Children container: hidden by default, shown when parent is expanded */
 .ft-children { list-style: none; padding: 0; margin: 0; display: none; }
-.ft-expanded > .ft-children { display: flex; flex-direction: column; }
-.ft-expanded > .ft-children > :last-child { margin-bottom: 4px; }
+.ft-expanded > .ft-children { display: block; }
 
 /* Current file highlight — left accent bar */
 .ft-item.ft-current { background: var(--pre-bg); box-shadow: inset 3px 0 0 var(--link-c); border-radius: 0 4px 4px 0; }

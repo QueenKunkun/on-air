@@ -203,12 +203,15 @@ test('clicking image file shows image preview', async ({ page }) => {
   await imgFile.click();
   await page.waitForTimeout(500);
 
-  // Should show an <img> element, not "Binary file"
-  const img = page.locator('#content img');
+  // Should show the file-view with an <img>, not "Binary file"
+  const fileView = page.locator('#content .file-view');
+  await expect(fileView).toBeVisible();
+  const img = fileView.locator('img');
   await expect(img).toBeVisible();
   const src = await img.getAttribute('src');
   expect(src).toContain('photo.png');
-  expect(await page.locator('#content .file-binary').count()).toBe(0);
+  // Should NOT show "Binary file" message
+  expect(await fileView.locator('.file-binary').count()).toBe(0);
 });
 
 test('hovering file does not highlight parent directory', async ({ page }) => {
@@ -264,4 +267,28 @@ test('hovering subdirectory does not highlight parent', async ({ page }) => {
   const progBg = await progRow.evaluate(el => getComputedStyle(el).backgroundColor);
   console.log('programming/ row bg on images/ hover:', progBg);
   expect(progBg === 'rgba(0, 0, 0, 0)' || progBg === 'transparent').toBeTruthy();
+});
+
+test('hovering in ft-children gap does not highlight parent', async ({ page }) => {
+  // The real-world scenario: mouse passes through the gap between items
+  await page.click('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))');
+  await page.waitForSelector('.ft-children .ft-item');
+
+  const srcDir = page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))');
+  const srcChildren = srcDir.locator(':scope > .ft-children');
+  const box = await srcChildren.boundingBox();
+  expect(box).not.toBeNull();
+
+  // Hover in the gap below the last child item
+  const lastItem = srcChildren.locator(':scope > .ft-item').last();
+  const lastBox = await lastItem.boundingBox();
+  const gapY = lastBox ? lastBox.y + lastBox.height + 2 : box!.y + box!.height - 2;
+  await page.mouse.move(box!.x + box!.width / 2, gapY);
+  await page.waitForTimeout(100);
+
+  // Parent's .ft-row should NOT have hover background
+  const srcRow = srcDir.locator(':scope > .ft-row');
+  const bg = await srcRow.evaluate(el => getComputedStyle(el).backgroundColor);
+  console.log('src/ row bg on gap hover:', bg);
+  expect(bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent').toBeTruthy();
 });
