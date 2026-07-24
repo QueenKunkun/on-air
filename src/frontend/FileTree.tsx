@@ -1,6 +1,7 @@
-import { h, Fragment } from 'preact';
+import { h, render } from 'preact';
 import { useState, useCallback, useEffect, useRef } from 'preact/hooks';
 import type { TreeEntry } from './types';
+import { FilePreview, FilePreviewError, FilePreviewBinary, FilePreviewCode } from './components/FilePreview';
 
 interface Props {
   id: string;
@@ -38,10 +39,6 @@ function globToRegex(glob: string): RegExp {
   const escaped = glob.replace(/[.+^${}()|[\]\\]/g, '\\$&');
   const pattern = escaped.replace(/\*/g, '.*').replace(/\?/g, '.');
   return new RegExp('^' + pattern + '$', 'i');
-}
-
-function escapeHtml(s: string): string {
-  return String(s).replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
 }
 
 function readFilters(): Filters {
@@ -307,28 +304,25 @@ export function FileTree({ id }: Props) {
   function openFile(filePath: string) {
     const contentEl = document.getElementById('content');
     if (!contentEl) return;
+    const goBack = () => { document.getElementById('tabTree')?.click(); };
     if (isTextFile(filePath)) {
       location.href = '/preview/' + id + '/' + encodeURIComponent(filePath);
     } else if (isImageFile(filePath)) {
-      const back = '<button onclick="document.getElementById(\'tabTree\').click()">← Back</button>';
-      const imgSrc = '/preview/' + id + '/' + encodeURIComponent(filePath);
-      contentEl.innerHTML = '<div class="file-view"><div class="file-view-header">' + back + '<span class="file-path">' + escapeHtml(filePath) + '</span></div><div class="file-image"><img src="' + imgSrc + '" /></div></div>';
+      render(h(FilePreview, { filePath, id, onBack: goBack }), contentEl);
     } else {
       const params = 'id=' + encodeURIComponent(id) + '&path=' + encodeURIComponent(filePath);
       fetch('/api/file?' + params).then(r => r.json()).then(data => {
         if (data.error) {
-          contentEl.innerHTML = '<div class="file-view"><div class="file-view-header">Error: ' + escapeHtml(data.error) + '</div></div>';
+          render(h(FilePreviewError, { error: data.error, onBack: goBack }), contentEl);
           return;
         }
-        const back = '<button onclick="document.getElementById(\'tabTree\').click()">← Back</button>';
         if (data.isBinary) {
-          contentEl.innerHTML = '<div class="file-view"><div class="file-view-header">' + back + '<span class="file-path">' + escapeHtml(filePath) + '</span></div><div class="file-binary">Binary file, cannot preview</div></div>';
+          render(h(FilePreviewBinary, { filePath, onBack: goBack }), contentEl);
         } else {
-          const code = escapeHtml(data.content);
-          contentEl.innerHTML = '<div class="file-view"><div class="file-view-header">' + back + '<span class="file-path">' + escapeHtml(filePath) + '</span></div><pre><code class="hljs">' + code + '</code></pre></div>';
+          render(h(FilePreviewCode, { filePath, content: data.content, onBack: goBack }), contentEl);
         }
       }).catch(() => {
-        contentEl.innerHTML = '<div class="file-view"><div class="file-view-header">Error loading file</div></div>';
+        render(h(FilePreviewError, { error: 'Error loading file', onBack: goBack }), contentEl);
       });
     }
   }
