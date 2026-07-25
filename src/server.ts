@@ -371,6 +371,12 @@ function resolveStaticPath(rootDir: string, relPath: string): string | null {
 	}
 	return null;
 }
+function isDangerousRootDir(rootDir: string): boolean {
+	if (!rootDir) return true;
+	const resolved = path.resolve(rootDir);
+	return resolved === '/' || resolved === process.cwd();
+}
+
 function kindFromPath(p: string): DocKind | null {
 	const ext = path.extname(p).toLowerCase();
 	if (isMarkdownExt(ext)) { return 'markdown'; }
@@ -512,6 +518,7 @@ export class PreviewServer {
 	}
 	/** Register/refresh a document, returning its preview id (calling this multiple times for the same file reuses the same id/link) */
 	registerDocument(uriKey: string, title: string, content: string, kind: DocKind, rootDir: string, fullPath: string): string {
+		console.log(`[on-air] register: file=${fullPath} rootDir=${rootDir || '(none)'} kind=${kind}`);
 		let id = this.uriToId.get(uriKey);
 		if (!id) {
 			// Deterministic id: the same file always yields the same link, so
@@ -622,8 +629,10 @@ export class PreviewServer {
 
 		const rootDir = fromEntry?.rootDir || '';
 		const matches: string[] = [];
-		if (rootDir) {
-			const walk = (dir: string): void => {
+		if (rootDir && !isDangerousRootDir(rootDir)) {
+			const XREF_MAX_DEPTH = 15;
+			const walk = (dir: string, depth: number = 0): void => {
+				if (depth > XREF_MAX_DEPTH) return;
 				let entries: fs.Dirent[];
 				try { entries = fs.readdirSync(dir, { withFileTypes: true }); }
 				catch { return; }
@@ -631,7 +640,7 @@ export class PreviewServer {
 					const full = path.join(dir, e.name);
 					if (e.isDirectory()) {
 						if (e.name === 'node_modules' || e.name === '.git') { continue; }
-						walk(full);
+						walk(full, depth + 1);
 					} else if (e.isFile()) {
 						const ext = path.extname(e.name).toLowerCase();
 						if (isMarkdownExt(ext) && e.name.toLowerCase() === q.toLowerCase()) {
@@ -692,6 +701,12 @@ export class PreviewServer {
 			}
 
 			const rootDirResolved = path.resolve(entry.rootDir);
+			if (isDangerousRootDir(entry.rootDir)) {
+				console.error(`[on-air] /api/tree: rootDir unsafe, file=${entry.fullPath} rootDir=${JSON.stringify(entry.rootDir)}`);
+				res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+				res.end(JSON.stringify({ dir: '', entries: [] }));
+				return;
+			}
 			const targetDir = dir ? path.resolve(rootDirResolved, dir) : rootDirResolved;
 			if (dir && !targetDir.startsWith(rootDirResolved + path.sep)) {
 				res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -828,6 +843,12 @@ export class PreviewServer {
 			}
 
 			const rootDirResolved = path.resolve(entry.rootDir);
+			if (isDangerousRootDir(entry.rootDir)) {
+				console.error(`[on-air] /api/file-index: rootDir unsafe, file=${entry.fullPath} rootDir=${JSON.stringify(entry.rootDir)}`);
+				res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+				res.end(JSON.stringify({ entries: [] }));
+				return;
+			}
 			const index: Array<{ name: string; type: string; path: string; ext: string; size: number }> = [];
 
 			const ig: ReturnType<typeof ignore> | null = (() => {
@@ -840,7 +861,11 @@ export class PreviewServer {
 			const supportedExts = new Set(SUPPORTED_EXTS as readonly string[]);
 			const imageExts = new Set(IMAGE_EXTS as readonly string[]);
 
-			const walk = (dir: string) => {
+			const MAX_WALK_DEPTH = 15;
+			const MAX_INDEX_ENTRIES = 5000;
+
+			const walk = (dir: string, depth: number = 0) => {
+				if (depth > MAX_WALK_DEPTH || index.length >= MAX_INDEX_ENTRIES) return;
 				let dirents: fs.Dirent[];
 				try { dirents = fs.readdirSync(dir, { withFileTypes: true }); }
 				catch { return; }
@@ -852,7 +877,7 @@ export class PreviewServer {
 						const rel = toPosix(path.relative(rootDirResolved, path.join(dir, e.name)));
 						if (ig && ig.ignores(rel + '/')) continue;
 						index.push({ name: e.name, type: 'directory', path: rel, ext: '', size: 0 });
-						walk(path.join(dir, e.name));
+						walk(path.join(dir, e.name), depth + 1);
 					} else if (e.isFile()) {
 						const ext = path.extname(e.name).toLowerCase();
 						const full = path.join(dir, e.name);
