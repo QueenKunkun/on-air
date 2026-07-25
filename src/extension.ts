@@ -43,6 +43,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		// is provided (rootDir = '') to avoid walking unrelated directories.
 		const wsFolder = doc.uri.scheme === 'file' ? vscode.workspace.getWorkspaceFolder(doc.uri) : undefined;
 		const rootDir = wsFolder ? wsFolder.uri.fsPath : '';
+		console.log(`[on-air] generateUrl: scheme=${doc.uri.scheme} file=${doc.fileName} rootDir=${rootDir || '(none)'}`);
 		const id = server.registerDocument(uriKey, fileTitle(doc), doc.getText(), kind, rootDir, doc.fileName);
 			const url = server.buildUrl(id);
 			const lanIp = server.getLanIp();
