@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.13.2] - 2026-07-25
+
+- fix: prevent rootDir from resolving to filesystem root '/' for opening non-file-scheme documents
+- fix: serve raw HTML for iframe requests instead of redirecting to preview page
+- feat: add isDangerousRootDir guard, walk depth/count limits, and diagnostic logging
+
+
 ## [0.13.0] - 2026-07-24
 
 - feat: Add project file tree panel with search, filter, and expand-to-current-file
