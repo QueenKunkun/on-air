@@ -927,32 +927,40 @@ export class PreviewServer {
 				return;
 			}
 
-			// A relative link to another Markdown/HTML document: register it on demand
-			// (sharing the same id the extension would use) and redirect to its preview,
-			// so clicking the link opens a rendered, live-syncable preview instead of raw bytes.
-			const kind = kindFromPath(filePath);
-			if (kind) {
-				const frag = rel.includes('#') ? '#' + rel.split('#')[1] : '';
-				const uriKey = vscode.Uri.file(filePath).toString();
-				const existingId = this.uriToId.get(uriKey);
-				if (existingId) {
-					res.writeHead(302, { Location: `/preview/${existingId}${frag}` });
-					res.end();
-					return;
-				}
-				fs.readFile(filePath, 'utf8', (err, data) => {
-					if (err) {
-						res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-						res.end('File not found');
+			// If the request has a Referer pointing to a preview page (e.g. an <iframe>
+			// inside the preview), serve the raw file directly instead of redirecting to
+			// another preview — iframes need the original content, not the wrapped page.
+			const referer = req.headers.referer || '';
+			const isEmbedded = referer.includes('/preview/');
+
+			if (!isEmbedded) {
+				// A relative link to another Markdown/HTML document: register it on demand
+				// (sharing the same id the extension would use) and redirect to its preview,
+				// so clicking the link opens a rendered, live-syncable preview instead of raw bytes.
+				const kind = kindFromPath(filePath);
+				if (kind) {
+					const frag = rel.includes('#') ? '#' + rel.split('#')[1] : '';
+					const uriKey = vscode.Uri.file(filePath).toString();
+					const existingId = this.uriToId.get(uriKey);
+					if (existingId) {
+						res.writeHead(302, { Location: `/preview/${existingId}${frag}` });
+						res.end();
 						return;
 					}
-					const targetWs = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(filePath));
-					const targetRootDir = targetWs ? targetWs.uri.fsPath : path.dirname(filePath);
-					const newId = this.registerDocument(uriKey, path.basename(filePath), data, kind, targetRootDir, filePath);
-					res.writeHead(302, { Location: `/preview/${newId}${frag}` });
-					res.end();
-				});
-				return;
+					fs.readFile(filePath, 'utf8', (err, data) => {
+						if (err) {
+							res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+							res.end('File not found');
+							return;
+						}
+						const targetWs = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(filePath));
+						const targetRootDir = targetWs ? targetWs.uri.fsPath : path.dirname(filePath);
+						const newId = this.registerDocument(uriKey, path.basename(filePath), data, kind, targetRootDir, filePath);
+						res.writeHead(302, { Location: `/preview/${newId}${frag}` });
+						res.end();
+					});
+					return;
+				}
 			}
 
 			fs.readFile(filePath, (err, data) => {

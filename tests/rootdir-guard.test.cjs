@@ -201,3 +201,93 @@ test('/api/file-index returns 404 for unknown document id', async () => {
   const res = await httpGet(`${baseUrl}/api/file-index?id=nonexistent`);
   assert.equal(res.status, 404);
 });
+
+// ─── Iframe tests ────────────────────────────────────────────────────────────
+
+function httpGetWithFollow(url, maxRedirects = 5) {
+  return new Promise((resolve, reject) => {
+    function doRequest(u, redirectsLeft) {
+      http.get(u, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && redirectsLeft > 0) {
+          const redirectUrl = new URL(res.headers.location, u).href;
+          res.resume();
+          doRequest(redirectUrl, redirectsLeft - 1);
+          return;
+        }
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          resolve({ status: res.statusCode, headers: res.headers, body: data });
+        });
+      }).on('error', reject);
+    }
+    doRequest(url, maxRedirects);
+  });
+}
+
+test('iframe markdown renders <iframe> tag with correct src', async () => {
+  const mdPath = path.join(FIXTURE_DIR, 'iframe-test.md');
+  const id = server.registerDocument(
+    'test://iframe-test.md',
+    'Iframe Test',
+    fs.readFileSync(mdPath, 'utf8'),
+    'markdown',
+    FIXTURE_DIR,
+    mdPath
+  );
+
+  const res = await httpGet(`${baseUrl}/preview/${id}`);
+  assert.equal(res.status, 200);
+  assert.ok(res.body.includes('<iframe'), 'page should contain <iframe> tag');
+  assert.ok(res.body.includes('embeds/embed-001.html'), 'iframe src should reference embed-001.html');
+});
+
+test('static HTML asset is served raw (not redirected) when requested from preview', async () => {
+  const mdPath = path.join(FIXTURE_DIR, 'iframe-test.md');
+  const id = server.registerDocument(
+    'test://iframe-test-2.md',
+    'Iframe Test 2',
+    fs.readFileSync(mdPath, 'utf8'),
+    'markdown',
+    FIXTURE_DIR,
+    mdPath
+  );
+
+  // Simulate iframe request with Referer pointing to the preview page
+  const iframeUrl = `${baseUrl}/preview/${id}/embeds/embed-001.html`;
+  const res = await new Promise((resolve, reject) => {
+    const req = http.get(iframeUrl, {
+      headers: { 'Referer': `${baseUrl}/preview/${id}` }
+    }, (resp) => {
+      let data = '';
+      resp.on('data', (chunk) => { data += chunk; });
+      resp.on('end', () => {
+        resolve({ status: resp.statusCode, headers: resp.headers, body: data });
+      });
+    });
+    req.on('error', reject);
+  });
+
+  // Should return raw HTML, NOT redirect to preview
+  assert.equal(res.status, 200, 'should return 200, not redirect');
+  assert.ok(res.body.includes('Hello from iframe'), 'should contain raw HTML content');
+  assert.ok(!res.body.includes('onair-md'), 'should NOT be wrapped in preview template');
+});
+
+test('static HTML asset redirects to preview when no Referer (direct navigation)', async () => {
+  const mdPath = path.join(FIXTURE_DIR, 'iframe-test.md');
+  const id = server.registerDocument(
+    'test://iframe-test-3.md',
+    'Iframe Test 3',
+    fs.readFileSync(mdPath, 'utf8'),
+    'markdown',
+    FIXTURE_DIR,
+    mdPath
+  );
+
+  // Direct request without Referer (simulates user clicking a link)
+  const res = await httpGetWithFollow(`${baseUrl}/preview/${id}/embeds/embed-001.html`, 0);
+  // Should redirect (302) since no Referer
+  assert.equal(res.status, 302, 'direct request should redirect to preview');
+  assert.ok(res.headers.location && res.headers.location.includes('/preview/'), 'should redirect to preview page');
+});
