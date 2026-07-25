@@ -702,7 +702,7 @@ export class PreviewServer {
 
 			const rootDirResolved = path.resolve(entry.rootDir);
 			if (isDangerousRootDir(entry.rootDir)) {
-				console.error(`[on-air] /api/tree: rootDir unsafe, file=${entry.fullPath} rootDir=${JSON.stringify(entry.rootDir)}`);
+				console.warn(`[on-air] /api/tree: rootDir empty or unsafe, returning empty tree. file=${entry.fullPath} rootDir=${JSON.stringify(entry.rootDir)}`);
 				res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
 				res.end(JSON.stringify({ dir: '', entries: [] }));
 				return;
@@ -844,7 +844,7 @@ export class PreviewServer {
 
 			const rootDirResolved = path.resolve(entry.rootDir);
 			if (isDangerousRootDir(entry.rootDir)) {
-				console.error(`[on-air] /api/file-index: rootDir unsafe, file=${entry.fullPath} rootDir=${JSON.stringify(entry.rootDir)}`);
+				console.warn(`[on-air] /api/file-index: rootDir empty or unsafe, returning empty index. file=${entry.fullPath} rootDir=${JSON.stringify(entry.rootDir)}`);
 				res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
 				res.end(JSON.stringify({ entries: [] }));
 				return;
