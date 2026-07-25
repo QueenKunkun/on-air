@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { LS_KEYS } from '../../common/localStorageKeys';
 import { ConnectionStatus } from './ConnectionStatus';
 import type { ConnectionStatus as ConnectionStatusType } from '../hooks/useWebSocket';
 
@@ -9,10 +10,10 @@ interface BannerProps {
 }
 
 export function Banner({ connStatus }: BannerProps) {
-	const [theme, setTheme] = useLocalStorage('onair-theme', 'auto');
-	const [fs, setFs] = useLocalStorage('onair-font-size', '16');
-	const [sbw, setSbw] = useLocalStorage('onair-scrollbar-width', '16');
-	const [mw, setMw] = useLocalStorage('onair-max-width', '920');
+	const [theme, setTheme] = useLocalStorage(LS_KEYS.THEME, 'auto');
+	const [fs, setFs] = useLocalStorage(LS_KEYS.FONT_SIZE, '16');
+	const [sbw, setSbw] = useLocalStorage(LS_KEYS.SCROLLBAR_WIDTH, '16');
+	const [mw, setMw] = useLocalStorage(LS_KEYS.MAX_WIDTH, '920');
 	const [wpOn, setWpOn] = useState(false);
 	const rootRef = useRef<HTMLDivElement>(null);
 	const contentRef = useRef<HTMLElement | null>(null);

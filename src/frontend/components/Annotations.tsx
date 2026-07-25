@@ -1,5 +1,6 @@
 import { h } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
+import { LS_KEYS } from '../../common/localStorageKeys';
 
 interface CardEntry {
 	id: string;
@@ -8,7 +9,7 @@ interface CardEntry {
 }
 
 export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElement | null; contentVersion: number }) {
-	const hoverOn = useRef(localStorage.getItem('onair-annot-hover') === '1');
+	const hoverOn = useRef(localStorage.getItem(LS_KEYS.ANNOT_HOVER) === '1');
 	const cardRegistry = useRef<CardEntry[]>([]);
 	const popRef = useRef<HTMLDivElement | null>(null);
 
@@ -190,7 +191,7 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 		}
 		function onResizerMouseUp() {
 			resizer!.classList.remove('active');
-			localStorage.setItem('onair-annot-width', String(side!.offsetWidth));
+			localStorage.setItem(LS_KEYS.ANNOT_WIDTH, String(side!.offsetWidth));
 			document.removeEventListener('mousemove', onResizerMouseMove);
 			document.removeEventListener('mouseup', onResizerMouseUp);
 		}
@@ -207,10 +208,10 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 			handle!.textContent = c ? '<' : '>';
 			handle!.title = c ? 'Show annotations' : 'Hide annotations';
 			if (cardRegistry.current.length && resizer) resizer.style.display = c ? 'none' : '';
-			localStorage.setItem('onair-annot-collapsed', c ? '1' : '0');
+			localStorage.setItem(LS_KEYS.ANNOT_COLLAPSED, c ? '1' : '0');
 			if (!c) layoutCards();
 		}
-		setAnnotCollapsed(localStorage.getItem('onair-annot-collapsed') === '1');
+		setAnnotCollapsed(localStorage.getItem(LS_KEYS.ANNOT_COLLAPSED) === '1');
 		function onToggleClick() { setAnnotCollapsed(!side!.classList.contains('collapsed')); }
 		handle?.addEventListener('click', onToggleClick);
 
@@ -219,7 +220,7 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 		function onHoverBtnClick() {
 			hoverOn.current = !hoverOn.current;
 			hoverBtn!.classList.toggle('on', hoverOn.current);
-			localStorage.setItem('onair-annot-hover', hoverOn.current ? '1' : '0');
+			localStorage.setItem(LS_KEYS.ANNOT_HOVER, hoverOn.current ? '1' : '0');
 			if (!hoverOn.current) hidePopover();
 		}
 		if (hoverBtn) {

@@ -3,6 +3,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { debug, debugWarn } from './common/debug';
 import * as vscode from 'vscode';
 import { WebSocketServer, WebSocket } from 'ws';
 import MarkdownIt from 'markdown-it';
@@ -374,7 +375,20 @@ function resolveStaticPath(rootDir: string, relPath: string): string | null {
 function isDangerousRootDir(rootDir: string): boolean {
 	if (!rootDir) return true;
 	const resolved = path.resolve(rootDir);
-	return resolved === '/' || resolved === process.cwd();
+	if (resolved === '/' || resolved === process.cwd()) return true;
+	// Block common high-level directories that would expose the entire filesystem
+	const dangerous = ['/', '/Users', '/home', '/root', '/var', '/etc', '/usr', '/opt', '/tmp'];
+	const dangerousWin = ['C:\\', 'D:\\'];
+	for (const d of dangerous) {
+		if (resolved === d || resolved === d + path.sep) return true;
+	}
+	for (const d of dangerousWin) {
+		if (resolved === d || resolved === d + path.sep) return true;
+	}
+	// Block if rootDir resolves to the user's home directory
+	const home = process.env.HOME || process.env.USERPROFILE;
+	if (home && (resolved === home || resolved === home + path.sep)) return true;
+	return false;
 }
 
 function kindFromPath(p: string): DocKind | null {
@@ -477,7 +491,7 @@ export class PreviewServer {
 		this.server.on('upgrade', (req, socket, head) => this.handleUpgrade(req, socket, head));
 	}
 
-	start(preferredPort = 5757): Promise<number> {
+	start(preferredPort = 5757, host = '0.0.0.0'): Promise<number> {
 		return new Promise((resolve, reject) => {
 			const tryListen = (port: number, attemptsLeft: number) => {
 				const onError = (err: NodeJS.ErrnoException) => {
@@ -488,7 +502,7 @@ export class PreviewServer {
 					}
 				};
 				this.server.once('error', onError);
-				this.server.listen(port, '127.0.0.1', () => {
+				this.server.listen(port, host, () => {
 					this.server.removeListener('error', onError);
 					const addr = this.server.address();
 					this.port = typeof addr === 'object' && addr ? addr.port : port;
@@ -518,7 +532,7 @@ export class PreviewServer {
 	}
 	/** Register/refresh a document, returning its preview id (calling this multiple times for the same file reuses the same id/link) */
 	registerDocument(uriKey: string, title: string, content: string, kind: DocKind, rootDir: string, fullPath: string): string {
-		console.log(`[on-air] register: file=${fullPath} rootDir=${rootDir || '(none)'} kind=${kind} contentLen=${content.length}`);
+		debug('register:', `file=${fullPath} rootDir=${rootDir || '(none)'} kind=${kind} contentLen=${content.length}`);
 		let id = this.uriToId.get(uriKey);
 		if (!id) {
 			// Deterministic id: the same file always yields the same link, so
@@ -702,7 +716,7 @@ export class PreviewServer {
 
 			const rootDirResolved = path.resolve(entry.rootDir);
 			if (isDangerousRootDir(entry.rootDir)) {
-				console.warn(`[on-air] /api/tree: rootDir empty or unsafe, returning empty tree. file=${entry.fullPath} rootDir=${JSON.stringify(entry.rootDir)}`);
+				debugWarn('/api/tree: rootDir empty or unsafe, returning empty tree.', `file=${entry.fullPath} rootDir=${JSON.stringify(entry.rootDir)}`);
 				res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
 				res.end(JSON.stringify({ dir: '', entries: [] }));
 				return;
@@ -844,7 +858,7 @@ export class PreviewServer {
 
 			const rootDirResolved = path.resolve(entry.rootDir);
 			if (isDangerousRootDir(entry.rootDir)) {
-				console.warn(`[on-air] /api/file-index: rootDir empty or unsafe, returning empty index. file=${entry.fullPath} rootDir=${JSON.stringify(entry.rootDir)}`);
+				debugWarn('/api/file-index: rootDir empty or unsafe, returning empty index.', `file=${entry.fullPath} rootDir=${JSON.stringify(entry.rootDir)}`);
 				res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
 				res.end(JSON.stringify({ entries: [] }));
 				return;

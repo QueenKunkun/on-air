@@ -1,5 +1,6 @@
 import { h } from 'preact';
 import { useState, useEffect, useRef } from 'preact/hooks';
+import { LS_KEYS } from '../../common/localStorageKeys';
 
 interface FootnotesBlockProps {
 	contentEl: HTMLElement | null;
@@ -8,7 +9,7 @@ interface FootnotesBlockProps {
 
 export function FootnotesBlock({ contentEl, contentVersion }: FootnotesBlockProps) {
 	const [collapsed, setCollapsed] = useState(() =>
-		localStorage.getItem('onair-footnotes-collapsed') === '1'
+		localStorage.getItem(LS_KEYS.FOOTNOTES_COLLAPSED) === '1'
 	);
 	const blockRef = useRef<HTMLDivElement>(null);
 
@@ -25,7 +26,7 @@ export function FootnotesBlock({ contentEl, contentVersion }: FootnotesBlockProp
 	}, [contentEl, contentVersion]);
 
 	useEffect(() => {
-		localStorage.setItem('onair-footnotes-collapsed', collapsed ? '1' : '0');
+		localStorage.setItem(LS_KEYS.FOOTNOTES_COLLAPSED, collapsed ? '1' : '0');
 	}, [collapsed]);
 
 	if (!contentEl) return null;

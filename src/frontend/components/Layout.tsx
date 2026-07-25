@@ -2,10 +2,11 @@ import { h, Fragment } from 'preact';
 import { useCallback, useEffect, useRef } from 'preact/hooks';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useResizer } from '../hooks/useResizer';
+import { LS_KEYS } from '../../common/localStorageKeys';
 
 export function Layout({ children }: { children: preact.ComponentChildren }) {
-	const [filesCollapsed, setFilesCollapsed] = useLocalStorage('onair-files-collapsed', '0');
-	const [tocCollapsed, setTocCollapsed] = useLocalStorage('onair-toc-collapsed', '0');
+	const [filesCollapsed, setFilesCollapsed] = useLocalStorage(LS_KEYS.FILES_COLLAPSED, '0');
+	const [tocCollapsed, setTocCollapsed] = useLocalStorage(LS_KEYS.TOC_COLLAPSED, '0');
 
 	const filesSideRef = useRef(document.getElementById('filesSide'));
 	const tocColRef = useRef(document.getElementById('tocCol'));
@@ -21,13 +22,13 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 	const tc = tocCollapsed === '1';
 
 	useResizer(filesResizerRef, filesSideRef, {
-		axis: 'x', invert: false, key: 'onair-files-width', def: null, min: 120, max: Infinity,
+		axis: 'x', invert: false, key: LS_KEYS.FILES_WIDTH, def: null, min: 120, max: Infinity,
 		get: (el) => el.offsetWidth,
 		set: (_, v) => { document.documentElement.style.setProperty('--files-w', v + 'px'); },
 	}, []);
 
 	useResizer(tocResizerRef, tocColRef, {
-		axis: 'x', invert: false, key: 'onair-toc-width', def: null, min: 120, max: Infinity,
+		axis: 'x', invert: false, key: LS_KEYS.TOC_WIDTH, def: null, min: 120, max: Infinity,
 		get: (el) => el.offsetWidth,
 		set: (_, v) => { document.documentElement.style.setProperty('--toc-w', v + 'px'); },
 	}, []);
@@ -37,7 +38,7 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		setFilesCollapsed(next ? '1' : '0');
 		const el = filesSideRef.current;
 		if (el) el.classList.toggle('collapsed', next);
-		document.documentElement.style.setProperty('--files-w', next ? '0px' : (localStorage.getItem('onair-files-width') || '300') + 'px');
+		document.documentElement.style.setProperty('--files-w', next ? '0px' : (localStorage.getItem(LS_KEYS.FILES_WIDTH) || '300') + 'px');
 		document.documentElement.style.setProperty('--files-resizer-w', next ? '0px' : 'var(--resizer-w)');
 		if (!next) window.dispatchEvent(new CustomEvent('onair:tree-activate'));
 	}, [filesCollapsed, setFilesCollapsed]);
@@ -47,7 +48,7 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		setTocCollapsed(next ? '1' : '0');
 		const el = tocColRef.current;
 		if (el) el.classList.toggle('collapsed', next);
-		document.documentElement.style.setProperty('--toc-w', next ? '0px' : (localStorage.getItem('onair-toc-width') || '200') + 'px');
+		document.documentElement.style.setProperty('--toc-w', next ? '0px' : (localStorage.getItem(LS_KEYS.TOC_WIDTH) || '200') + 'px');
 		document.documentElement.style.setProperty('--toc-resizer-w', next ? '0px' : 'var(--resizer-w)');
 	}, [tocCollapsed, setTocCollapsed]);
 
@@ -55,7 +56,7 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		setFilesCollapsed('0');
 		const el = filesSideRef.current;
 		if (el) el.classList.remove('collapsed');
-		document.documentElement.style.setProperty('--files-w', (localStorage.getItem('onair-files-width') || '300') + 'px');
+		document.documentElement.style.setProperty('--files-w', (localStorage.getItem(LS_KEYS.FILES_WIDTH) || '300') + 'px');
 		document.documentElement.style.setProperty('--files-resizer-w', 'var(--resizer-w)');
 		window.dispatchEvent(new CustomEvent('onair:tree-activate'));
 	}, [setFilesCollapsed]);
@@ -64,7 +65,7 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		setTocCollapsed('0');
 		const el = tocColRef.current;
 		if (el) el.classList.remove('collapsed');
-		document.documentElement.style.setProperty('--toc-w', (localStorage.getItem('onair-toc-width') || '200') + 'px');
+		document.documentElement.style.setProperty('--toc-w', (localStorage.getItem(LS_KEYS.TOC_WIDTH) || '200') + 'px');
 		document.documentElement.style.setProperty('--toc-resizer-w', 'var(--resizer-w)');
 	}, [setTocCollapsed]);
 

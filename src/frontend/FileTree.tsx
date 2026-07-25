@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect, useRef } from 'preact/hooks';
 import type { TreeEntry } from './types';
 import { FilePreview, FilePreviewError, FilePreviewBinary, FilePreviewCode } from './components/FilePreview';
 import { MARKDOWN_EXTS, isMarkdownExt, markdownExtFilter } from '../common/extensions';
+import { LS_KEYS } from '../common/localStorageKeys';
 
 interface Props {
   id: string;
@@ -44,7 +45,7 @@ function globToRegex(glob: string): RegExp {
 
 function readFilters(): Filters {
   try {
-    const saved = localStorage.getItem('onair-ft-filters');
+    const saved = localStorage.getItem(LS_KEYS.FT_FILTERS);
     if (saved) return JSON.parse(saved);
   } catch {}
   return { gitignore: true, mdOnly: false, hideBinary: true };
@@ -194,7 +195,7 @@ export function FileTree({ id }: Props) {
   const handleFilterChange = useCallback((key: keyof Filters) => {
     setFilters(prev => {
       const next = { ...prev, [key]: !prev[key] };
-      localStorage.setItem('onair-ft-filters', JSON.stringify(next));
+      localStorage.setItem(LS_KEYS.FT_FILTERS, JSON.stringify(next));
       return next;
     });
     setExpanded({});
@@ -232,7 +233,7 @@ export function FileTree({ id }: Props) {
     cacheRef.current = {};
     (async () => {
       await fetchDir('');
-      const saved = localStorage.getItem('onair-ft-expanded');
+      const saved = localStorage.getItem(LS_KEYS.FT_EXPANDED);
       if (saved) {
         try {
           const paths: string[] = JSON.parse(saved);
@@ -271,9 +272,9 @@ export function FileTree({ id }: Props) {
   useEffect(() => {
     const active = Object.keys(expandedRef.current).filter(k => expandedRef.current[k]);
     if (active.length) {
-      localStorage.setItem('onair-ft-expanded', JSON.stringify(active));
-    } else {
-      localStorage.removeItem('onair-ft-expanded');
+      localStorage.setItem(LS_KEYS.FT_EXPANDED, JSON.stringify(active));
+      } else {
+        localStorage.removeItem(LS_KEYS.FT_EXPANDED);
     }
   }, [expanded]);
 

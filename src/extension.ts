@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { PreviewServer, DocKind } from './server';
+import { debug, setDebugEnabled } from './common/debug';
 
 let server: PreviewServer | undefined;
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -17,6 +18,7 @@ function docKind(languageId: string): DocKind | null {
 }
 
 export async function activate(context: vscode.ExtensionContext) {
+	setDebugEnabled(!!process.env.ONAIR_DEBUG);
 	server = new PreviewServer();
 	try {
 		await server.start(5757);
@@ -37,10 +39,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		const doc = editor.document;
 		const uriKey = doc.uri.toString();
 		const rawWsFolder = vscode.workspace.getWorkspaceFolder(doc.uri);
-		console.log(`[on-air] rawWsFolder=${rawWsFolder}`);
+		debug(`rawWsFolder=${rawWsFolder}`);
 		const wsFolder = doc.uri.scheme === 'file' ? vscode.workspace.getWorkspaceFolder(doc.uri) : undefined;
 		const rootDir = wsFolder ? wsFolder.uri.fsPath : '';
-		console.log(`[on-air] generateUrl: scheme=${doc.uri.scheme} rootDir=${rootDir || '(none)'} file=${doc.fileName}`);
+		debug(`generateUrl: scheme=${doc.uri.scheme} rootDir=${rootDir || '(none)'} file=${doc.fileName}`);
 		const id = server.registerDocument(uriKey, fileTitle(doc), doc.getText(), kind, rootDir, doc.fileName);
 			const url = server.buildUrl(id);
 			const lanIp = server.getLanIp();
