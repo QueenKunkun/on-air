@@ -191,6 +191,63 @@ test('files resizer drag changes width', async ({ page }) => {
   expect(afterWidth).toBeGreaterThan(beforeWidth);
 });
 
+test('files resizer drag does not cause content scroll jump', async ({ page }) => {
+  // Scroll content to a known position
+  const content = page.locator('#content');
+  await content.evaluate(el => { el.scrollTop = 200; });
+  await page.waitForTimeout(100);
+
+  // Record the text at the top of the viewport before drag
+  const textBefore = await page.evaluate(() => {
+    const el = document.getElementById('content');
+    if (!el) return '';
+    // Get the first visible text element
+    const children = el.querySelectorAll('h1, h2, h3, p, li, code');
+    for (const child of children) {
+      const rect = child.getBoundingClientRect();
+      if (rect.top >= 0 && rect.top < window.innerHeight) {
+        return child.textContent?.trim() || '';
+      }
+    }
+    return '';
+  });
+
+  // Drag files resizer
+  const resizer = page.locator('#filesResizer');
+  const box = await resizer.boundingBox();
+  if (!box) throw new Error('resizer not visible');
+  const startY = box.y + 60;
+  await page.mouse.move(box.x + box.width / 2, startY);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 80, startY, { steps: 10 });
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+
+  // Check scroll position hasn't jumped dramatically
+  const scrollPos = await content.evaluate(el => el.scrollTop);
+  // Scroll should stay within 50px of original (some reflow is OK, big jumps are not)
+  expect(Math.abs(scrollPos - 200)).toBeLessThan(50);
+
+  // Check the text content at the top is roughly the same
+  const textAfter = await page.evaluate(() => {
+    const el = document.getElementById('content');
+    if (!el) return '';
+    const children = el.querySelectorAll('h1, h2, h3, p, li, code');
+    for (const child of children) {
+      const rect = child.getBoundingClientRect();
+      if (rect.top >= 0 && rect.top < window.innerHeight) {
+        return child.textContent?.trim() || '';
+      }
+    }
+    return '';
+  });
+
+  // The first visible text element should be the same (no major jump)
+  if (textBefore && textAfter) {
+    expect(textAfter).toBe(textBefore);
+  }
+});
+
 test('file tree has visible items with proper scroll height', async ({ page }) => {
   // ft-scroll should have non-zero height (flex layout working)
   const ftScrollHeight = await page.evaluate(() => {

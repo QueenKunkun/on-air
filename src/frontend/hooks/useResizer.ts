@@ -22,6 +22,8 @@ export function useResizer(
 		let startPos = 0;
 		let startSize = 0;
 		let didDrag = false;
+		let rafId = 0;
+		let pendingSize: number | null = null;
 
 		function onMouseDown(e: MouseEvent) {
 			startPos = opts.axis === 'x' ? e.clientX : e.clientY;
@@ -42,10 +44,27 @@ export function useResizer(
 				resizerEl.setAttribute('data-dragging', '1');
 			}
 			const size = Math.max(opts.min, Math.min(opts.max, startSize + delta));
-			opts.set(targetEl, size);
+			// Throttle CSS variable updates to once per animation frame to prevent
+			// layout thrashing (高频 reflow) that causes text to jump around.
+			pendingSize = size;
+			if (!rafId) {
+				rafId = requestAnimationFrame(() => {
+					rafId = 0;
+					if (pendingSize !== null) {
+						opts.set(targetEl, pendingSize);
+						pendingSize = null;
+					}
+				});
+			}
 		}
 
 		function onMouseUp() {
+			// Apply any pending update immediately
+			if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+			if (pendingSize !== null) {
+				opts.set(targetEl, pendingSize);
+				pendingSize = null;
+			}
 			resizerEl.classList.remove('active');
 			document.removeEventListener('mousemove', onMouseMove);
 			document.removeEventListener('mouseup', onMouseUp);
@@ -58,6 +77,7 @@ export function useResizer(
 
 		resizerEl.addEventListener('mousedown', onMouseDown);
 		return () => {
+			if (rafId) { cancelAnimationFrame(rafId); }
 			resizerEl.removeEventListener('mousedown', onMouseDown);
 			document.removeEventListener('mousemove', onMouseMove);
 			document.removeEventListener('mouseup', onMouseUp);
