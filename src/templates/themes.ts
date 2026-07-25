@@ -1,0 +1,18 @@
+export const THEMES = [
+	{ id: 'auto', label: '\u{1F313} Auto' },
+	{ id: 'vscode-dark', label: '\u{1F319} VS Code Dark' },
+	{ id: 'github-light', label: '\u{2600}\uFE0F GitHub Light' },
+	{ id: 'vscode-light', label: '\u{2600}\uFE0F VS Code Light' },
+	{ id: 'github-dark', label: '\u{1F319} GitHub Dark' },
+	{ id: 'monokai', label: '\u{1F319} Monokai' },
+	{ id: 'solarized-dark', label: '\u{1F319} Solarized Dark' },
+	{ id: 'solarized-light', label: '\u{2600}\uFE0F Solarized Light' },
+	{ id: 'tomorrow-night-blue', label: '\u{1F319} Tomorrow Night Blue' },
+	{ id: 'abyss', label: '\u{1F319} Abyss' },
+	{ id: 'kimbie-dark', label: '\u{1F319} Kimbie Dark' },
+	{ id: 'monokai-dimmed', label: '\u{1F319} Monokai Dimmed' },
+	{ id: 'red', label: '\u{1F319} Red' },
+	{ id: 'quietlight', label: '\u{2600}\uFE0F Quiet Light' },
+	{ id: 'hc-black', label: '\u{1F319} High Contrast Black' },
+	{ id: 'hc-light', label: '\u{2600}\uFE0F High Contrast Light' },
+];

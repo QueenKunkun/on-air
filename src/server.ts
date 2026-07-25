@@ -3,32 +3,20 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { debug, debugWarn } from './common/debug';
+import { debug } from './common/debug';
 import * as vscode from 'vscode';
 import { WebSocketServer, WebSocket } from 'ws';
-import MarkdownIt from 'markdown-it';
-import markdownItFootnote from 'markdown-it-footnote';
-import markdownItMark from 'markdown-it-mark';
-import hljs from 'highlight.js/lib/core';
-import ignore from 'ignore';
-import { MARKDOWN_EXTS, SUPPORTED_EXTS, IMAGE_EXTS, isMarkdownExt } from './common/extensions';
+import { renderMarkdown, escapeHtml, rewriteHtmlLinks, md } from './markdown/renderer';
+import { THEMES } from './templates/themes';
+import { handleTree } from './routes/tree';
+import { handleFile } from './routes/file';
+import { handleFileIndex } from './routes/fileIndex';
+import { handleStatic } from './routes/static';
+import { handlePreview } from './routes/preview';
+import { handleXref } from './routes/xref';
+import { kindFromPath, toPosix } from './routes/utils';
+import type { DocKind, DocEntry } from './routes/types';
 
-// Only register the languages we actually want to highlight, instead of pulling in
-// highlight.js's full language set (~190 languages, ~1MB+) via the default import.
-// This keeps the bundled extension small. Add more `registerLanguage` calls here
-// if a commonly-requested language is missing.
-import javascript from 'highlight.js/lib/languages/javascript';
-import typescript from 'highlight.js/lib/languages/typescript';
-import python from 'highlight.js/lib/languages/python';
-import java from 'highlight.js/lib/languages/java';
-import csharp from 'highlight.js/lib/languages/csharp';
-import cpp from 'highlight.js/lib/languages/cpp';
-import go from 'highlight.js/lib/languages/go';
-import rust from 'highlight.js/lib/languages/rust';
-import php from 'highlight.js/lib/languages/php';
-import ruby from 'highlight.js/lib/languages/ruby';
-import swift from 'highlight.js/lib/languages/swift';
-import kotlin from 'highlight.js/lib/languages/kotlin';
 import pageCss from './templates/page.css';
 import mdTemplate from './templates/markdown-page.html';
 import htmlSnippet from './templates/html-snippet.html';
@@ -39,309 +27,11 @@ try { preactJs = fs.readFileSync(path.join(__dirname, 'preview.js'), 'utf8'); } 
 if (!preactJs) {
 	try { preactJs = fs.readFileSync(path.join(__dirname, '..', 'dist', 'preview.js'), 'utf8'); } catch {}
 }
-import sql from 'highlight.js/lib/languages/sql';
-import bash from 'highlight.js/lib/languages/bash';
-import shell from 'highlight.js/lib/languages/shell';
-import json from 'highlight.js/lib/languages/json';
-import yaml from 'highlight.js/lib/languages/yaml';
-import xml from 'highlight.js/lib/languages/xml';
-import css from 'highlight.js/lib/languages/css';
-import markdown from 'highlight.js/lib/languages/markdown';
-import diff from 'highlight.js/lib/languages/diff';
 
-hljs.registerLanguage('javascript', javascript);
-hljs.registerLanguage('typescript', typescript);
-hljs.registerLanguage('python', python);
-hljs.registerLanguage('java', java);
-hljs.registerLanguage('csharp', csharp);
-hljs.registerLanguage('cpp', cpp);
-hljs.registerLanguage('go', go);
-hljs.registerLanguage('rust', rust);
-hljs.registerLanguage('php', php);
-hljs.registerLanguage('ruby', ruby);
-hljs.registerLanguage('swift', swift);
-hljs.registerLanguage('kotlin', kotlin);
-hljs.registerLanguage('sql', sql);
-hljs.registerLanguage('bash', bash);
-hljs.registerLanguage('shell', shell);
-hljs.registerLanguage('json', json);
-hljs.registerLanguage('yaml', yaml);
-hljs.registerLanguage('xml', xml);
-hljs.registerLanguage('html', xml);
-hljs.registerLanguage('css', css);
-hljs.registerLanguage('markdown', markdown);
-hljs.registerLanguage('diff', diff);
+// Re-export DocKind for extension.ts compatibility
+export type { DocKind } from './routes/types';
 
-export type DocKind = 'markdown' | 'html';
-
-interface DocEntry {
-	id: string;
-	title: string;
-	fullPath: string;
-	kind: DocKind;
-	page: string;
-	bodyHtml?: string;
-	/** Directory containing the source file, used to resolve relative static assets (images/embeds/attachments/etc.) */
-	rootDir: string;
-	clients: Set<WebSocket>;
-}
-
-function highlightCode(code: string, lang: string): string {
-	if (lang && hljs.getLanguage(lang)) {
-		try {
-			return hljs.highlight(code, { language: lang }).value;
-		} catch {
-			// Fall back to plain text if highlighting fails, so rendering is unaffected
-		}
-	}
-	return md.utils.escapeHtml(code);
-}
-
-const md: MarkdownIt = new MarkdownIt({
-	html: true,
-	linkify: true,
-	typographer: true,
-	highlight: (code, lang) => `<pre class="hljs"><code>${highlightCode(code, lang)}</code></pre>`,
-});
-
-// Disable fuzzy (schemaless) linkification. With it on, a bare token like
-// `AGENTS.md` matches linkify-it's fuzzy host rule (`.md` is in its TLD
-// list) and gets turned into a dead `http://AGENTS.md/` link. Bare `.md`
-// / `.markdown` tokens are re-linked as in-project cross-references instead
-// (see `linkifyMdTokens`), so we don't lose the convenience.
-md.linkify.set({ fuzzyLink: false });
-
-md.use(markdownItFootnote);
-md.use(markdownItMark);
-
-const slugify = (text: string): string =>
-	text.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w\u4e00-\u9fff\-]/g, '');
-
-/**
- * Rewrite a relative link/src to be relative to `rootDir` instead of the document's
- * own directory. This is what lets `../parent.md` and sibling links resolve correctly
- * once the preview's `<base href>` points at `/preview/<id>/`. Targets that fall inside
- * `rootDir` produce a `..`-free path (so the browser never escapes the `<id>` segment);
- * out-of-scope links keep their `..` and are blocked by resolveStaticPath downstream.
- */
-function rewriteLink(href: string, docDir: string, rootDir: string): string {
-	if (!rootDir || !docDir) { return href; }
-	if (/^(https?:)?\/\//i.test(href) || href.startsWith('#') || href.startsWith('data:') || href.startsWith('mailto:') || href.startsWith('/')) {
-		return href;
-	}
-	const hashIdx = href.indexOf('#');
-	const qIdx = href.indexOf('?');
-	const cut = qIdx >= 0 && (hashIdx < 0 || qIdx < hashIdx) ? qIdx : hashIdx;
-	const raw = cut >= 0 ? href.slice(0, cut) : href;
-	if (!raw) { return href; }
-	const absTarget = path.resolve(docDir, raw);
-	let rel = path.relative(rootDir, absTarget);
-	if (path.sep !== '/') { rel = rel.split(path.sep).join('/'); }
-	return rel + (cut >= 0 ? href.slice(cut) : '');
-}
-
-function rewriteHtmlLinks(html: string, docDir: string, rootDir: string): string {
-	if (!rootDir || !docDir) { return html; }
-	return html.replace(/(href|src)="([^"]*)"/gi, (_m, attr: string, val: string) => {
-		const rewritten = rewriteLink(val, docDir, rootDir);
-		return rewritten === val ? _m : `${attr}="${rewritten}"`;
-	});
-}
-
-/**
- * Path-proximity score between a candidate file and the source file: smaller is
- * closer. Based on the shared path prefix (longer shared prefix = closer) with a
- * tie-breaker on total depth (shallower candidate ranks higher).
- */
-function proximity(candidate: string, source?: string): number {
-	if (!source) { return Number.MAX_SAFE_INTEGER; }
-	const a = path.resolve(candidate).split(path.sep);
-	const b = path.resolve(source).split(path.sep);
-	let shared = 0;
-	while (shared < Math.min(a.length, b.length) && a[shared] === b[shared]) { shared++; }
-	return -(shared * 1000) + a.length;
-}
-
-/**
- * Minimal OnAir-styled picker page for `/xref`. Also embedded client-side in a
- * popover (same HTML, single render source). Lists each matching file with its
- * relative path; rows link to that file's live preview. `files` empty => not found.
- */
-	function xrefPage(files: string[], q: string, sourceTitle: string | null, sourcePath: string | null, fragment = false): string {
-	const srcRel = sourceTitle && sourcePath ? computeDisplayPath(sourcePath) : null;
-	const header = `<h1>${escapeHtml(q)}</h1>` + (srcRel ? `<p class="src">${escapeHtml(srcRel)}</p>` : '');
-	let body: string;
-	if (!files.length) {
-		body = `<p class="empty">No matching <code>${escapeHtml(q)}</code> found in this project.</p>`;
-	} else {
-		const lis = files.map(f => {
-			const rel = sourceTitle ? computeDisplayPath(f) : f;
-			const uriKey = vscode.Uri.file(f).toString();
-			const id = crypto.createHash('sha256').update(uriKey).digest('hex').slice(0, 12);
-			return `<li><a class="path" href="/preview/${id}?file=${encodeURIComponent(f)}">${escapeHtml(rel)}</a></li>`;
-		}).join('');
-		body = `<ul>${lis}</ul>`;
-	}
-	// Fragment mode: just the markup, no <style>. The in-page popover already
-	// carries scoped `#xrefOverlay .xref-box …` rules, so a bare fragment won't
-	// pollute the host page's CSS (a full <style> with global selectors would).
-	if (fragment) { return header + body; }
-	const head = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device,initial-scale=1">` +
-		`<title>OnAir · ${escapeHtml(q)}</title>` +
-		`<style>
-			:root{--bg:#fff;--fg:#1f2328;--muted:#57606a;--border:#d0d7de;--accent:#0969da;--pre:#f6f8fa}
-			@media (prefers-color-scheme: dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#8b949e;--border:#30363d;--accent:#58a6ff;--pre:#161b22}}
-			body{font:14px/1.6 system-ui,sans-serif;background:var(--bg);color:var(--fg);margin:0;padding:24px}
-			h1{font-size:16px;margin:0}a{color:var(--accent);text-decoration:none}
-			a:hover{text-decoration:underline}
-			.src{color:var(--muted);font-size:12px;font-family:ui-monospace,monospace;padding:0 16px;margin:2px 0 0;word-break:break-all}
-			ul{list-style:none;margin:0;padding:0 16px 16px;max-width:680px}
-			li{padding:4px 0;line-height:1.8;border-bottom:1px solid var(--border)}
-			.path{display:inline;color:var(--accent);font-size:13px;font-family:ui-monospace,monospace;word-break:break-all;text-decoration:none}
-			.path:hover{text-decoration:underline;text-underline-offset:2px}
-			.empty{color:var(--muted)}
-		</style>`;
-	return head + header + body;
-}
-
-md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
-	const inline = tokens[idx + 1];
-	if (inline?.type === 'inline') {
-		const slugs = (env.slugs ||= new Map<string, boolean>());
-		let base = slugify(inline.content);
-		if (!base) { base = 'section'; }
-		let slug = base, i = 1;
-		while (slugs.has(slug)) { slug = `${base}-${i++}`; }
-		slugs.set(slug, true);
-		tokens[idx].attrSet('id', slug);
-	}
-	return self.renderToken(tokens, idx, options);
-};
-
-md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
-	const href = tokens[idx].attrGet('href');
-	if (href !== null && env?.docDir && env?.rootDir) {
-		const rewritten = rewriteLink(href, env.docDir, env.rootDir);
-		if (rewritten !== href) { tokens[idx].attrSet('href', rewritten); }
-	}
-	return self.renderToken(tokens, idx, options);
-};
-
-md.renderer.rules.image = (tokens, idx, options, env, self) => {
-	const src = tokens[idx].attrGet('src');
-	if (src !== null && env?.docDir && env?.rootDir) {
-		const rewritten = rewriteLink(src, env.docDir, env.rootDir);
-		if (rewritten !== src) { tokens[idx].attrSet('src', rewritten); }
-	}
-	return self.renderToken(tokens, idx, options);
-};
-
-function renderFrontmatter(source: string): string {
-	return source.replace(/^---\n([\s\S]*?)\n---\n?/, (_m, content) =>
-		`<div class="frontmatter"><pre>---\n${md.utils.escapeHtml(content)}\n---</pre></div>\n`
-	);
-}
-
-function renderMarkdown(source: string, docDir: string, rootDir: string, fromId?: string): string {
-	return linkifyMdTokens(md.render(renderFrontmatter(source), { docDir, rootDir }), fromId);
-}
-
-/**
- * Turn bare `NAME.md` / `NAME.markdown` / `NAME.mdx` tokens in already-rendered HTML into
- * in-project cross-reference links. Bare tokens (no `[text](…)` syntax) are not
- * matched by markdown's link rules, and with fuzzy linkify disabled they stay plain
- * text — so we re-link them here as `<a class="onair-xref" href="/xref?…">`.
- *
- * Scoped to markdown extensions only. Skips tokens already inside an `<a>` or
- * `<code>`/`<pre>` (the negative lookbehind avoids `href="…"` and `>` from a
- * preceding close tag), so existing links and inline code are untouched.
- */
-const MD_LINKIFY_RE = new RegExp(`(^|[\\s<("'])([\\w-]*\\.(?:${MARKDOWN_EXTS.map(e => e.slice(1)).join('|')}))(?!\\w)(?=$|\\s|<)`, 'gi');
-function linkifyMdTokens(html: string, fromId?: string): string {
-	const xref = (name: string): string => {
-		const q = encodeURIComponent(name);
-		const from = fromId ? `&from=${encodeURIComponent(fromId)}` : '';
-		return `<a class="onair-xref" target="_blank" href="/xref?q=${q}${from}">${name}</a>`;
-	};
-	MD_LINKIFY_RE.lastIndex = 0;
-	return html.replace(MD_LINKIFY_RE, (_m, pre, name) => {
-		if (pre === '>' || pre === '"' || pre === "'" || pre === '.') { return _m; }
-		return pre + xref(name);
-	});
-}
-
-function escapeHtml(s: string): string {
-	const map: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-	return s.replace(/[&<>"']/g, (c) => map[c]);
-}
-
-const toPosix = (p: string): string => (path.sep !== '/' ? p.split(path.sep).join('/') : p);
-
-/**
- * Human-friendly path shown under the filename in the TOC. If the file is inside a
- * workspace folder, it's relative to that folder (prefixed with the folder name when
- * several folders are open). Otherwise we walk up to the nearest ancestor containing a
- * `.git` directory and show the path relative to that repo root's parent (so it includes
- * the repo folder name). With neither, falls back to the absolute path.
- */
-function computeDisplayPath(fsPath: string): string {
-	if (!fsPath || !path.isAbsolute(fsPath)) { return toPosix(fsPath || ''); }
-	try {
-		const wsFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(fsPath));
-		if (wsFolder) {
-			const rel = toPosix(path.relative(wsFolder.uri.fsPath, fsPath));
-			const folders = vscode.workspace.workspaceFolders || [];
-			return folders.length > 1 ? toPosix(path.join(path.basename(wsFolder.uri.fsPath), rel)) : rel;
-		}
-	} catch {
-		// not a resolvable workspace file - fall through
-	}
-	let dir = path.dirname(fsPath);
-	for (;;) {
-		try { if (fs.existsSync(path.join(dir, '.git'))) { return toPosix(path.relative(path.dirname(dir), fsPath)); } }
-		catch { /* ignore and keep walking up */ }
-		const parent = path.dirname(dir);
-		if (parent === dir) { break; }
-		dir = parent;
-	}
-	return toPosix(fsPath);
-}
-
-const MIME_TYPES: Record<string, string> = {
-	...Object.fromEntries(MARKDOWN_EXTS.map(e => [e, 'text/markdown; charset=utf-8'])),
-	'.html': 'text/html; charset=utf-8',
-	'.htm': 'text/html; charset=utf-8',
-	'.css': 'text/css; charset=utf-8',
-	'.js': 'text/javascript; charset=utf-8',
-	'.json': 'application/json; charset=utf-8',
-	'.txt': 'text/plain; charset=utf-8',
-	'.svg': 'image/svg+xml',
-	'.png': 'image/png',
-	'.jpg': 'image/jpeg',
-	'.jpeg': 'image/jpeg',
-	'.gif': 'image/gif',
-	'.webp': 'image/webp',
-	'.avif': 'image/avif',
-	'.bmp': 'image/bmp',
-	'.ico': 'image/x-icon',
-	'.pdf': 'application/pdf',
-	'.zip': 'application/zip',
-	'.mp4': 'video/mp4',
-	'.webm': 'video/webm',
-	'.mp3': 'audio/mpeg',
-	'.wav': 'audio/wav',
-	'.woff': 'font/woff',
-	'.woff2': 'font/woff2',
-	'.ttf': 'font/ttf',
-};
-
-function mimeType(filePath: string): string {
-	return MIME_TYPES[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
-}
-
-// Extension version, shown in the preview corner. Injected at build time by
-// webpack's DefinePlugin (__ONAIR_VERSION__), with a runtime fallback to the
-// VS Code API / on-disk package.json so dev runs still resolve it.
+// Extension version, shown in the preview corner.
 declare const __ONAIR_VERSION__: string;
 const EXT_VERSION = (() => {
 	if (__ONAIR_VERSION__) { return __ONAIR_VERSION__; }
@@ -354,70 +44,27 @@ const EXT_VERSION = (() => {
 	return '';
 })();
 
-/**
- * Resolve a relative request path against a document's root directory, guarding
- * against path traversal (e.g. `../../etc/passwd`). Returns the absolute file
- * path if it's a real file inside rootDir, or null otherwise.
- */
-function resolveStaticPath(rootDir: string, relPath: string): string | null {
-	const decoded = decodeURIComponent(relPath.split('?')[0].split('#')[0]);
-	const resolvedRoot = path.resolve(rootDir);
-	const resolvedTarget = path.resolve(resolvedRoot, decoded);
-	const isInsideRoot = resolvedTarget === resolvedRoot || resolvedTarget.startsWith(resolvedRoot + path.sep);
-	if (!isInsideRoot) { return null; }
+function computeDisplayPath(fsPath: string): string {
+	if (!fsPath || !path.isAbsolute(fsPath)) { return toPosix(fsPath || ''); }
 	try {
-		if (fs.statSync(resolvedTarget).isFile()) { return resolvedTarget; }
-	} catch {
-		// File doesn't exist or isn't accessible - treat as not found
+		const wsFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(fsPath));
+		if (wsFolder) {
+			const rel = toPosix(path.relative(wsFolder.uri.fsPath, fsPath));
+			const folders = vscode.workspace.workspaceFolders || [];
+			return folders.length > 1 ? toPosix(path.join(path.basename(wsFolder.uri.fsPath), rel)) : rel;
+		}
+	} catch { /* fall through */ }
+	let dir = path.dirname(fsPath);
+	for (;;) {
+		try { if (fs.existsSync(path.join(dir, '.git'))) { return toPosix(path.relative(path.dirname(dir), fsPath)); } }
+		catch { /* ignore and keep walking up */ }
+		const parent = path.dirname(dir);
+		if (parent === dir) { break; }
+		dir = parent;
 	}
-	return null;
-}
-function isDangerousRootDir(rootDir: string): boolean {
-	if (!rootDir) return true;
-	const resolved = path.resolve(rootDir);
-	if (resolved === '/' || resolved === process.cwd()) return true;
-	// Block common high-level directories that would expose the entire filesystem
-	const dangerous = ['/', '/Users', '/home', '/root', '/var', '/etc', '/usr', '/opt', '/tmp'];
-	const dangerousWin = ['C:\\', 'D:\\'];
-	for (const d of dangerous) {
-		if (resolved === d || resolved === d + path.sep) return true;
-	}
-	for (const d of dangerousWin) {
-		if (resolved === d || resolved === d + path.sep) return true;
-	}
-	// Block if rootDir resolves to the user's home directory
-	const home = process.env.HOME || process.env.USERPROFILE;
-	if (home && (resolved === home || resolved === home + path.sep)) return true;
-	return false;
+	return toPosix(fsPath);
 }
 
-function kindFromPath(p: string): DocKind | null {
-	const ext = path.extname(p).toLowerCase();
-	if (isMarkdownExt(ext)) { return 'markdown'; }
-	if (ext === '.html' || ext === '.htm') { return 'html'; }
-	return null;
-}
-
-const THEMES = [
-	{ id: 'auto', label: '🌓 Auto' },
-	{ id: 'vscode-dark', label: '🌙 VS Code Dark' },
-	{ id: 'github-light', label: '☀️ GitHub Light' },
-	{ id: 'vscode-light', label: '☀️ VS Code Light' },
-	{ id: 'github-dark', label: '🌙 GitHub Dark' },
-	{ id: 'monokai', label: '🌙 Monokai' },
-	{ id: 'solarized-dark', label: '🌙 Solarized Dark' },
-	{ id: 'solarized-light', label: '☀️ Solarized Light' },
-	{ id: 'tomorrow-night-blue', label: '🌙 Tomorrow Night Blue' },
-	{ id: 'abyss', label: '🌙 Abyss' },
-	{ id: 'kimbie-dark', label: '🌙 Kimbie Dark' },
-	{ id: 'monokai-dimmed', label: '🌙 Monokai Dimmed' },
-	{ id: 'red', label: '🌙 Red' },
-	{ id: 'quietlight', label: '☀️ Quiet Light' },
-	{ id: 'hc-black', label: '🌙 High Contrast Black' },
-	{ id: 'hc-light', label: '☀️ High Contrast Light' },
-];
-
-/** Markdown preview page: wrapped in our own template, content updates use targeted DOM replacement (no full page reload) */
 function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullPath: string, relPath: string, rootDir: string): string {
 	return mdTemplate
 		.replace(/\{\{CSS\}\}/g, () => pageCss)
@@ -435,13 +82,7 @@ function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullP
 		.replace(/\{\{ROOT_DIR_ATTR\}\}/g, () => escapeHtml(rootDir || ''))
 		.replace(/\{\{PREACT_JS\}\}/g, () => preactJs);
 }
-/**
- * HTML preview page: the user's HTML is already a complete page (with its own
- * <head>/styles/scripts), so we can't wrap it in our template. Instead we inject
- * a small badge + a reconnect script into its existing content. Content updates
- * trigger a full page reload (location.reload) rather than a targeted replacement,
- * since arbitrary HTML/JS/CSS can't be safely patched via innerHTML.
- */
+
 function htmlLiveReloadSnippet(id: string, title: string, fullPath: string, relPath: string): string {
 	return htmlSnippet
 		.replace(/\{\{CSS\}\}/g, () => pageCss)
@@ -460,24 +101,17 @@ function htmlPageTemplate(id: string, rawHtml: string, title: string, fullPath: 
 	if (bodyCloseRegex.test(rawHtml)) {
 		withSnippet = rawHtml.replace(bodyCloseRegex, snippet + '</body>');
 	} else {
-		// No </body> found (e.g. it's just an HTML fragment) - append at the end
 		withSnippet = rawHtml + snippet;
 	}
-
-	// Inject a <base> tag so the user's relative asset references (e.g. <img src="images/x.png">)
-	// resolve against /preview/:id/ rather than the bare /preview/:id URL. Skipped if a <base>
-	// tag already exists (don't override the user's own choice) or there's no <head> to inject into.
 	const headOpenRegex = /<head[^>]*>/i;
 	if (!/<base[^>]*>/i.test(withSnippet) && headOpenRegex.test(withSnippet)) {
 		withSnippet = withSnippet.replace(headOpenRegex, (tag) => `${tag}\n<base href="/preview/${id}/" />`);
 	}
-
-	// Rewrite relative links/src to be root-relative so they resolve via the preview URL
-	// (and so `../` links inside the workspace work). Absolute/external links are left alone.
 	const docDir = path.dirname(fullPath);
 	withSnippet = rewriteHtmlLinks(withSnippet, docDir, rootDir);
 	return withSnippet;
 }
+
 export class PreviewServer {
 	private server: http.Server;
 	private wss: WebSocketServer;
@@ -530,13 +164,11 @@ export class PreviewServer {
 		const bodyHtml = renderMarkdown(content, docDir, rootDir, id);
 		return { page: markdownPageTemplate(id, title, bodyHtml, fullPath, relPath, rootDir), bodyHtml };
 	}
-	/** Register/refresh a document, returning its preview id (calling this multiple times for the same file reuses the same id/link) */
+
 	registerDocument(uriKey: string, title: string, content: string, kind: DocKind, rootDir: string, fullPath: string): string {
 		debug('register:', `file=${fullPath} rootDir=${rootDir || '(none)'} kind=${kind} contentLen=${content.length}`);
 		let id = this.uriToId.get(uriKey);
 		if (!id) {
-			// Deterministic id: the same file always yields the same link, so
-			// previews survive extension restarts/upgrades and VS Code reloads.
 			id = crypto.createHash('sha256').update(uriKey).digest('hex').slice(0, 12);
 			this.uriToId.set(uriKey, id);
 		}
@@ -574,6 +206,7 @@ export class PreviewServer {
 			if (client.readyState === client.OPEN) { client.send(payload); }
 		}
 	}
+
 	closeDocument(uriKey: string): void {
 		const id = this.uriToId.get(uriKey);
 		if (!id) { return; }
@@ -583,7 +216,6 @@ export class PreviewServer {
 			for (const client of entry.clients) {
 				if (client.readyState === client.OPEN) { client.send(payload); }
 			}
-			// Keep it around for a few seconds so any open browser tabs can receive the "closed" notice before cleanup
 			setTimeout(() => this.docs.delete(id as string), 5000);
 		}
 		this.uriToId.delete(uriKey);
@@ -602,82 +234,12 @@ export class PreviewServer {
 		return `http://127.0.0.1:${this.port}/preview/${id}`;
 	}
 
-	/**
-	 * Internal debug helper: return the exact full HTML the preview currently
-	 * serves for a registered document, prefixed with a marker comment so the
-	 * export command can recognize its own files. Output is verbatim (no asset
-	 * embedding / link rewriting). Returns null if the document isn't registered.
-	 */
 	renderHtmlForUri(uriKey: string): string | null {
 		const id = this.uriToId.get(uriKey);
 		if (!id) { return null; }
 		const entry = this.docs.get(id);
 		if (!entry) { return null; }
 		return `<!-- onair:export:md -->\n${entry.page}`;
-	}
-
-	/**
-	 * In-project cross-reference resolver. A bare `NAME.md` token in a document is
-	 * linked to `/xref?q=NAME.md&from=<id>` (see `linkifyMdTokens`). This
-	 * resolves it: walks the source document's rootDir for `.md`/`.markdown`/`.mdx` files
-	 * whose basename matches, sorts by path proximity to the source, then either
-	 * 302-redirects to the single match's preview, or renders a minimal picker
-	 * page (also embedded in a popover client-side). The picker and the full-page
-	 * navigation share this exact HTML, so the render path is single-source.
-	 */
-	private handleXref(req: http.IncomingMessage, res: http.ServerResponse, url: string): void {
-		const m = url.match(/^\/xref\??([#?].*)?$/);
-		if (!m) { return; }
-		const params = new URLSearchParams(url.includes('?') ? url.slice(url.indexOf('?') + 1) : '');
-		const q = (params.get('q') || '').trim();
-		const fromId = params.get('from');
-		const fragment = params.get('fragment') === '1';
-		const fromEntry = fromId ? this.docs.get(fromId) : undefined;
-		const sourcePath = fromEntry?.fullPath;
-
-		res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-		if (!q) {
-			res.end(xrefPage([], q, fromEntry?.title ?? null, sourcePath ?? null, fragment));
-			return;
-		}
-
-		const rootDir = fromEntry?.rootDir || '';
-		const matches: string[] = [];
-		if (rootDir && !isDangerousRootDir(rootDir)) {
-			const XREF_MAX_DEPTH = 15;
-			const walk = (dir: string, depth: number = 0): void => {
-				if (depth > XREF_MAX_DEPTH) return;
-				let entries: fs.Dirent[];
-				try { entries = fs.readdirSync(dir, { withFileTypes: true }); }
-				catch { return; }
-				for (const e of entries) {
-					const full = path.join(dir, e.name);
-					if (e.isDirectory()) {
-						if (e.name === 'node_modules' || e.name === '.git') { continue; }
-						walk(full, depth + 1);
-					} else if (e.isFile()) {
-						const ext = path.extname(e.name).toLowerCase();
-						if (isMarkdownExt(ext) && e.name.toLowerCase() === q.toLowerCase()) {
-							matches.push(full);
-						}
-					}
-				}
-			};
-		walk(rootDir);
-	}
-
-		const sorted = matches
-			.filter(p => !sourcePath || path.resolve(p) !== path.resolve(sourcePath))
-			.sort((a, b) => proximity(a, sourcePath) - proximity(b, sourcePath));
-
-		if (sorted.length === 1) {
-			const uriKey = vscode.Uri.file(sorted[0]).toString();
-			const id = this.uriToId.get(uriKey) || crypto.createHash('sha256').update(uriKey).digest('hex').slice(0, 12);
-			res.writeHead(302, { Location: `/preview/${id}?file=${encodeURIComponent(sorted[0])}` });
-			res.end();
-			return;
-		}
-		res.end(xrefPage(sorted, q, fromEntry?.title ?? null, sourcePath ?? null, fragment));
 	}
 
 	getLanIp(): string | null {
@@ -695,338 +257,25 @@ export class PreviewServer {
 
 	private handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
 		const url = req.url || '';
-		const u = new URL(url, 'http://localhost');
-		const pathname = u.pathname;
-		const sp = u.searchParams;
+		const { pathname } = new URL(url, 'http://localhost');
+		const typedReq = { url } as { url: string };
+		const typedReqWithHeaders = { url, headers: req.headers };
 
-		// ---- file tree API: list directory entries ----
-		if (pathname === '/api/tree') {
-			const id = sp.get('id') || '';
-			const dir = sp.get('dir') || '';
-			const respectGitignore = sp.get('respectGitignore') === '1';
-			const extFilter = sp.get('ext') || '';
-			const hideBinary = sp.get('hideBinary') === '1';
-
-			const entry = this.docs.get(id);
-			if (!entry) {
-				res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
-				res.end(JSON.stringify({ error: 'Preview not found' }));
-				return;
-			}
-
-			const rootDirResolved = path.resolve(entry.rootDir);
-			if (isDangerousRootDir(entry.rootDir)) {
-				debugWarn('/api/tree: rootDir empty or unsafe, returning empty tree.', `file=${entry.fullPath} rootDir=${JSON.stringify(entry.rootDir)}`);
-				res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-				res.end(JSON.stringify({ dir: '', entries: [] }));
-				return;
-			}
-			const targetDir = dir ? path.resolve(rootDirResolved, dir) : rootDirResolved;
-			if (dir && !targetDir.startsWith(rootDirResolved + path.sep)) {
-				res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
-				res.end(JSON.stringify({ error: 'Directory outside root' }));
-				return;
-			}
-
-			let dirents: fs.Dirent[];
-			try { dirents = fs.readdirSync(targetDir, { withFileTypes: true }); }
-			catch {
-				res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
-				res.end(JSON.stringify({ error: 'Cannot read directory' }));
-				return;
-			}
-
-			// Load root .gitignore
-			let ig: ReturnType<typeof ignore> | null = null;
-			if (respectGitignore) {
-				try {
-					const giPath = path.join(rootDirResolved, '.gitignore');
-					ig = ignore().add(fs.readFileSync(giPath, 'utf8'));
-				} catch { /* no .gitignore — skip */ }
-			}
-
-			const result: Array<{ name: string; type: string; path: string; ext: string; size?: number }> = [];
-			for (const e of dirents) {
-				if (e.name.startsWith('.')) {continue;}
-				const full = path.join(targetDir, e.name);
-				const relPath = toPosix(path.relative(rootDirResolved, full));
-
-				if (e.isDirectory()) {
-					if (e.name === 'node_modules' || e.name === '.git' || e.name === '.vscode') {continue;}
-					if (ig && ig.ignores(relPath + '/')) {continue;}
-					// Check if directory has any visible children
-					try {
-						const subEntries = fs.readdirSync(full, { withFileTypes: true });
-						const hasVisible = subEntries.some(se => {
-							if (se.name.startsWith('.')) return false;
-							if (se.isDirectory()) {
-								if (se.name === 'node_modules' || se.name === '.git' || se.name === '.vscode') return false;
-								if (ig && ig.ignores(relPath + '/' + se.name + '/')) return false;
-								return true;
-							}
-							if (!se.isFile()) return false;
-							const ext = path.extname(se.name).toLowerCase();
-							if (extFilter && !extFilter.split(',').includes(ext)) return false;
-							if (ig && ig.ignores(relPath + '/' + se.name)) return false;
-							if (hideBinary) {
-								const supportedExts = new Set(SUPPORTED_EXTS as readonly string[]);
-								const imageExts = new Set(IMAGE_EXTS as readonly string[]);
-								if (!supportedExts.has(ext)) return false;
-								if (!imageExts.has(ext)) {
-									try {
-										const fd = fs.openSync(path.join(full, se.name), 'r');
-										const buf = Buffer.alloc(8192);
-										const bytesRead = fs.readSync(fd, buf, 0, 8192, 0);
-										fs.closeSync(fd);
-										if (buf.subarray(0, bytesRead).includes(0)) return false;
-									} catch { return false; }
-								}
-							}
-							return true;
-						});
-						if (!hasVisible) continue;
-					} catch { continue; }
-					result.push({ name: e.name, type: 'directory', path: relPath, ext: '' });
-				} else if (e.isFile()) {
-					const ext = path.extname(e.name).toLowerCase();
-					if (extFilter && !extFilter.split(',').includes(ext)) {continue;}
-					if (ig && ig.ignores(relPath)) {continue;}
-					if (hideBinary) {
-						const supportedExts = new Set(SUPPORTED_EXTS as readonly string[]);
-						const imageExts = new Set(IMAGE_EXTS as readonly string[]);
-						if (!supportedExts.has(ext)) { continue; }
-						if (!imageExts.has(ext)) {
-							try {
-								const fd = fs.openSync(full, 'r');
-								const buf = Buffer.alloc(8192);
-								const bytesRead = fs.readSync(fd, buf, 0, 8192, 0);
-								fs.closeSync(fd);
-								if (buf.subarray(0, bytesRead).includes(0)) {continue;}
-							} catch { continue; }
-						}
-					}
-					result.push({ name: e.name, type: 'file', path: relPath, ext, size: fs.statSync(full).size });
-				}
-			}
-
-			res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-			res.end(JSON.stringify({ dir: toPosix(path.relative(rootDirResolved, targetDir) || ''), entries: result }));
-			return;
+		if (pathname === '/api/tree')          return handleTree(typedReq, res, this.docs);
+		if (pathname === '/api/file')          return handleFile(typedReq, res, this.docs);
+		if (pathname === '/api/file-index')    return handleFileIndex(typedReq, res, this.docs);
+		if (pathname.startsWith('/preview/'))  {
+			const staticMatch = pathname.match(/^\/preview\/([a-f0-9]+)\/(.+)$/);
+			if (staticMatch)                   return handleStatic(typedReqWithHeaders, res, this.docs, this.uriToId, (a, b, c, d, e, f) => this.registerDocument(a, b, c, d as DocKind, e, f));
+			const pageMatch = pathname.match(/^\/preview\/([a-f0-9]+)\/?$/);
+			if (pageMatch)                     return handlePreview(typedReq, res, this.docs, (a, b, c, d, e, f) => this.registerDocument(a, b, c, d as DocKind, e, f));
 		}
-
-		// ---- file API: read and return file content ----
-		if (pathname === '/api/file') {
-			const id = sp.get('id') || '';
-			const filePath = sp.get('path') || '';
-
-			const entry = this.docs.get(id);
-			if (!entry) {
-				res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
-				res.end(JSON.stringify({ error: 'Preview not found' }));
-				return;
-			}
-
-			const absPath = resolveStaticPath(entry.rootDir, filePath);
-			if (!absPath) {
-				res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
-				res.end(JSON.stringify({ error: 'File not found' }));
-				return;
-			}
-
-			try {
-				const buf = fs.readFileSync(absPath);
-				const isBinary = buf.includes(0);
-				const content = isBinary ? null : buf.toString('utf8');
-				res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-				res.end(JSON.stringify({ content, ext: path.extname(absPath).toLowerCase(), size: buf.length, isBinary }));
-			} catch {
-				res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
-				res.end(JSON.stringify({ error: 'Cannot read file' }));
-			}
-			return;
-		}
-
-		// ---- file index API: return flat recursive file list ----
-		if (pathname === '/api/file-index') {
-			const id = sp.get('id') || '';
-			const entry = this.docs.get(id);
-			if (!entry) {
-				res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
-				res.end(JSON.stringify({ error: 'Preview not found' }));
-				return;
-			}
-
-			const rootDirResolved = path.resolve(entry.rootDir);
-			if (isDangerousRootDir(entry.rootDir)) {
-				debugWarn('/api/file-index: rootDir empty or unsafe, returning empty index.', `file=${entry.fullPath} rootDir=${JSON.stringify(entry.rootDir)}`);
-				res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-				res.end(JSON.stringify({ entries: [] }));
-				return;
-			}
-			const index: Array<{ name: string; type: string; path: string; ext: string; size: number }> = [];
-
-			const ig: ReturnType<typeof ignore> | null = (() => {
-				try {
-					return ignore().add(fs.readFileSync(path.join(rootDirResolved, '.gitignore'), 'utf8'));
-				} catch { return null; }
-			})();
-
-			const skipDirs = new Set(['node_modules', '.git', '.vscode']);
-			const supportedExts = new Set(SUPPORTED_EXTS as readonly string[]);
-			const imageExts = new Set(IMAGE_EXTS as readonly string[]);
-
-			const MAX_WALK_DEPTH = 15;
-			const MAX_INDEX_ENTRIES = 5000;
-
-			const walk = (dir: string, depth: number = 0) => {
-				if (depth > MAX_WALK_DEPTH || index.length >= MAX_INDEX_ENTRIES) return;
-				let dirents: fs.Dirent[];
-				try { dirents = fs.readdirSync(dir, { withFileTypes: true }); }
-				catch { return; }
-
-				for (const e of dirents) {
-					if (e.name.startsWith('.')) continue;
-					if (e.isDirectory()) {
-						if (skipDirs.has(e.name)) continue;
-						const rel = toPosix(path.relative(rootDirResolved, path.join(dir, e.name)));
-						if (ig && ig.ignores(rel + '/')) continue;
-						index.push({ name: e.name, type: 'directory', path: rel, ext: '', size: 0 });
-						walk(path.join(dir, e.name), depth + 1);
-					} else if (e.isFile()) {
-						const ext = path.extname(e.name).toLowerCase();
-						const full = path.join(dir, e.name);
-						const rel = toPosix(path.relative(rootDirResolved, full));
-						if (ig && ig.ignores(rel)) continue;
-						if (!supportedExts.has(ext)) continue;
-						if (!imageExts.has(ext)) {
-							try {
-								const fd = fs.openSync(full, 'r');
-								const buf = Buffer.alloc(8192);
-								const bytesRead = fs.readSync(fd, buf, 0, 8192, 0);
-								fs.closeSync(fd);
-								if (buf.subarray(0, bytesRead).includes(0)) continue;
-							} catch { continue; }
-						}
-						try {
-							const stat = fs.statSync(full);
-							index.push({ name: e.name, type: 'file', path: rel, ext, size: stat.size });
-						} catch { /* skip */ }
-					}
-				}
-			};
-
-			walk(rootDirResolved);
-
-			res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-			res.end(JSON.stringify({ entries: index }));
-			return;
-		}
-
-		// Static assets alongside the source file, e.g. /preview/<id>/images/foo.png,
-		// referenced via relative paths like `images/foo.png` or `embeds/x.html` in the
-		// source document. Checked before the bare preview-page route below.
-		const staticMatch = pathname.match(/^\/preview\/([a-f0-9]+)\/(.+)$/);
-		if (staticMatch) {
-			const entry = this.docs.get(staticMatch[1]);
-			if (!entry) {
-				res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-				res.end('Preview not found or has been closed. Please regenerate the link in VS Code.');
-				return;
-			}
-			const rel = staticMatch[2];
-			const filePath = resolveStaticPath(entry.rootDir, rel);
-			if (!filePath) {
-				res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-				res.end('File not found');
-				return;
-			}
-
-			// If the request has a Referer pointing to a preview page (e.g. an <iframe>
-			// inside the preview), serve the raw file directly instead of redirecting to
-			// another preview — iframes need the original content, not the wrapped page.
-			const referer = req.headers.referer || '';
-			const isEmbedded = referer.includes('/preview/');
-
-			if (!isEmbedded) {
-				// A relative link to another Markdown/HTML document: register it on demand
-				// (sharing the same id the extension would use) and redirect to its preview,
-				// so clicking the link opens a rendered, live-syncable preview instead of raw bytes.
-				const kind = kindFromPath(filePath);
-				if (kind) {
-					const frag = rel.includes('#') ? '#' + rel.split('#')[1] : '';
-					const uriKey = vscode.Uri.file(filePath).toString();
-					const existingId = this.uriToId.get(uriKey);
-					if (existingId) {
-						res.writeHead(302, { Location: `/preview/${existingId}${frag}` });
-						res.end();
-						return;
-					}
-					fs.readFile(filePath, 'utf8', (err, data) => {
-						if (err) {
-							res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-							res.end('File not found');
-							return;
-						}
-						const targetWs = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(filePath));
-						const targetRootDir = targetWs ? targetWs.uri.fsPath : path.dirname(filePath);
-						const newId = this.registerDocument(uriKey, path.basename(filePath), data, kind, targetRootDir, filePath);
-						res.writeHead(302, { Location: `/preview/${newId}${frag}` });
-						res.end();
-					});
-					return;
-				}
-			}
-
-			fs.readFile(filePath, (err, data) => {
-				if (err) {
-					res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-					res.end('File not found');
-					return;
-				}
-				res.writeHead(200, { 'Content-Type': mimeType(filePath) });
-				res.end(data);
-			});
-			return;
-		}
-
-		const match = pathname.match(/^\/preview\/([a-f0-9]+)\/?$/);
-		if (match) {
-			const entry = this.docs.get(match[1]);
-			if (!entry) {
-				// Lazy registration: an xref link may point at a file that was
-				// found on disk but never opened as a preview. Load it and register
-				// on demand (mirrors the relative-link path at the top of this method).
-				const file = sp.get('file');
-				const kind = file ? kindFromPath(file) : null;
-				if (file && kind && fs.existsSync(file)) {
-					const data = fs.readFileSync(file, 'utf8');
-					const ws = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(file));
-					const rootDir = ws ? ws.uri.fsPath : path.dirname(file);
-					const newId = this.registerDocument(vscode.Uri.file(file).toString(), path.basename(file), data, kind, rootDir, file);
-					const newEntry = this.docs.get(newId);
-					if (newEntry) {
-						res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-						res.end(newEntry.page);
-						return;
-					}
-				}
-				res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-				res.end('Preview not found or has been closed. Please regenerate the link in VS Code.');
-				return;
-			}
-			res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-			res.end(entry.page);
-			return;
-		}
-
-		if (/^\/xref\b/.test(url)) {
-			this.handleXref(req, res, url);
-			return;
-		}
+		if (/^\/xref\b/.test(url))            return handleXref(typedReq, res, this.docs, this.uriToId);
 
 		res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
 		res.end('Not found');
 	}
+
 	private handleUpgrade(req: http.IncomingMessage, socket: import('stream').Duplex, head: Buffer): void {
 		const url = req.url || '';
 		const match = url.match(/^\/ws\/([a-f0-9]+)\/?$/);
