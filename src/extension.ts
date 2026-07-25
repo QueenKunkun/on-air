@@ -38,11 +38,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		const uriKey = doc.uri.toString();
 		const wsFolder = doc.uri.scheme === 'file' ? vscode.workspace.getWorkspaceFolder(doc.uri) : undefined;
 		const rootDir = wsFolder ? wsFolder.uri.fsPath : '';
-		const wsFolders = vscode.workspace.workspaceFolders || [];
-		console.log(`[on-air] generateUrl: scheme=${doc.uri.scheme} file=${doc.fileName}`);
-		console.log(`[on-air]   rootDir=${rootDir || '(none)'}`);
-		console.log(`[on-air]   workspaceFolders=${wsFolders.map(f => f.uri.fsPath).join(', ') || '(none)'}`);
-		console.log(`[on-air]   wsFolder=${wsFolder?.uri.fsPath || '(none)'} name=${wsFolder?.name || '(none)'}`);
+		console.log(`[on-air] generateUrl: scheme=${doc.uri.scheme} rootDir=${rootDir || '(none)'} file=${doc.fileName}`);
 		const id = server.registerDocument(uriKey, fileTitle(doc), doc.getText(), kind, rootDir, doc.fileName);
 			const url = server.buildUrl(id);
 			const lanIp = server.getLanIp();
