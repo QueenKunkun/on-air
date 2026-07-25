@@ -2,6 +2,7 @@ import { h, render } from 'preact';
 import { useState, useCallback, useEffect, useRef } from 'preact/hooks';
 import type { TreeEntry } from './types';
 import { FilePreview, FilePreviewError, FilePreviewBinary, FilePreviewCode } from './components/FilePreview';
+import { MARKDOWN_EXTS, isMarkdownExt, markdownExtFilter } from '../common/extensions';
 
 interface Props {
   id: string;
@@ -20,14 +21,14 @@ interface FileIndexEntry {
 function makeFilterParams(id: string, dir: string, f: Filters): string {
   const p = new URLSearchParams({ id, dir });
   if (f.gitignore) p.set('respectGitignore', '1');
-  if (f.mdOnly) p.set('ext', '.md,.mdx');
+  if (f.mdOnly) p.set('ext', markdownExtFilter());
   if (f.hideBinary) p.set('hideBinary', '1');
   return p.toString();
 }
 
 function isTextFile(p: string): boolean {
-  const l = p.toLowerCase();
-  return l.endsWith('.md') || l.endsWith('.markdown') || l.endsWith('.mdx');
+  const ext = p.toLowerCase().split('.').pop() || '';
+  return isMarkdownExt('.' + ext);
 }
 
 function isImageFile(p: string): boolean {
@@ -77,7 +78,7 @@ function dirHasVisibleFiles(dirPath: string, index: FileIndexEntry[], filters: F
     if (e.type !== 'file') return false;
     if (prefix && !e.path.startsWith(prefix)) return false;
     if (!prefix && e.path.includes('/')) return false;
-    if (filters.mdOnly && e.ext !== '.md' && e.ext !== '.mdx') return false;
+    if (filters.mdOnly && !isMarkdownExt(e.ext)) return false;
     return true;
   });
 }
@@ -387,7 +388,7 @@ export function FileTree({ id }: Props) {
     <div class="ft-root">
       <div class="ft-filter">
         <label><input type="checkbox" checked={filters.gitignore} onChange={() => handleFilterChange('gitignore')} /> .gitignore</label>
-        <label><input type="checkbox" checked={filters.mdOnly} onChange={() => handleFilterChange('mdOnly')} /> .md/.mdx</label>
+        <label><input type="checkbox" checked={filters.mdOnly} onChange={() => handleFilterChange('mdOnly')} /> {MARKDOWN_EXTS.join('/')}</label>
         <label><input type="checkbox" checked={filters.hideBinary} onChange={() => handleFilterChange('hideBinary')} /> Hide unsupported</label>
         <span class="ft-filter-spacer"></span>
         <input class="ft-search" type="text" placeholder="Filter: *.svg" value={searchQuery} onInput={(e: h.JSX.TargetedEvent<HTMLInputElement>) => setSearchQuery((e.target as HTMLInputElement).value)} onKeydown={(e: h.JSX.TargetedKeyboardEvent<HTMLInputElement>) => { if (e.key === 'Escape') setSearchQuery(''); }} />

@@ -177,7 +177,8 @@ export function buildRelatedLinks(tocEl: HTMLElement, rootEl: HTMLElement): void
 		const href = a.getAttribute('href') || '';
 		if (href.slice(0, 2) === '//') continue;
 		if (/^[a-z][a-z0-9+.-]*:|#|data:/i.test(href)) continue;
-		if (!/\.(md|markdown|html?)([#?].*)?$/i.test(href)) continue;
+		// NOTE: Keep in sync with src/common/extensions.ts MARKDOWN_EXTS
+		if (!/\.(md|markdown|mdx|html?)([#?].*)?$/i.test(href)) continue;
 		const key = href.replace(/^\.\//, '').replace(/[#?].*$/, '');
 		if (seen[key]) continue;
 		seen[key] = true;
@@ -399,7 +400,8 @@ function buildRelatedLinks(tocEl, rootEl) {
 		var href = a.getAttribute('href') || '';
 		if (href.slice(0, 2) === '//') continue;
 		if (/^[a-z][a-z0-9+.-]*:|#|data:/i.test(href)) continue;
-		if (!/\\.(md|markdown|html?)([#?].*)?$/i.test(href)) continue;
+		// NOTE: Keep in sync with src/common/extensions.ts MARKDOWN_EXTS
+		if (!/\\.(md|markdown|mdx|html?)([#?].*)?$/i.test(href)) continue;
 		var key = href.replace(/^\\.\\//, '').replace(/[#?].*$/, '');
 		if (seen[key]) continue;
 		seen[key] = true;

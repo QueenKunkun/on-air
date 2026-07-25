@@ -10,6 +10,7 @@ import markdownItFootnote from 'markdown-it-footnote';
 import markdownItMark from 'markdown-it-mark';
 import hljs from 'highlight.js/lib/core';
 import ignore from 'ignore';
+import { MARKDOWN_EXTS, SUPPORTED_EXTS, IMAGE_EXTS, isMarkdownExt } from './common/extensions';
 
 // Only register the languages we actually want to highlight, instead of pulling in
 // highlight.js's full language set (~190 languages, ~1MB+) via the default import.
@@ -250,17 +251,19 @@ function renderMarkdown(source: string, docDir: string, rootDir: string, fromId?
  * matched by markdown's link rules, and with fuzzy linkify disabled they stay plain
  * text — so we re-link them here as `<a class="onair-xref" href="/xref?…">`.
  *
- * Scoped to `.md`/`.markdown`/`.mdx` only. Skips tokens already inside an `<a>` or
+ * Scoped to markdown extensions only. Skips tokens already inside an `<a>` or
  * `<code>`/`<pre>` (the negative lookbehind avoids `href="…"` and `>` from a
  * preceding close tag), so existing links and inline code are untouched.
  */
+const MD_LINKIFY_RE = new RegExp(`(^|[\\s<("'])([\\w-]*\\.(?:${MARKDOWN_EXTS.map(e => e.slice(1)).join('|')}))(?!\\w)(?=$|\\s|<)`, 'gi');
 function linkifyMdTokens(html: string, fromId?: string): string {
 	const xref = (name: string): string => {
 		const q = encodeURIComponent(name);
 		const from = fromId ? `&from=${encodeURIComponent(fromId)}` : '';
 		return `<a class="onair-xref" target="_blank" href="/xref?q=${q}${from}">${name}</a>`;
 	};
-	return html.replace(/(^|[\s<("'])([\w-]*\.(?:markdown|mdx|md))(?!\w)(?=$|\s|<)/gi, (_m, pre, name) => {
+	MD_LINKIFY_RE.lastIndex = 0;
+	return html.replace(MD_LINKIFY_RE, (_m, pre, name) => {
 		if (pre === '>' || pre === '"' || pre === "'" || pre === '.') { return _m; }
 		return pre + xref(name);
 	});
@@ -304,13 +307,12 @@ function computeDisplayPath(fsPath: string): string {
 }
 
 const MIME_TYPES: Record<string, string> = {
+	...Object.fromEntries(MARKDOWN_EXTS.map(e => [e, 'text/markdown; charset=utf-8'])),
 	'.html': 'text/html; charset=utf-8',
 	'.htm': 'text/html; charset=utf-8',
 	'.css': 'text/css; charset=utf-8',
 	'.js': 'text/javascript; charset=utf-8',
 	'.json': 'application/json; charset=utf-8',
-	'.md': 'text/markdown; charset=utf-8',
-	'.mdx': 'text/markdown; charset=utf-8',
 	'.txt': 'text/plain; charset=utf-8',
 	'.svg': 'image/svg+xml',
 	'.png': 'image/png',
@@ -371,7 +373,7 @@ function resolveStaticPath(rootDir: string, relPath: string): string | null {
 }
 function kindFromPath(p: string): DocKind | null {
 	const ext = path.extname(p).toLowerCase();
-	if (ext === '.md' || ext === '.markdown' || ext === '.mdx') { return 'markdown'; }
+	if (isMarkdownExt(ext)) { return 'markdown'; }
 	if (ext === '.html' || ext === '.htm') { return 'html'; }
 	return null;
 }
@@ -632,7 +634,7 @@ export class PreviewServer {
 						walk(full);
 					} else if (e.isFile()) {
 						const ext = path.extname(e.name).toLowerCase();
-						if ((ext === '.md' || ext === '.markdown' || ext === '.mdx') && e.name.toLowerCase() === q.toLowerCase()) {
+						if (isMarkdownExt(ext) && e.name.toLowerCase() === q.toLowerCase()) {
 							matches.push(full);
 						}
 					}
@@ -738,8 +740,8 @@ export class PreviewServer {
 							if (extFilter && !extFilter.split(',').includes(ext)) return false;
 							if (ig && ig.ignores(relPath + '/' + se.name)) return false;
 							if (hideBinary) {
-								const supportedExts = new Set(['.md', '.markdown', '.mdx', '.html', '.htm', '.txt', '.log', '.json', '.js', '.css', '.ts', '.tsx', '.jsx', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico', '.pdf']);
-								const imageExts = new Set(['.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico']);
+								const supportedExts = new Set(SUPPORTED_EXTS as readonly string[]);
+								const imageExts = new Set(IMAGE_EXTS as readonly string[]);
 								if (!supportedExts.has(ext)) return false;
 								if (!imageExts.has(ext)) {
 									try {
@@ -761,8 +763,8 @@ export class PreviewServer {
 					if (extFilter && !extFilter.split(',').includes(ext)) {continue;}
 					if (ig && ig.ignores(relPath)) {continue;}
 					if (hideBinary) {
-						const supportedExts = new Set(['.md', '.markdown', '.mdx', '.html', '.htm', '.txt', '.log', '.json', '.js', '.css', '.ts', '.tsx', '.jsx', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico', '.pdf']);
-						const imageExts = new Set(['.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico']);
+						const supportedExts = new Set(SUPPORTED_EXTS as readonly string[]);
+						const imageExts = new Set(IMAGE_EXTS as readonly string[]);
 						if (!supportedExts.has(ext)) { continue; }
 						if (!imageExts.has(ext)) {
 							try {
@@ -835,8 +837,8 @@ export class PreviewServer {
 			})();
 
 			const skipDirs = new Set(['node_modules', '.git', '.vscode']);
-			const supportedExts = new Set(['.md', '.markdown', '.mdx', '.html', '.htm', '.txt', '.log', '.json', '.js', '.css', '.ts', '.tsx', '.jsx', '.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico', '.pdf']);
-			const imageExts = new Set(['.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico']);
+			const supportedExts = new Set(SUPPORTED_EXTS as readonly string[]);
+			const imageExts = new Set(IMAGE_EXTS as readonly string[]);
 
 			const walk = (dir: string) => {
 				let dirents: fs.Dirent[];
