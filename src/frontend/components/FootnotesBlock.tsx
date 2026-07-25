@@ -3,9 +3,10 @@ import { useState, useEffect, useRef } from 'preact/hooks';
 
 interface FootnotesBlockProps {
 	contentEl: HTMLElement | null;
+	contentVersion: number;
 }
 
-export function FootnotesBlock({ contentEl }: FootnotesBlockProps) {
+export function FootnotesBlock({ contentEl, contentVersion }: FootnotesBlockProps) {
 	const [collapsed, setCollapsed] = useState(() =>
 		localStorage.getItem('onair-footnotes-collapsed') === '1'
 	);
@@ -21,7 +22,7 @@ export function FootnotesBlock({ contentEl }: FootnotesBlockProps) {
 		if (!block) return;
 		sec.parentNode?.insertBefore(block, sec);
 		block.appendChild(sec);
-	}, [contentEl]);
+	}, [contentEl, contentVersion]);
 
 	useEffect(() => {
 		localStorage.setItem('onair-footnotes-collapsed', collapsed ? '1' : '0');
@@ -29,7 +30,7 @@ export function FootnotesBlock({ contentEl }: FootnotesBlockProps) {
 
 	if (!contentEl) return null;
 	const sec = contentEl.querySelector('section.footnotes');
-	if (!sec) return null;
+	if (!sec || !sec.querySelector('li.footnote-item')) return null;
 
 	return (
 		<div ref={blockRef} id="footnotes-block" class={collapsed ? 'collapsed' : ''}>

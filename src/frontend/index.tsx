@@ -41,7 +41,7 @@ function App() {
 	return h(Layout, null,
 		h(Banner, { connStatus }),
 		h(TOC, { contentEl, fullPath, relPath, contentVersion }),
-		h(FootnotesBlock, { contentEl }),
+		h(FootnotesBlock, { contentEl, contentVersion }),
 		h(Annotations, { contentEl, contentVersion }),
 	);
 }

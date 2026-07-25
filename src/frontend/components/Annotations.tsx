@@ -119,8 +119,8 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 						const fback = fclone.querySelector('.footnote-backref');
 						if (fback) fback.parentNode?.removeChild(fback);
 						const htmlStr = fclone.innerHTML;
-						(markEl as HTMLElement).onmouseenter = (e: MouseEvent) => { if (hoverOn.current) showPopover(e, htmlStr); };
-						(markEl as HTMLElement).onmouseleave = () => { if (hoverOn.current) hidePopover(); };
+						(ref as HTMLElement).onmouseenter = (e: MouseEvent) => { if (hoverOn.current) showPopover(e, htmlStr); };
+						(ref as HTMLElement).onmouseleave = () => { if (hoverOn.current) hidePopover(); };
 					}
 					continue;
 				}
@@ -166,7 +166,7 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 			if (sec && !sec.querySelector('li.footnote-item')) {
 				const sep = contentEl!.querySelector('hr.footnotes-sep');
 				if (sep) sep.parentNode?.removeChild(sep);
-				sec.parentNode?.removeChild(sec);
+				sec.innerHTML = '';
 			}
 
 			const has = cardRegistry.current.length > 0;
@@ -176,28 +176,28 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 		}
 
 		// Annotation column resize
+		function onResizerMouseDown(e: MouseEvent) {
+			startPos = e.clientX;
+			startSize = side!.offsetWidth;
+			resizer!.classList.add('active');
+			document.addEventListener('mousemove', onResizerMouseMove);
+			document.addEventListener('mouseup', onResizerMouseUp);
+			e.preventDefault();
+		}
+		function onResizerMouseMove(e: MouseEvent) {
+			const size = Math.max(120, startSize - (e.clientX - startPos));
+			side!.style.width = size + 'px';
+		}
+		function onResizerMouseUp() {
+			resizer!.classList.remove('active');
+			localStorage.setItem('onair-annot-width', String(side!.offsetWidth));
+			document.removeEventListener('mousemove', onResizerMouseMove);
+			document.removeEventListener('mouseup', onResizerMouseUp);
+		}
+		let startPos = 0;
+		let startSize = 0;
 		if (resizer && side) {
-			let startPos = 0;
-			let startSize = 0;
-			function onMouseDown(e: MouseEvent) {
-				startPos = e.clientX;
-				startSize = side!.offsetWidth;
-				resizer!.classList.add('active');
-				document.addEventListener('mousemove', onMouseMove);
-				document.addEventListener('mouseup', onMouseUp);
-				e.preventDefault();
-			}
-			function onMouseMove(e: MouseEvent) {
-				const size = Math.max(120, startSize - (e.clientX - startPos));
-				side!.style.width = size + 'px';
-			}
-			function onMouseUp() {
-				resizer!.classList.remove('active');
-				localStorage.setItem('onair-annot-width', String(side!.offsetWidth));
-				document.removeEventListener('mousemove', onMouseMove);
-				document.removeEventListener('mouseup', onMouseUp);
-			}
-			resizer.addEventListener('mousedown', onMouseDown);
+			resizer.addEventListener('mousedown', onResizerMouseDown);
 		}
 
 		// Annotation column collapse handle
@@ -211,18 +211,20 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 			if (!c) layoutCards();
 		}
 		setAnnotCollapsed(localStorage.getItem('onair-annot-collapsed') === '1');
-		handle?.addEventListener('click', () => setAnnotCollapsed(!side!.classList.contains('collapsed')));
+		function onToggleClick() { setAnnotCollapsed(!side!.classList.contains('collapsed')); }
+		handle?.addEventListener('click', onToggleClick);
 
 		// Hover preview
 		const hoverBtn = document.getElementById('hoverBtn');
+		function onHoverBtnClick() {
+			hoverOn.current = !hoverOn.current;
+			hoverBtn!.classList.toggle('on', hoverOn.current);
+			localStorage.setItem('onair-annot-hover', hoverOn.current ? '1' : '0');
+			if (!hoverOn.current) hidePopover();
+		}
 		if (hoverBtn) {
 			if (hoverOn.current) hoverBtn.classList.add('on');
-			hoverBtn.addEventListener('click', () => {
-				hoverOn.current = !hoverOn.current;
-				hoverBtn.classList.toggle('on', hoverOn.current);
-				localStorage.setItem('onair-annot-hover', hoverOn.current ? '1' : '0');
-				if (!hoverOn.current) hidePopover();
-			});
+			hoverBtn.addEventListener('click', onHoverBtnClick);
 		}
 
 		// Click outside popover to close
@@ -236,6 +238,9 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 		buildAnnotations();
 
 		return () => {
+			if (resizer) resizer.removeEventListener('mousedown', onResizerMouseDown);
+			handle?.removeEventListener('click', onToggleClick);
+			hoverBtn?.removeEventListener('click', onHoverBtnClick);
 			document.removeEventListener('click', onDocClick);
 			pop.remove();
 		};
