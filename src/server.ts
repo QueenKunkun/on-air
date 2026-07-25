@@ -518,7 +518,7 @@ export class PreviewServer {
 	}
 	/** Register/refresh a document, returning its preview id (calling this multiple times for the same file reuses the same id/link) */
 	registerDocument(uriKey: string, title: string, content: string, kind: DocKind, rootDir: string, fullPath: string): string {
-		console.log(`[on-air] register: file=${fullPath} rootDir=${rootDir || '(none)'} kind=${kind}`);
+		console.log(`[on-air] register: file=${fullPath} rootDir=${rootDir || '(none)'} kind=${kind} contentLen=${content.length}`);
 		let id = this.uriToId.get(uriKey);
 		if (!id) {
 			// Deterministic id: the same file always yields the same link, so

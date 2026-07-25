@@ -36,14 +36,13 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		const doc = editor.document;
 		const uriKey = doc.uri.toString();
-		// Files alongside the source document (images/, embeds/, attachments/, etc.) are
-		// only resolvable on disk, so this only works for real files (not untitled buffers).
-		// When the file lives inside a workspace folder, resolve relative links against the
-		// whole folder root (so `../` links within the project work); otherwise no file tree
-		// is provided (rootDir = '') to avoid walking unrelated directories.
 		const wsFolder = doc.uri.scheme === 'file' ? vscode.workspace.getWorkspaceFolder(doc.uri) : undefined;
 		const rootDir = wsFolder ? wsFolder.uri.fsPath : '';
-		console.log(`[on-air] generateUrl: scheme=${doc.uri.scheme} file=${doc.fileName} rootDir=${rootDir || '(none)'}`);
+		const wsFolders = vscode.workspace.workspaceFolders || [];
+		console.log(`[on-air] generateUrl: scheme=${doc.uri.scheme} file=${doc.fileName}`);
+		console.log(`[on-air]   rootDir=${rootDir || '(none)'}`);
+		console.log(`[on-air]   workspaceFolders=${wsFolders.map(f => f.uri.fsPath).join(', ') || '(none)'}`);
+		console.log(`[on-air]   wsFolder=${wsFolder?.uri.fsPath || '(none)'} name=${wsFolder?.name || '(none)'}`);
 		const id = server.registerDocument(uriKey, fileTitle(doc), doc.getText(), kind, rootDir, doc.fileName);
 			const url = server.buildUrl(id);
 			const lanIp = server.getLanIp();
