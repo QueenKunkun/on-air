@@ -291,3 +291,50 @@ test('static HTML asset redirects to preview when no Referer (direct navigation)
   assert.equal(res.status, 302, 'direct request should redirect to preview');
   assert.ok(res.headers.location && res.headers.location.includes('/preview/'), 'should redirect to preview page');
 });
+
+test('missing iframe file: page still renders, text below iframe is visible', async () => {
+  const mdPath = path.join(FIXTURE_DIR, 'iframe-missing-test.md');
+  const id = server.registerDocument(
+    'test://iframe-missing-test.md',
+    'Iframe Missing Test',
+    fs.readFileSync(mdPath, 'utf8'),
+    'markdown',
+    FIXTURE_DIR,
+    mdPath
+  );
+
+  const res = await httpGet(`${baseUrl}/preview/${id}`);
+  assert.equal(res.status, 200);
+  // Page should contain the iframe tag (markdown rendered it)
+  assert.ok(res.body.includes('<iframe'), 'page should contain <iframe> tag');
+  // Page should contain the text after the iframe
+  assert.ok(res.body.includes('This text should still appear'), 'text after iframe should be present');
+  // The iframe src should reference the missing file
+  assert.ok(res.body.includes('embeds/nonexistent.html'), 'iframe src should reference nonexistent file');
+});
+
+test('missing iframe: requesting the nonexistent file returns 404', async () => {
+  const mdPath = path.join(FIXTURE_DIR, 'iframe-missing-test.md');
+  const id = server.registerDocument(
+    'test://iframe-missing-test-2.md',
+    'Iframe Missing Test 2',
+    fs.readFileSync(mdPath, 'utf8'),
+    'markdown',
+    FIXTURE_DIR,
+    mdPath
+  );
+
+  const res = await new Promise((resolve, reject) => {
+    http.get(`${baseUrl}/preview/${id}/embeds/nonexistent.html`, {
+      headers: { 'Referer': `${baseUrl}/preview/${id}` }
+    }, (resp) => {
+      let data = '';
+      resp.on('data', (chunk) => { data += chunk; });
+      resp.on('end', () => {
+        resolve({ status: resp.statusCode, body: data });
+      });
+    }).on('error', reject);
+  });
+
+  assert.equal(res.status, 404, 'missing file should return 404');
+});
