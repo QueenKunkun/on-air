@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { PreviewServer, DocKind } from './server';
 import { debug, setDebugEnabled } from './common/debug';
 import { DEFAULT_PORT } from './common/constants';
+import { IMAGE_EXTS } from './common/extensions';
 
 let server: PreviewServer | undefined;
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -12,9 +13,13 @@ function fileTitle(doc: vscode.TextDocument): string {
 	return doc.fileName.split(/[\\/]/).pop() || 'Untitled';
 }
 
-function docKind(languageId: string): DocKind | null {
-	if (languageId === 'markdown') { return 'markdown'; }
-	if (languageId === 'html') { return 'html'; }
+const IMAGE_EXT_SET = new Set<string>(IMAGE_EXTS);
+
+function docKind(doc: vscode.TextDocument): DocKind | null {
+	if (doc.languageId === 'markdown') { return 'markdown'; }
+	if (doc.languageId === 'html') { return 'html'; }
+	const ext = path.extname(doc.fileName).toLowerCase();
+	if (IMAGE_EXT_SET.has(ext)) { return 'image'; }
 	return null;
 }
 
@@ -31,9 +36,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand('onAir.generateUrl', async () => {
 			const editor = vscode.window.activeTextEditor;
-			const kind = editor ? docKind(editor.document.languageId) : null;
+			const kind = editor ? docKind(editor.document) : null;
 			if (!editor || !kind) {
-				vscode.window.showWarningMessage('Please open a Markdown or HTML file first to generate a preview link');
+				vscode.window.showWarningMessage('Please open a Markdown, HTML, or image file first to generate a preview link');
 				return;
 			}
 			if (!server) { return; }
@@ -46,7 +51,8 @@ export async function activate(context: vscode.ExtensionContext) {
 		const wsFolder = doc.uri.scheme === 'file' ? vscode.workspace.getWorkspaceFolder(doc.uri) : undefined;
 		const rootDir = wsFolder ? wsFolder.uri.fsPath : '';
 		debug(`generateUrl: scheme=${doc.uri.scheme} rootDir=${rootDir || '(none)'} file=${doc.fileName}`);
-		const id = server.registerDocument(uriKey, fileTitle(doc), doc.getText(), kind, rootDir, doc.fileName);
+		const content = kind === 'image' ? doc.fileName : doc.getText();
+		const id = server.registerDocument(uriKey, fileTitle(doc), content, kind, rootDir, doc.fileName);
 			const url = server.buildUrl(id);
 			const lanIp = server.getLanIp();
 			const lanUrl = lanIp ? `http://${lanIp}:${server.port}/preview/${id}` : null;
@@ -79,7 +85,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 
 		vscode.workspace.onDidChangeTextDocument((e) => {
-			const kind = docKind(e.document.languageId);
+			const kind = docKind(e.document);
 			if (!kind) { return; }
 			const uriKey = e.document.uri.toString();
 			const existing = debounceTimers.get(uriKey);
@@ -92,7 +98,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 
 		vscode.workspace.onDidCloseTextDocument((doc) => {
-			if (!docKind(doc.languageId)) { return; }
+			if (!docKind(doc)) { return; }
 			server?.closeDocument(doc.uri.toString());
 		}),
 
@@ -107,7 +113,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand('onAir.exportPreviewHtml', async () => {
 			const editor = vscode.window.activeTextEditor;
-			if (!editor || docKind(editor.document.languageId) !== 'markdown') {
+			if (!editor || docKind(editor.document) !== 'markdown') {
 				vscode.window.showWarningMessage('Open a Markdown file first to export its preview HTML');
 				return;
 			}

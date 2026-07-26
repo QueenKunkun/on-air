@@ -263,3 +263,30 @@ test('port fallback: EADDRINUSE after exhausting all retries', async () => {
 	);
 	for (const b of blockers) b.stop();
 });
+
+// ─── Image preview test ──────────────────────────────────────────────────────
+
+test('E2E: image preview renders base64 data URL', async () => {
+	// Create a tiny 1x1 red PNG (67 bytes)
+	const pngBuf = Buffer.from(
+		'89504e470d0a1a0a0000000d4948445200000001000000010802000000' +
+		'900104000000b0' + // IDAT chunk header + compressed red pixel
+		'ffffff' + // filter byte + RGB
+		'0000000c4944415408d763f8cf80000000201' +
+		'010000050001a2fd5e0000000049454e44ae426082', 'hex');
+	const imgPath = path.join(FIXTURE_DIR, 'test-image.png');
+	fs.writeFileSync(imgPath, pngBuf);
+
+	const id = server.registerDocument(
+		'test://e2e-image.png', 'Test Image', imgPath,
+		'image', FIXTURE_DIR, imgPath
+	);
+
+	const res = await httpGet(`${baseUrl}/preview/${id}`);
+	assert.equal(res.status, 200);
+	assert.equal(res.headers['content-type'], 'text/html; charset=utf-8');
+	assert.ok(res.body.includes('data:image/png;base64,'), 'base64 data URL present');
+	assert.ok(res.body.includes('Test Image'), 'title present');
+
+	fs.unlinkSync(imgPath);
+});

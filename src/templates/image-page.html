@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{{TITLE}} · OnAir</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+	background: #1e1e1e; color: #ccc;
+	font: 13px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+	display: flex; flex-direction: column; align-items: center; justify-content: center;
+	min-height: 100vh; padding: 24px;
+}
+.title {
+	color: #888; font-size: 13px; margin-bottom: 12px;
+	font-family: ui-monospace, Menlo, monospace; word-break: break-all; text-align: center;
+}
+img {
+	max-width: 95vw; max-height: 85vh; object-fit: contain;
+	border-radius: 4px; box-shadow: 0 2px 12px rgba(0,0,0,.4);
+	background: repeating-conic-gradient(#2a2a2a 0% 25%, #333 0% 50%) 0 0 / 16px 16px;
+}
+.info {
+	color: #666; font-size: 12px; margin-top: 12px;
+	font-family: ui-monospace, Menlo, monospace;
+}
+.ver {
+	position: fixed; bottom: 8px; right: 12px;
+	color: #555; font: 11px/1 -apple-system, sans-serif; opacity: .6;
+}
+</style>
+</head>
+<body>
+<div class="title">{{TITLE}}</div>
+<img src="{{SRC}}" alt="{{TITLE}}" id="img" />
+<div class="info" id="info"></div>
+<div class="ver">v{{VERSION}}</div>
+<script>
+(function () {
+	var img = document.getElementById('img');
+	var info = document.getElementById('info');
+	img.onload = function () {
+		info.textContent = img.naturalWidth + ' × ' + img.naturalHeight + ' · ' + {{SIZE_JSON}};
+	};
+	if (img.complete) { img.onload(); }
+})();
+</script>
+</body>
+</html>

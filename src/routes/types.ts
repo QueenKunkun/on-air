@@ -1,6 +1,6 @@
 import type { WebSocket } from 'ws';
 
-export type DocKind = 'markdown' | 'html';
+export type DocKind = 'markdown' | 'html' | 'image';
 
 export interface DocEntry {
 	id: string;

@@ -21,6 +21,7 @@ import type { DocKind, DocEntry } from './routes/types';
 import pageCss from './templates/page.css';
 import mdTemplate from './templates/markdown-page.html';
 import htmlSnippet from './templates/html-snippet.html';
+import imgTemplate from './templates/image-page.html';
 import { tocJs } from './templates/toc-common';
 
 let preactJs = '';
@@ -113,6 +114,20 @@ function htmlPageTemplate(id: string, rawHtml: string, title: string, fullPath: 
 	return withSnippet;
 }
 
+const IMAGE_MIME: Record<string, string> = {
+	'.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+	'.gif': 'image/gif', '.webp': 'image/webp', '.avif': 'image/avif',
+	'.bmp': 'image/bmp', '.ico': 'image/x-icon', '.svg': 'image/svg+xml',
+};
+
+function imagePageTemplate(id: string, title: string, dataUrl: string, fullPath: string, relPath: string, size: number): string {
+	return imgTemplate
+		.replace(/\{\{TITLE\}\}/g, () => escapeHtml(title))
+		.replace(/\{\{SRC\}\}/g, () => dataUrl)
+		.replace(/\{\{SIZE_JSON\}\}/g, () => JSON.stringify(`${(size / 1024).toFixed(1)} KB`))
+		.replace(/\{\{VERSION\}\}/g, () => escapeHtml(EXT_VERSION));
+}
+
 export class PreviewServer {
 	private server: http.Server;
 	private wss: WebSocketServer;
@@ -160,6 +175,18 @@ export class PreviewServer {
 		const relPath = computeDisplayPath(fullPath);
 		if (kind === 'html') {
 			return { page: htmlPageTemplate(id, content, title, fullPath, relPath, rootDir) };
+		}
+		if (kind === 'image') {
+			const ext = path.extname(fullPath).toLowerCase();
+			const mime = IMAGE_MIME[ext] || 'application/octet-stream';
+			try {
+				const buf = fs.readFileSync(fullPath);
+				const b64 = buf.toString('base64');
+				const dataUrl = `data:${mime};base64,${b64}`;
+				return { page: imagePageTemplate(id, title, dataUrl, fullPath, relPath, buf.length) };
+			} catch {
+				return { page: imagePageTemplate(id, title, '', fullPath, relPath, 0) };
+			}
 		}
 		const docDir = path.dirname(fullPath);
 		const bodyHtml = renderMarkdown(content, docDir, rootDir, id);
