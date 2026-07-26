@@ -215,3 +215,51 @@ test('E2E: updateDocument triggers WebSocket broadcast', async () => {
 	assert.equal(msg.title, 'Updated Title');
 	assert.ok(msg.html.includes('Updated'));
 });
+
+// ─── Port fallback tests ────────────────────────────────────────────────────
+
+let { PreviewServer } = {};
+
+test('load PreviewServer for port tests', async () => {
+	const mod = await import('../src/server.ts');
+	PreviewServer = mod.PreviewServer;
+});
+
+test('port fallback: second server auto-picks next port when preferred is occupied', async () => {
+	const s1 = new PreviewServer();
+	await s1.start(0);
+	const s2 = new PreviewServer();
+	await s2.start(s1.port);
+	assert.equal(s2.port, s1.port + 1, 'second server uses port+1');
+	s2.stop();
+	s1.stop();
+});
+
+test('port fallback: buildUrl uses actual port, not requested port', async () => {
+	const s = new PreviewServer();
+	const requestedPort = 19876;
+	await s.start(requestedPort);
+	const id = s.registerDocument('test://port-test.md', 'Port Test', '# hello', 'markdown', '', '');
+	const url = s.buildUrl(id);
+	assert.ok(url.includes(`:${s.port}/`), 'URL uses actual port');
+	assert.equal(s.port, requestedPort, 'actual port matches requested when available');
+	s.stop();
+});
+
+test('port fallback: EADDRINUSE after exhausting all retries', async () => {
+	// Block a range of ports to force failure
+	const blockers = [];
+	const startPort = 19880;
+	for (let i = 0; i < 31; i++) {
+		const b = new PreviewServer();
+		await b.start(startPort + i);
+		blockers.push(b);
+	}
+	const s = new PreviewServer();
+	await assert.rejects(
+		() => s.start(startPort),
+		(err) => err.code === 'EADDRINUSE',
+		'throws EADDRINUSE when all 31 ports taken'
+	);
+	for (const b of blockers) b.stop();
+});

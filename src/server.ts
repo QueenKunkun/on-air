@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { debug } from './common/debug';
+import { DEFAULT_PORT } from './common/constants';
 import * as vscode from 'vscode';
 import { WebSocketServer, WebSocket } from 'ws';
 import { renderMarkdown, escapeHtml, rewriteHtmlLinks, md } from './markdown/renderer';
@@ -125,7 +126,7 @@ export class PreviewServer {
 		this.server.on('upgrade', (req, socket, head) => this.handleUpgrade(req, socket, head));
 	}
 
-	start(preferredPort = 5757, host = '0.0.0.0'): Promise<number> {
+	start(preferredPort = DEFAULT_PORT, host = '0.0.0.0'): Promise<number> {
 		return new Promise((resolve, reject) => {
 			const tryListen = (port: number, attemptsLeft: number) => {
 				const onError = (err: NodeJS.ErrnoException) => {
@@ -166,6 +167,7 @@ export class PreviewServer {
 	}
 
 	registerDocument(uriKey: string, title: string, content: string, kind: DocKind, rootDir: string, fullPath: string): string {
+		console.log('[on-air] register:', uriKey, '→ id=', this.uriToId.get(uriKey) ?? '(new)');
 		debug('register:', `file=${fullPath} rootDir=${rootDir || '(none)'} kind=${kind} contentLen=${content.length}`);
 		let id = this.uriToId.get(uriKey);
 		if (!id) {
@@ -231,7 +233,9 @@ export class PreviewServer {
 	}
 
 	buildUrl(id: string): string {
-		return `http://127.0.0.1:${this.port}/preview/${id}`;
+		const url = `http://127.0.0.1:${this.port}/preview/${id}`;
+		console.log('[on-air] buildUrl:', url, 'docs.has=', this.docs.has(id), 'port=', this.port);
+		return url;
 	}
 
 	renderHtmlForUri(uriKey: string): string | null {
@@ -258,6 +262,7 @@ export class PreviewServer {
 	private handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
 		const url = req.url || '';
 		const { pathname } = new URL(url, 'http://localhost');
+		console.log('[on-air] handleRequest:', pathname, 'docs.size=', this.docs.size, 'port=', this.port);
 		const typedReq = { url } as { url: string };
 		const typedReqWithHeaders = { url, headers: req.headers };
 
