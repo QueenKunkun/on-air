@@ -18,6 +18,7 @@ export function handlePreview(
 
 	const entry = docs.get(match[1]);
 	if (!entry) {
+		console.log('[on-air] handlePreview: doc not found, id=', match[1], 'docs.size=', docs.size);
 		// Lazy registration: an xref link may point at a file that was
 		// found on disk but never opened as a preview.
 		const file = sp.get('file');
