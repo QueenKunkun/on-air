@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.14.0] - 2026-07-26
+
+- fix: annotation rendering, LAN IP binding
+
 ## [0.13.2] - 2026-07-25
 
 - fix: prevent rootDir from resolving to filesystem root '/' for opening non-file-scheme documents
