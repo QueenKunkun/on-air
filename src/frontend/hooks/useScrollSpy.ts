@@ -34,12 +34,22 @@ export function useScrollSpy(
 				if (active) active.classList.add('active');
 				activeRef.current = active;
 			}
-			if (active) {
-				const scrollEl = active.closest('#toc-list') as HTMLElement | null;
-				const sl = scrollEl?.scrollLeft ?? 0;
-				active.scrollIntoView({ block: 'nearest' });
-				if (scrollEl) scrollEl.scrollLeft = sl;
+		if (active) {
+			const scrollEl = active.closest('#toc-list') as HTMLElement | null;
+			if (scrollEl) {
+				const sl = scrollEl.scrollLeft;
+				const linkTop = active.offsetTop;
+				const linkHeight = active.offsetHeight;
+				const st = scrollEl.scrollTop;
+				const vh = scrollEl.clientHeight;
+				if (linkTop < st) {
+					scrollEl.scrollTop = linkTop;
+				} else if (linkTop + linkHeight > st + vh) {
+					scrollEl.scrollTop = linkTop + linkHeight - vh;
+				}
+				scrollEl.scrollLeft = sl;
 			}
+		}
 		}
 
 		let ticking = false;

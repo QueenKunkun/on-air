@@ -132,9 +132,19 @@ function bindTocInteractions(tocEl, contentEl, offset) {
 		for (var m = 0; m < map.length; m++) map[m][1].classList.toggle('active', map[m][1] === active);
 		if (active) {
 			var scrollEl = active.closest ? active.closest('#toc-list') : null;
-			var sl = scrollEl ? scrollEl.scrollLeft : 0;
-			active.scrollIntoView({ block: 'nearest' });
-			if (scrollEl) scrollEl.scrollLeft = sl;
+			if (scrollEl) {
+				var sl = scrollEl.scrollLeft;
+				var linkTop = active.offsetTop;
+				var linkHeight = active.offsetHeight;
+				var st = scrollEl.scrollTop;
+				var vh = scrollEl.clientHeight;
+				if (linkTop < st) {
+					scrollEl.scrollTop = linkTop;
+				} else if (linkTop + linkHeight > st + vh) {
+					scrollEl.scrollTop = linkTop + linkHeight - vh;
+				}
+				scrollEl.scrollLeft = sl;
+			}
 		}
 	}
 	var ticking = false;
