@@ -229,7 +229,6 @@ export function FileTree({ id }: Props) {
 
   // Initial load + refetch on filter change
   useEffect(() => {
-    console.log('[ FileTree ] initial load effect, filters:', filters);
     cacheRef.current = {};
     (async () => {
       await fetchDir('');
@@ -238,7 +237,6 @@ export function FileTree({ id }: Props) {
         try {
           const paths: string[] = JSON.parse(saved);
           if (paths.length) {
-            console.log('[ FileTree ] restoring expanded from localStorage:', paths);
             const restore: Record<string, boolean> = {};
             for (const p of paths) {
               if (!cacheRef.current[p]) await fetchDir(p);
@@ -262,7 +260,6 @@ export function FileTree({ id }: Props) {
       .then(data => {
         if (data.entries) {
           setFileIndex(data.entries);
-          console.log('[ FileTree ] file index loaded:', data.entries.length, 'entries');
         }
       })
       .catch(() => {});
@@ -332,10 +329,6 @@ export function FileTree({ id }: Props) {
   function renderDir(dirPath: string): h.JSX.Element[] {
     const entries = cacheRef.current[dirPath];
     if (!entries) return [];
-    if (dirPath === '') {
-      console.log('[ renderDir ] root entries:', entries.length, entries.map(e => e.name + '(' + e.type + ')'));
-      console.log('[ renderDir ] expanded keys:', Object.keys(expandedRef.current).filter(k => expandedRef.current[k]));
-    }
     const searchRegex = searchQuery ? globToRegex(searchQuery) : null;
     const visibleDirs = searchRegex && fileIndex.length ? computeVisibleDirs(fileIndex, searchRegex) : null;
     const dirs: TreeEntry[] = [];
@@ -345,7 +338,6 @@ export function FileTree({ id }: Props) {
         if (visibleDirs) {
           if (!visibleDirs.has(e.path)) continue;
         }
-        if (fileIndex.length > 0 && !dirHasVisibleFiles(e.path, fileIndex, filters)) continue;
         const childEntries = cacheRef.current[e.path];
         if (childEntries && childEntries.length === 0) continue;
         dirs.push(e);

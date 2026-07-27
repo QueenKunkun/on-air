@@ -71,7 +71,7 @@
     "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
     "lint": "eslint src",
     "test": "vscode-test",
-    "test:unit": "node --test",
+    "test:unit": "npx tsx --test",
     "test:e2e": "npx playwright test",
     "publish-all": "node scripts/check-size.mjs && pnpm publish-vsce && pnpm publish-ovsx",
     "package-vsix": "vsce package --no-dependencies",

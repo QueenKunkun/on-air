@@ -110,6 +110,76 @@ test('handleTree returns 404 for unknown document id', async () => {
   assert.equal(res.status, 404);
 });
 
+// ─── tree / fileIndex mismatch (regression: dirHasVisibleFiles bug) ────────
+
+const DIR_FILTER_FIXTURE = path.join(FIXTURE_DIR, 'dir-filter-mismatch');
+
+test('tree returns dir with unsupported files, fileIndex does not — must not hide dir', async () => {
+  // Scenario: subdir-unsupported/ has only .bin/.docx files.
+  // Tree API (hideBinary=0) returns the dir. FileIndex filters by isSupportedExt,
+  // so it does NOT include .bin/.docx.  The old dirHasVisibleFiles frontend code
+  // would hide this dir because fileIndex says it has no visible files.
+  const mdPath = path.join(DIR_FILTER_FIXTURE, 'README.md');
+  const id = server.registerDocument(
+    'test://dir-filter-mismatch.md', 'Mismatch', fs.readFileSync(mdPath, 'utf8'),
+    'markdown', DIR_FILTER_FIXTURE, mdPath
+  );
+
+  // 1) Tree API returns subdir-unsupported (hideBinary not set → includes .bin/.docx)
+  const treeRes = await httpGet(`${baseUrl}/api/tree?id=${id}&dir=`);
+  assert.equal(treeRes.status, 200);
+  const treeDirNames = treeRes.body.entries.filter(e => e.type === 'directory').map(e => e.name);
+  assert.ok(treeDirNames.includes('subdir-unsupported'),
+    `tree should include subdir-unsupported, got: ${treeDirNames}`);
+
+  // 2) FileIndex does NOT include the .bin file
+  const idxRes = await httpGet(`${baseUrl}/api/file-index?id=${id}`);
+  assert.equal(idxRes.status, 200);
+  const idxBinFiles = idxRes.body.entries.filter(e => e.name === 'data.bin');
+  assert.equal(idxBinFiles.length, 0,
+    'fileIndex must not include .bin files (unsupported ext)');
+
+  // 3) FileIndex also does not include .docx
+  const idxDocx = idxRes.body.entries.filter(e => e.name === 'doc.docx');
+  assert.equal(idxDocx.length, 0,
+    'fileIndex must not include .docx files (unsupported ext)');
+
+  // 4) The critical invariant: tree has the directory, fileIndex does NOT have
+  //    its files. This is the exact scenario that caused dirHasVisibleFiles to
+  //    hide the directory. If dirHasVisibleFiles were restored, the frontend
+  //    would filter out subdir-unsupported because fileIndex says it has no
+  //    visible files — even though the tree API says it does.
+  const idxFilesInSubdir = idxRes.body.entries.filter(e =>
+    e.type === 'file' && e.path.startsWith('subdir-unsupported/')
+  );
+  assert.equal(idxFilesInSubdir.length, 0,
+    'fileIndex must have zero files in subdir-unsupported (all unsupported ext)');
+
+  // This confirms the mismatch: tree has the dir, fileIndex has nothing in it.
+  // Any frontend code that uses fileIndex to filter tree entries will break.
+  assert.ok(treeDirNames.includes('subdir-unsupported'),
+    'tree MUST still return subdir-unsupported despite fileIndex having no files in it');
+});
+
+test('tree with hideBinary=1 excludes unsupported files like fileIndex does', async () => {
+  const mdPath = path.join(DIR_FILTER_FIXTURE, 'README.md');
+  const id = server.registerDocument(
+    'test://dir-filter-hidebin.md', 'HideBin', fs.readFileSync(mdPath, 'utf8'),
+    'markdown', DIR_FILTER_FIXTURE, mdPath
+  );
+
+  const treeRes = await httpGet(`${baseUrl}/api/tree?id=${id}&dir=&hideBinary=1`);
+  assert.equal(treeRes.status, 200);
+  const treeDirNames = treeRes.body.entries.filter(e => e.type === 'directory').map(e => e.name);
+  // With hideBinary=1, tree filters by isSupportedExt like fileIndex does.
+  // subdir-unsupported only has .bin/.docx → dir has no visible children → excluded.
+  assert.ok(!treeDirNames.includes('subdir-unsupported'),
+    'tree with hideBinary=1 should exclude subdir-unsupported (only unsupported files)');
+  // subdir-supported has .md/.js → still included
+  assert.ok(treeDirNames.includes('subdir-supported'),
+    'tree with hideBinary=1 should include subdir-supported (has .md/.js)');
+});
+
 // ─── handleFile ─────────────────────────────────────────────────────────────
 
 test('handleFile serves existing file content', async () => {
