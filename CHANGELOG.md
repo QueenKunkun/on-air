@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.15.0] - 2026-07-27
+
+- feat: image preview (png/jpg/gif/webp/svg/bmp/ico render as inline base64 data URL)
+- fix: file tree hiding directories when .gitignore removed (tree/fileIndex filter mismatch)
+- fix: TOC active tracking scrolling entire page (scrollIntoView leak to document.body)
+- fix: TOC scrollbar missing after Preact migration (portal wrapper not a flex container)
+
 ## [0.14.0] - 2026-07-26
 
 - fix: annotation rendering, LAN IP binding
