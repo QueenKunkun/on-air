@@ -111,6 +111,7 @@ export function FileTree({ id }: Props) {
     setExpanded(prev => {
       const next = updater(prev);
       expandedRef.current = next;
+      console.log('[FT] setBothExpanded, new state:', Object.keys(next));
       return next;
     });
   }, []);
@@ -120,11 +121,14 @@ export function FileTree({ id }: Props) {
   }, [fetchDir]);
 
   const toggleDir = useCallback(async (path: string) => {
+    console.log('[FT] toggleDir called:', path, 'expandedRef:', expandedRef.current[path]);
     if (expandedRef.current[path]) {
+      console.log('[FT] Collapsing:', path);
       setBothExpanded(prev => { const n = { ...prev }; delete n[path]; return n; });
     } else {
       await fetchNeeded(path);
       const entries = cacheRef.current[path];
+      console.log('[FT] Expanding:', path, 'entries:', entries?.length);
       if (entries && entries.length === 0) return;
       setBothExpanded(prev => ({ ...prev, [path]: true }));
     }
@@ -277,6 +281,25 @@ export function FileTree({ id }: Props) {
 
   // Custom event handlers
   useEffect(() => {
+    // DEBUG: trace all clicks on ft-items
+    const debugClick = (ev: MouseEvent) => {
+      const target = ev.target as HTMLElement;
+      const ftRow = target.closest('.ft-row');
+      const ftItem = target.closest('.ft-item');
+      const ftChildren = target.closest('.ft-children');
+      console.log('[FT] DEBUG click:', {
+        tag: target.tagName,
+        class: target.className,
+        ftRow: !!ftRow,
+        ftItem: !!ftItem,
+        ftChildren: !!ftChildren,
+        inTree: !!target.closest('.ft-root'),
+        defaultPrevented: ev.defaultPrevented,
+        propagationStopped: false,
+      });
+    };
+    document.addEventListener('click', debugClick, true);
+
     const hRefresh = async () => {
       cacheRef.current = {};
       setExpanded({});
@@ -295,6 +318,7 @@ export function FileTree({ id }: Props) {
     window.addEventListener('onair:tree-refresh', hRefresh);
     window.addEventListener('onair:tree-activate', hActivate);
     return () => {
+      document.removeEventListener('click', debugClick, true);
       window.removeEventListener('onair:tree-refresh', hRefresh);
       window.removeEventListener('onair:tree-activate', hActivate);
     };
@@ -355,7 +379,7 @@ export function FileTree({ id }: Props) {
         const isExpanded = !!expandedRef.current[e.path];
         return (
           <li class={'ft-item ft-directory' + (isExpanded ? ' ft-expanded' : '')}>
-            <div class="ft-row" onClick={(ev: h.JSX.TargetedMouseEvent<HTMLDivElement>) => { ev.stopPropagation(); toggleDir(e.path); }}>
+            <div class="ft-row" onClick={(ev: h.JSX.TargetedMouseEvent<HTMLDivElement>) => { console.log('[FT] ft-row click:', e.path); ev.stopPropagation(); toggleDir(e.path); }}>
               <span class="ft-toggle">{isExpanded ? '\u25BC' : '\u25B6'}</span>
               <span class="ft-name">{e.name}</span>
             </div>

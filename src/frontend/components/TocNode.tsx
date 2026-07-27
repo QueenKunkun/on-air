@@ -1,4 +1,5 @@
 import { h } from 'preact';
+import { useState, useCallback } from 'preact/hooks';
 
 export interface TocEntry {
 	id: string;
@@ -14,13 +15,20 @@ interface TocNodeProps {
 
 export function TocNode({ entry, collapsedAll }: TocNodeProps) {
 	const hasChildren = entry.children.length > 0;
-	const collapsed = collapsedAll;
+	const [localCollapsed, setLocalCollapsed] = useState(false);
+	const collapsed = collapsedAll || localCollapsed;
+
+	const toggle = useCallback((e: Event) => {
+		e.preventDefault();
+		e.stopPropagation();
+		setLocalCollapsed(prev => !prev);
+	}, []);
 
 	return (
 		<li>
 			<div class="r">
 				{hasChildren ? (
-					<button class="t" title={collapsed ? 'Expand' : 'Collapse'}>{collapsed ? '+' : '\u2212'}</button>
+					<button class="t" title={collapsed ? 'Expand' : 'Collapse'} onClick={toggle}>{collapsed ? '+' : '\u2212'}</button>
 				) : (
 					<span class="s"></span>
 				)}
@@ -29,7 +37,7 @@ export function TocNode({ entry, collapsedAll }: TocNodeProps) {
 			{hasChildren && (
 				<ul class={collapsed ? 'c' : undefined}>
 					{entry.children.map(child => (
-						<TocNode key={child.id} entry={child} collapsedAll={collapsed} />
+						<TocNode key={child.id} entry={child} collapsedAll={collapsedAll} />
 					))}
 				</ul>
 			)}

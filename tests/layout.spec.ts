@@ -240,6 +240,49 @@ test('TOC expand all and collapse all', async ({ page }) => {
   expect(collapsedAfter).toBe(0);
 });
 
+test('TOC individual section collapse and expand', async ({ page }) => {
+  const md = `# Title\n${Array.from({ length: 10 }, (_, i) => `## Section ${i + 1}\n\nText.\n\n`).join('')}`;
+  await page.request.post(`${baseUrl}/test/update`, { data: JSON.stringify({ html: md }) });
+  await page.waitForTimeout(1000);
+  await expect(async () => {
+    const count = await page.locator('#toc-list .r').count();
+    expect(count).toBeGreaterThanOrEqual(5);
+  }).toPass({ timeout: 10000 });
+
+  // Each section with children should have a button.t
+  const buttons = page.locator('#toc-list .t');
+  const btnCount = await buttons.count();
+  expect(btnCount).toBeGreaterThan(0);
+
+  // Click the first individual collapse button
+  const firstBtn = buttons.first();
+  await expect(firstBtn).toBeVisible();
+  const btnTextBefore = await firstBtn.textContent();
+  expect(btnTextBefore).toBe('\u2212'); // "−" = collapse icon
+
+  await firstBtn.click();
+  await page.waitForTimeout(300);
+
+  // After clicking, button should show "+" (expand)
+  const btnTextAfter = await firstBtn.textContent();
+  expect(btnTextAfter).toBe('+');
+
+  // The sibling ul should have class "c" (collapsed)
+  const parentLi = firstBtn.locator('xpath=ancestor::li');
+  const childUl = parentLi.locator(':scope > ul');
+  await expect(childUl).toHaveClass(/c/);
+
+  // Click again to expand
+  await firstBtn.click();
+  await page.waitForTimeout(300);
+
+  const btnTextReexpand = await firstBtn.textContent();
+  expect(btnTextReexpand).toBe('\u2212');
+
+  // ul should no longer have class "c"
+  await expect(childUl).not.toHaveClass(/c/);
+});
+
 test('file tree locate button highlights current file', async ({ page }) => {
   await page.waitForSelector('.ft-list .ft-directory', { timeout: 5000 });
 
