@@ -151,6 +151,36 @@ test('files toggle collapses and expands panel', async ({ page }) => {
   expect(isCollapsed2).toBe(false);
 });
 
+test('file tree directory expand and collapse', async ({ page }) => {
+  await page.waitForSelector('.ft-list .ft-directory', { timeout: 5000 });
+
+  const dirItem = page.locator('.ft-list > .ft-directory > .ft-row > .ft-name', { hasText: 'programming' });
+  await expect(dirItem).toBeVisible();
+  const li = dirItem.locator('xpath=ancestor::li[1]');
+
+  const isExpandedBefore = await li.evaluate(el => el.classList.contains('ft-expanded'));
+  expect(isExpandedBefore).toBe(false);
+
+  const childrenBefore = page.locator('.ft-children .ft-name', { hasText: 'app.md' });
+  await expect(childrenBefore).toBeHidden();
+
+  // Expand
+  await li.locator(':scope > .ft-row > .ft-toggle').click();
+  await page.waitForTimeout(500);
+
+  const isExpandedAfter = await li.evaluate(el => el.classList.contains('ft-expanded'));
+  expect(isExpandedAfter).toBe(true);
+  await expect(childrenBefore).toBeVisible();
+
+  // Collapse
+  await li.locator(':scope > .ft-row > .ft-toggle').click();
+  await page.waitForTimeout(500);
+
+  const isExpandedCollapse = await li.evaluate(el => el.classList.contains('ft-expanded'));
+  expect(isExpandedCollapse).toBe(false);
+  await expect(childrenBefore).toBeHidden();
+});
+
 test('toc toggle collapses and expands panel', async ({ page }) => {
   const tocCol = page.locator('#tocCol');
   const toggle = page.locator('#toggle-layer [data-panel="toc"]');
@@ -169,6 +199,71 @@ test('toc toggle collapses and expands panel', async ({ page }) => {
   await page.waitForTimeout(300);
   const isCollapsed2 = await tocCol.evaluate(el => el.classList.contains('collapsed'));
   expect(isCollapsed2).toBe(false);
+});
+
+test('TOC expand all and collapse all', async ({ page }) => {
+  const md = `# Title\n${Array.from({ length: 15 }, (_, i) => `## Section ${i + 1}\n\nText.\n\n`).join('')}`;
+  await page.request.post(`${baseUrl}/test/update`, { data: JSON.stringify({ html: md }) });
+  await page.waitForTimeout(1000);
+  await expect(async () => {
+    const count = await page.locator('#toc-list .r').count();
+    expect(count).toBeGreaterThanOrEqual(10);
+  }).toPass({ timeout: 10000 });
+
+  const header = page.locator('#toc-header');
+  await expect(header).toBeVisible();
+  const collapseBtn = header.locator('.toc-m');
+  await expect(collapseBtn).toBeVisible();
+
+  // Initial state: sections visible
+  const firstSection = page.locator('#toc-list .t').first();
+  await expect(firstSection).toBeVisible();
+
+  // Click collapse all (button shows "−")
+  await collapseBtn.click();
+  await page.waitForTimeout(300);
+
+  // All nested lists should be collapsed (class "c")
+  const collapsedItems = await page.locator('#toc-list ul.c').count();
+  expect(collapsedItems).toBeGreaterThan(0);
+
+  // Button should now show "+" (expand all)
+  const btnText = await collapseBtn.textContent();
+  expect(btnText).toBe('+');
+
+  // Click expand all
+  await collapseBtn.click();
+  await page.waitForTimeout(300);
+
+  // No collapsed lists
+  const collapsedAfter = await page.locator('#toc-list ul.c').count();
+  expect(collapsedAfter).toBe(0);
+});
+
+test('file tree locate button highlights current file', async ({ page }) => {
+  await page.waitForSelector('.ft-list .ft-directory', { timeout: 5000 });
+
+  // README.md is the currently open file — it should have ft-current class
+  const readmeItem = page.locator('.ft-list .ft-file .ft-name', { hasText: 'README.md' });
+  await expect(readmeItem).toBeVisible();
+  const readmeLi = readmeItem.locator('xpath=ancestor::li[1]');
+  const isCurrentBefore = await readmeLi.evaluate(el => el.classList.contains('ft-current'));
+  expect(isCurrentBefore).toBe(true);
+
+  // Scroll the file tree away from the current file
+  const scrollContainer = page.locator('.ft-scroll');
+  await scrollContainer.evaluate((el: HTMLElement) => { el.scrollTop = el.scrollHeight; });
+  await page.waitForTimeout(200);
+
+  // Click locate button
+  const locateBtn = page.locator('.ft-locate-btn');
+  await expect(locateBtn).toBeVisible();
+  await locateBtn.click();
+  await page.waitForTimeout(500);
+
+  // README.md should still have ft-current class
+  const isCurrentAfter = await readmeLi.evaluate(el => el.classList.contains('ft-current'));
+  expect(isCurrentAfter).toBe(true);
 });
 
 test('files resizer drag changes width', async ({ page }) => {
