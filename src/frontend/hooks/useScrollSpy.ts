@@ -60,11 +60,14 @@ export function useScrollSpy(
 			}
 		};
 
-		document.addEventListener('scroll', onScroll);
+		const scrollTarget = document.scrollingElement || document.documentElement;
+		scrollTarget.addEventListener('scroll', onScroll);
+		window.addEventListener('scroll', onScroll);
 		updateActive();
 
 		return () => {
-			document.removeEventListener('scroll', onScroll);
+			scrollTarget.removeEventListener('scroll', onScroll);
+			window.removeEventListener('scroll', onScroll);
 			for (const [, a] of map) a.onclick = null;
 		};
 	}, [contentEl, headings, links, offset]);

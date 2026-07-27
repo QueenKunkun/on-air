@@ -18,7 +18,8 @@ export function TOC({ contentEl, fullPath, relPath, contentVersion }: TOCProps) 
 	const [relatedItems, setRelatedItems] = useState<{ href: string; label: string }[]>([]);
 	const [hasHeadings, setHasHeadings] = useState(false);
 	const rootRef = useRef<HTMLDivElement>(null);
-	const tocListRef = useRef<HTMLDivElement>(null);
+	const [tocListNode, setTocListNode] = useState<HTMLDivElement | null>(null);
+	const tocListCb = (node: HTMLDivElement | null) => { setTocListNode(node); };
 
 	useEffect(() => {
 		if (!contentEl) return;
@@ -35,10 +36,9 @@ export function TOC({ contentEl, fullPath, relPath, contentVersion }: TOCProps) 
 
 	const title = useMemo(() => document.title.replace(/ \u00b7 OnAir$/, ''), []);
 
-	const links = useMemo(() => {
-		if (!tocListRef.current) return [];
-		return Array.from(tocListRef.current.querySelectorAll('a'));
-	}, [tocListRef.current, tocEntries, collapsedAll]);
+	const linksRef = useRef<HTMLAnchorElement[]>([]);
+	const [, forceLinks] = useState(0);
+	const links = linksRef.current;
 
 	const headings = useMemo(() => {
 		if (!contentEl) return [];
@@ -46,6 +46,13 @@ export function TOC({ contentEl, fullPath, relPath, contentVersion }: TOCProps) 
 	}, [contentEl, contentVersion]);
 
 	useScrollSpy(contentEl, headings, links);
+
+	// Compute links after DOM paint so we pick up the updated TOC anchors
+	useEffect(() => {
+		if (!tocListNode) { linksRef.current = []; return; }
+		linksRef.current = Array.from(tocListNode.querySelectorAll('a'));
+		forceLinks(n => n + 1);
+	});
 
 	// Portal-like: append rendered content to #toc
 	useEffect(() => {
@@ -72,7 +79,7 @@ export function TOC({ contentEl, fullPath, relPath, contentVersion }: TOCProps) 
 				onToggleAll={() => setCollapsedAll(prev => !prev)}
 			/>
 			{hasHeadings && (
-				<div id="toc-list" ref={tocListRef}>
+				<div id="toc-list" ref={tocListCb}>
 					<ul>
 						{tocEntries.map(entry => (
 							<TocNode key={entry.id} entry={entry} collapsedAll={collapsedAll} />
