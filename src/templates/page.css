@@ -20,6 +20,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
 #filesSide { position: sticky; top: 38px; align-self: flex-start; flex-shrink: 0; height: calc(100vh - 46px); display: flex; flex-direction: column; width: var(--files-w); }
 #tocCol { position: sticky; top: 38px; align-self: flex-start; flex-shrink: 0; height: calc(100vh - 46px); display: flex; flex-direction: column; width: var(--toc-w); }
 #toc { width: 100%; flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding: 0; box-sizing: border-box; font-size: 14px; line-height: 1.5; }
+#toc > div { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 #toc-list { overflow: auto; flex: 1; min-height: 0; padding: 0 0 24px 6px; }
 #toc.no-tree .toc-m { display: none; }
 #toc ul { list-style: none; padding: 0; margin: 0; }

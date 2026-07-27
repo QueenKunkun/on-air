@@ -541,3 +541,31 @@ test('TOC active tracking must not use scrollIntoView (causes document scroll le
   // If this fails, the old buggy code was restored.
   expect(calls).toBe(0);
 });
+
+test('TOC shows scrollbar when headings overflow', async ({ page }) => {
+  await page.goto(`${baseUrl}/preview/${docId}`);
+  await page.waitForSelector('.ft-list', { timeout: 5000 });
+
+  const md = Array.from({ length: 40 }, (_, i) =>
+    `## Heading ${i + 1}\n\n${'Paragraph text here. '.repeat(8)}\n\n`
+  ).join('');
+  await page.request.post(`${baseUrl}/test/update`, { data: JSON.stringify({ html: md }) });
+  await page.waitForTimeout(2000);
+
+  await expect(async () => {
+    const items = await page.locator('#toc-list .r').count();
+    expect(items).toBeGreaterThanOrEqual(30);
+  }).toPass({ timeout: 10000 });
+
+  const overflow = await page.evaluate(() => {
+    const el = document.querySelector('#toc-list') as HTMLElement;
+    if (!el) return { error: 'not found' };
+    return {
+      scrollHeight: el.scrollHeight,
+      clientHeight: el.clientHeight,
+      hasVerticalScrollbar: el.scrollHeight > el.clientHeight,
+    };
+  });
+
+  expect(overflow.hasVerticalScrollbar).toBe(true);
+});
