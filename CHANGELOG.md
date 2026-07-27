@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.15.0] - 2026-07-27
+
+- feat: image preview (png/jpg/gif/webp/svg/bmp/ico render as inline base64 data URL)
+- fix: file tree hiding and TOC scroll problems
+
 ## [0.14.0] - 2026-07-26
 
 - fix: annotation rendering, LAN IP binding
