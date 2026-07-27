@@ -39,6 +39,13 @@ async function expandDirNested(page: Page, ...names: string[]) {
   }
 }
 
+async function collapseDir(page: Page, name: string) {
+  const dir = page.locator(`.ft-list > .ft-item.ft-directory.ft-expanded:has(.ft-name:text("${name}"))`);
+  const row = dir.locator(':scope > .ft-row');
+  await row.click();
+  await expect(dir.locator(':scope > .ft-children')).toHaveCount(0, { timeout: 3000 });
+}
+
 // ─── Tree rendering ─────────────────────────────────────────────────────────
 
 test('tree renders root entries', async ({ page }) => {
@@ -348,6 +355,50 @@ test('clicking image file shows image preview', async ({ page }) => {
   await expect(img).toBeVisible();
   await expect(img).toHaveAttribute('src', /photo\.png/);
   expect(await fileView.locator('.file-binary').count()).toBe(0);
+});
+
+// ─── Expand/Collapse toggle ─────────────────────────────────────────────────
+
+test('expand then collapse: children hidden after second click', async ({ page }) => {
+  await expandDir(page, 'src');
+  const childrenBefore = await page.locator('.ft-children .ft-item').count();
+  expect(childrenBefore).toBeGreaterThan(0);
+
+  await collapseDir(page, 'src');
+  const childrenAfter = await page.locator('.ft-children .ft-item').count();
+  expect(childrenAfter).toBe(0);
+});
+
+test('collapse then re-expand: children visible again', async ({ page }) => {
+  await expandDir(page, 'src');
+  await collapseDir(page, 'src');
+
+  // Re-expand
+  await page.click(`.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))`);
+  await page.waitForSelector('.ft-children .ft-item', { timeout: 3000 });
+  const children = await page.locator('.ft-children .ft-item').count();
+  expect(children).toBeGreaterThan(0);
+});
+
+test('collapse removes ft-expanded class', async ({ page }) => {
+  await expandDir(page, 'src');
+  const dir = page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))');
+  await expect(dir).toHaveClass(/ft-expanded/);
+
+  await collapseDir(page, 'src');
+  await expect(dir).not.toHaveClass(/ft-expanded/);
+});
+
+test('clicking directory toggle icon collapses expanded dir', async ({ page }) => {
+  await expandDir(page, 'programming');
+
+  // Click the toggle span directly
+  const toggle = page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("programming")) > .ft-row > .ft-toggle');
+  await toggle.click();
+  await page.waitForTimeout(300);
+
+  const dir = page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("programming"))');
+  await expect(dir).not.toHaveClass(/ft-expanded/);
 });
 
 // ─── Hover behavior ─────────────────────────────────────────────────────────
