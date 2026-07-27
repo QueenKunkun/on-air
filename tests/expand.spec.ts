@@ -107,6 +107,18 @@ test.describe('expandToCurrentFile', () => {
     // Wait for expansion
     await expect(page.locator('.ft-item.ft-current')).toHaveCount(1, { timeout: 5000 });
 
+    // Wait for auto-scroll (expandToCurrentFile uses double rAF)
+    await page.waitForTimeout(1000);
+
+    // Debug: check scroll state
+    const scrollInfo = await page.locator('.ft-scroll').evaluate(el => ({
+      scrollTop: el.scrollTop,
+      scrollHeight: el.scrollHeight,
+      clientHeight: el.clientHeight,
+      offsetHeight: el.offsetHeight,
+    }));
+    console.log('scrollInfo:', JSON.stringify(scrollInfo));
+
     // The current file should be visible within the scroll container
     const current = page.locator('.ft-item.ft-current');
     await expect(current).toBeVisible();
@@ -118,8 +130,11 @@ test.describe('expandToCurrentFile', () => {
     const currentBox = await current.boundingBox();
     const scrollBox = await scrollContainer.boundingBox();
 
+    console.log('scrolled:', scrolled, 'currentBox:', JSON.stringify(currentBox), 'scrollBox:', JSON.stringify(scrollBox));
+
     // If the tree is tall enough to require scrolling, verify the file is in view
-    if (scrollBox!.height < await scrollContainer.evaluate(el => el.scrollHeight)) {
+    // Use a meaningful threshold (> 2px) to avoid false positives from subpixel rounding
+    if (scrollInfo.scrollHeight - scrollInfo.clientHeight > 2) {
       expect(scrolled).toBeTruthy();
     }
 

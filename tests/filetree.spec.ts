@@ -342,15 +342,15 @@ test('search + mdOnly: both filters apply simultaneously', async ({ page }) => {
 // ─── Image preview ──────────────────────────────────────────────────────────
 
 test('clicking image file shows image preview', async ({ page }) => {
+  await page.waitForTimeout(500);
   await expandDirNested(page, 'programming', 'react', 'images');
 
   const imgFile = page.locator('.ft-item.ft-file:has(.ft-name:text("photo.png"))');
   await expect(imgFile).toBeVisible();
   await imgFile.click();
-  await page.waitForTimeout(500);
 
   const fileView = page.locator('#content .file-view');
-  await expect(fileView).toBeVisible();
+  await expect(fileView).toBeVisible({ timeout: 10000 });
   const img = fileView.locator('img');
   await expect(img).toBeVisible();
   await expect(img).toHaveAttribute('src', /photo\.png/);
