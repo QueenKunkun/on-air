@@ -491,3 +491,53 @@ test('TOC scrollIntoView does not change horizontal scroll position', async ({ p
     expect(scrollLeftAfter).toBe(scrollLeftBefore);
   }
 });
+
+test('TOC active tracking must not use scrollIntoView (causes document scroll leak)', async ({ page }) => {
+  // Regression: scrollIntoView({ block: 'nearest' }) on TOC links scrolls
+  // ALL scrollable ancestors including document.body when TOC overflows.
+  // The fix uses manual scrollTop calculation instead.
+  // This test asserts scrollIntoView is never called on TOC-list links.
+
+  // Navigate fresh to reset state from previous tests
+  await page.goto(`${baseUrl}/preview/${docId}`);
+  await page.waitForSelector('.ft-list', { timeout: 5000 });
+
+  // Intercept scrollIntoView after page load
+  await page.evaluate(() => {
+    (window as any).__scrollIntoViewCalls = 0;
+    const orig = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) {
+      if (this instanceof HTMLElement && this.closest('#toc-list')) {
+        (window as any).__scrollIntoViewCalls++;
+      }
+      return orig.apply(this, arguments as any);
+    };
+  });
+
+  const md = [
+    '# Scroll Test\n',
+    ...Array.from({ length: 40 }, (_, i) =>
+      `## Heading ${i + 1}\n\n${'Paragraph text here. '.repeat(8)}\n\n`
+    ),
+  ].join('');
+  await page.request.post(`${baseUrl}/test/update`, { data: JSON.stringify({ html: md }) });
+  // Wait for WebSocket update to propagate and TOC to rebuild
+  await page.waitForTimeout(1000);
+
+  await expect(async () => {
+    const items = await page.locator('#toc-list .r').count();
+    expect(items).toBeGreaterThanOrEqual(30);
+  }).toPass({ timeout: 10000 });
+
+  // Scroll through the page to trigger TOC active-tracking updates
+  for (let i = 0; i < 10; i++) {
+    await page.evaluate((offset) => window.scrollTo(0, offset * 400), i);
+    await page.waitForTimeout(200);
+  }
+
+  const calls = await page.evaluate(() => (window as any).__scrollIntoViewCalls || 0);
+
+  // CRITICAL: scrollIntoView must NEVER be called on TOC links.
+  // If this fails, the old buggy code was restored.
+  expect(calls).toBe(0);
+});
