@@ -124,6 +124,7 @@ function imagePageTemplate(id: string, title: string, dataUrl: string, fullPath:
 	return imgTemplate
 		.replace(/\{\{CSS\}\}/g, () => pageCss)
 		.replace(/\{\{THEMES\}\}/g, () => JSON.stringify(THEMES))
+		.replace(/\{\{ID\}\}/g, () => id)
 		.replace(/\{\{ID_JSON\}\}/g, () => JSON.stringify(id))
 		.replace(/\{\{TITLE\}\}/g, () => escapeHtml(title))
 		.replace(/\{\{SRC\}\}/g, () => dataUrl)

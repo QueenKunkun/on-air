@@ -474,7 +474,7 @@ test('image preview page shows rendered image, not raw binary', async ({ page })
   await expect(img).toHaveAttribute('src', /^data:image\/png;base64,/);
 });
 
-test('clicking image file in tree navigates to preview page', async ({ page }) => {
+test('clicking image file in tree navigates to preview page and keeps file tree', async ({ page }) => {
   await expandDirNested(page, 'programming', 'react', 'images');
 
   const imgFile = page.locator('.ft-item.ft-file:has(.ft-name:text("photo.png"))');
@@ -488,6 +488,11 @@ test('clicking image file in tree navigates to preview page', async ({ page }) =
   const img = page.locator('#img');
   await expect(img).toBeVisible({ timeout: 5000 });
   await expect(img).toHaveAttribute('src', /^data:image\/png;base64,/);
+
+  // File tree should still have entries after navigation
+  await page.waitForSelector('.ft-item', { timeout: 8000 });
+  const items = page.locator('.ft-item');
+  expect(await items.count()).toBeGreaterThan(0);
 });
 
 test('image preview page shows file tree', async ({ page }) => {
@@ -508,7 +513,7 @@ test('image preview page shows file tree', async ({ page }) => {
   await expect(verBadge).toHaveText(/v/);
 });
 
-test('clicking version badge copies to clipboard', async ({ page }) => {
+test('clicking version badge copies to clipboard with feedback', async ({ page }) => {
   // Mock clipboard before page loads
   await page.addInitScript(() => {
     (window as any).__clipboardText = '';
@@ -526,13 +531,21 @@ test('clicking version badge copies to clipboard', async ({ page }) => {
   await page.goto(`${baseUrl}/preview/${imgId}`);
   await page.waitForLoadState('load');
 
-  // Click version badge
+  // Version badge shows version
   const verBadge = page.locator('#verBadge');
+  await expect(verBadge).toBeVisible({ timeout: 5000 });
+  await expect(verBadge).toHaveText(/^v/);
+
+  // Click version badge
   await verBadge.click();
 
-  // Check clipboard content — should copy the version string
+  // Should show "Copied!" feedback
+  await expect(verBadge).toHaveText('Copied!', { timeout: 2000 });
+
+  // Clipboard should have the version
   const clipboardText = await page.evaluate(() => (window as any).__clipboardText);
   expect(clipboardText).toBeTruthy();
-  expect(clipboardText).not.toBe('dev');
-  expect(clipboardText).not.toBe('');
+
+  // Feedback should disappear after 1.5s
+  await expect(verBadge).toHaveText(/^v/, { timeout: 3000 });
 });
