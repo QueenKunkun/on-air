@@ -29,7 +29,7 @@ function makeFilterParams(id: string, dir: string, f: Filters): string {
 
 function isTextFile(p: string): boolean {
   const ext = p.toLowerCase().split('.').pop() || '';
-  return isMarkdownExt('.' + ext);
+  return isMarkdownExt('.' + ext) || ext === 'html' || ext === 'htm';
 }
 
 function isImageFile(p: string): boolean {
