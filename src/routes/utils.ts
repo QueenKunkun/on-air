@@ -1,12 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { MARKDOWN_EXTS, SUPPORTED_EXTS, IMAGE_EXTS, isMarkdownExt } from '../common/extensions';
+import { MARKDOWN_EXTS, SUPPORTED_EXTS, IMAGE_EXTS, BINARY_EXTS, isMarkdownExt } from '../common/extensions';
 
 export const toPosix = (p: string): string => (path.sep !== '/' ? p.split(path.sep).join('/') : p);
 
 export type DocKind = 'markdown' | 'html' | 'image';
 
 const IMAGE_EXT_SET = new Set<string>(IMAGE_EXTS);
+const BINARY_EXT_SET = new Set<string>(BINARY_EXTS);
 
 export function kindFromPath(p: string): DocKind | null {
 	const ext = path.extname(p).toLowerCase();
@@ -94,12 +95,22 @@ export function isHidden(name: string): boolean {
 	return name.startsWith('.');
 }
 
-/** Check if a file is binary by reading first 8KB */
+/** Check if a file is binary by extension first, then by reading first 512 bytes */
 export function isBinaryFile(filePath: string): boolean {
+	// Fast path: check extension against known binary types
+	const ext = path.extname(filePath).toLowerCase();
+	if (BINARY_EXT_SET.has(ext)) {
+		return true;
+	}
+	// If extension is in supported text list, assume it's text
+	if (SUPPORTED_EXTS.includes(ext as any)) {
+		return false;
+	}
+	// Fallback: read first 512 bytes to check for null bytes
 	try {
 		const fd = fs.openSync(filePath, 'r');
-		const buf = Buffer.alloc(8192);
-		const bytesRead = fs.readSync(fd, buf, 0, 8192, 0);
+		const buf = Buffer.alloc(512);
+		const bytesRead = fs.readSync(fd, buf, 0, 512, 0);
 		fs.closeSync(fd);
 		return buf.subarray(0, bytesRead).includes(0);
 	} catch {

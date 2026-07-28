@@ -21,6 +21,21 @@ export const IMAGE_EXTS = [
 	'.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico',
 ] as const;
 
+/** Common binary file extensions (fast path for isBinaryFile) */
+export const BINARY_EXTS = [
+	// Archives
+	'.zip', '.tar', '.gz', '.bz2', '.7z', '.rar', '.xz',
+	// Executables
+	'.exe', '.dll', '.so', '.dylib', '.app', '.bin',
+	// Media
+	'.mp3', '.mp4', '.wav', '.avi', '.mov', '.mkv', '.flac', '.ogg', '.webm',
+	'.woff', '.woff2', '.ttf', '.otf', '.eot',
+	// Documents
+	'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.odt', '.ods', '.odp',
+	// Other
+	'.class', '.jar', '.war', '.ear', '.swf', '.iso', '.dmg', '.pkg',
+] as const;
+
 /** Check if extension is a markdown type */
 export function isMarkdownExt(ext: string): boolean {
 	return (MARKDOWN_EXTS as readonly string[]).includes(ext);
