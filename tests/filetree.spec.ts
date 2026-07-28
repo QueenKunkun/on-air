@@ -457,3 +457,44 @@ test('hovering in ft-children gap does not highlight parent', async ({ page }) =
   const bg = await srcRow.evaluate(el => getComputedStyle(el).backgroundColor);
   expect(bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent').toBeTruthy();
 });
+
+// ─── File click navigation ───────────────────────────────────────────────────
+
+test('clicking md file navigates to preview', async ({ page }) => {
+  // Expand programming/react to see hello.md
+  await expandDirNested(page, 'programming', 'react');
+
+  const mdFile = page.locator('.ft-item.ft-file:has(.ft-name:text("hello.md"))');
+  await expect(mdFile).toBeVisible();
+
+  // Click the md file — should navigate to its preview
+  const [newPage] = await Promise.all([
+    page.waitForEvent('framenavigated'),
+    mdFile.click(),
+  ]);
+
+  // After navigation, URL should contain hello.md
+  expect(page.url()).toContain('hello');
+});
+
+test('clicking image file shows image preview in content area', async ({ page }) => {
+  await expandDirNested(page, 'programming', 'react', 'images');
+
+  const imgFile = page.locator('.ft-item.ft-file:has(.ft-name:text("photo.png"))');
+  await expect(imgFile).toBeVisible();
+
+  // Click image — should render FilePreview in #content (no navigation)
+  await imgFile.click();
+  await page.waitForTimeout(1000);
+
+  const urlAfterClick = page.url();
+  // URL should NOT change (image preview is in-page, not a navigation)
+  expect(urlAfterClick).not.toContain('photo.png');
+
+  const fileView = page.locator('#content .file-view');
+  await expect(fileView).toBeVisible({ timeout: 5000 });
+
+  const img = fileView.locator('img');
+  await expect(img).toBeVisible();
+  await expect(img).toHaveAttribute('src', /photo\.png/);
+});
