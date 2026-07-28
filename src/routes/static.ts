@@ -30,10 +30,30 @@ export function handleStatic(
 		return;
 	}
 
-	// Document files (markdown/HTML) always redirect to rendered preview,
-	// even when navigated from a preview page (Referer contains /preview/).
+	// Document files (markdown/HTML/images) redirect to rendered preview,
+	// UNLESS the request is from an embedded resource (iframe/sub-resource).
+	// Embedded requests have Referer pointing to /preview/ but Accept
+	// does not include text/html; direct navigation always includes text/html.
 	const kind = kindFromPath(filePath);
 	if (kind) {
+		const referer = (req.headers.referer as string) || '';
+		const accept = (req.headers.accept as string) || '';
+		const isEmbedded = referer.includes('/preview/') && !accept.includes('text/html');
+
+		if (isEmbedded) {
+			// Serve raw file for embedded requests (e.g. iframe in preview)
+			fs.readFile(filePath, (err, data) => {
+				if (err) {
+					res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+					res.end('File not found');
+					return;
+				}
+				res.writeHead(200, { 'Content-Type': mimeType(filePath) });
+				res.end(data);
+			});
+			return;
+		}
+
 		const frag = rel.includes('#') ? '#' + rel.split('#')[1] : '';
 		const uriKey = vscode.Uri.file(filePath).toString();
 		const existingId = uriToId.get(uriKey);
