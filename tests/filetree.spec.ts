@@ -73,7 +73,7 @@ test('locate button applies ft-current to current file', async ({ page }) => {
 // ─── Filter: .md only ───────────────────────────────────────────────────────
 
 test('mdOnly: only .md files are visible', async ({ page }) => {
-  await page.click('label:has-text(".md") input[type="checkbox"]');
+  await page.getByRole('checkbox', { name: /markdown/i }).click();
   await page.waitForTimeout(500);
 
   const files = await getVisibleFiles(page);
@@ -84,7 +84,7 @@ test('mdOnly: only .md files are visible', async ({ page }) => {
 });
 
 test('mdOnly: directories without .md files are hidden', async ({ page }) => {
-  await page.click('label:has-text(".md") input[type="checkbox"]');
+  await page.getByRole('checkbox', { name: /markdown/i }).click();
   await page.waitForTimeout(500);
 
   const dirs = await getVisibleDirs(page);
@@ -107,7 +107,7 @@ test('hideBinary: images visible, .wasm hidden', async ({ page }) => {
 
 test('hideBinary: turning off reveals .wasm', async ({ page }) => {
   // Turn off hideBinary
-  await page.click('label:has-text("Hide unsupported") input[type="checkbox"]');
+  await page.getByRole('checkbox', { name: /hide unsupported/i }).click();
   await page.waitForTimeout(500);
 
   await expandDir(page, 'src');
@@ -123,7 +123,7 @@ test('gitignore: .log files hidden when checked', async ({ page }) => {
 });
 
 test('gitignore: unchecking reveals .log files', async ({ page }) => {
-  await page.click('.ft-filter label:has-text(".gitignore") input[type="checkbox"]');
+  await page.getByRole('checkbox', { name: /gitignore/i }).click();
   await page.waitForTimeout(1000);
 
   const files = await getVisibleFiles(page);
@@ -134,7 +134,7 @@ test('gitignore: unchecking reveals .log files', async ({ page }) => {
 
 test('all filters on: empty directories are hidden', async ({ page }) => {
   // Turn on mdOnly
-  await page.click('label:has-text(".md") input[type="checkbox"]');
+  await page.getByRole('checkbox', { name: /markdown/i }).click();
   await page.waitForTimeout(500);
 
   // Try to expand programming/ → react/
@@ -147,7 +147,7 @@ test('all filters on: empty directories are hidden', async ({ page }) => {
 });
 
 test('all filters on: directories with .md files are visible', async ({ page }) => {
-  await page.click('label:has-text(".md") input[type="checkbox"]');
+  await page.getByRole('checkbox', { name: /markdown/i }).click();
   await page.waitForTimeout(500);
 
   const dirs = await getVisibleDirs(page);
@@ -163,7 +163,7 @@ test('filter toggle collapses all directories', async ({ page }) => {
   const childrenBefore = await page.locator('.ft-children .ft-item').count();
   expect(childrenBefore).toBeGreaterThan(0);
 
-  await page.click('.ft-filter label:has-text(".gitignore") input[type="checkbox"]');
+  await page.getByRole('checkbox', { name: /gitignore/i }).click();
   await page.waitForTimeout(500);
 
   const childrenAfter = await page.locator('.ft-children .ft-item').count();
@@ -174,7 +174,7 @@ test('filter toggle collapses all directories', async ({ page }) => {
 
 test('filter state persists across page navigation', async ({ page }) => {
   // Turn on mdOnly
-  await page.click('label:has-text(".md") input[type="checkbox"]');
+  await page.getByRole('checkbox', { name: /markdown/i }).click();
   await page.waitForTimeout(500);
 
   // Navigate away and back
@@ -182,14 +182,14 @@ test('filter state persists across page navigation', async ({ page }) => {
   await page.waitForSelector('.ft-list', { timeout: 5000 });
 
   // mdOnly should still be checked
-  const mdCheckbox = page.locator('label:has-text(".md") input[type="checkbox"]');
+  const mdCheckbox = page.getByRole('checkbox', { name: /markdown/i });
   await expect(mdCheckbox).toBeChecked();
 });
 
 // ─── Search: basic matching ─────────────────────────────────────────────────
 
 test('search *.md: only .md files visible', async ({ page }) => {
-  const search = page.locator('.ft-search');
+  const search = page.getByPlaceholder('Filter');
   await search.fill('*.md');
   await page.waitForTimeout(300);
 
@@ -201,7 +201,7 @@ test('search *.md: only .md files visible', async ({ page }) => {
 });
 
 test('search *.md: directories containing .md are visible', async ({ page }) => {
-  const search = page.locator('.ft-search');
+  const search = page.getByPlaceholder('Filter');
   await search.fill('*.md');
   await page.waitForTimeout(300);
 
@@ -211,7 +211,7 @@ test('search *.md: directories containing .md are visible', async ({ page }) => 
 });
 
 test('search *.md: directories without .md are hidden', async ({ page }) => {
-  const search = page.locator('.ft-search');
+  const search = page.getByPlaceholder('Filter');
   await search.fill('*.md');
   await page.waitForTimeout(300);
 
@@ -222,7 +222,7 @@ test('search *.md: directories without .md are hidden', async ({ page }) => {
 // ─── Search: no matches ─────────────────────────────────────────────────────
 
 test('search *.svg: no files or directories (no .svg in fixture)', async ({ page }) => {
-  const search = page.locator('.ft-search');
+  const search = page.getByPlaceholder('Filter');
   await search.fill('*.svg');
   await page.waitForTimeout(300);
 
@@ -233,7 +233,7 @@ test('search *.svg: no files or directories (no .svg in fixture)', async ({ page
 });
 
 test('search nonexistent pattern: everything hidden', async ({ page }) => {
-  const search = page.locator('.ft-search');
+  const search = page.getByPlaceholder('Filter');
   await search.fill('zzz_no_match_zzz');
   await page.waitForTimeout(300);
 
@@ -244,7 +244,7 @@ test('search nonexistent pattern: everything hidden', async ({ page }) => {
 // ─── Search: Escape clears ──────────────────────────────────────────────────
 
 test('Escape clears search and restores tree', async ({ page }) => {
-  const search = page.locator('.ft-search');
+  const search = page.getByPlaceholder('Filter');
   await search.fill('*.md');
   await page.waitForTimeout(300);
   expect((await getVisibleFiles(page)).every(t => t.endsWith('.md'))).toBeTruthy();
@@ -264,7 +264,7 @@ test('search hides expanded directories without matches', async ({ page }) => {
   const srcBefore = await page.locator('.ft-list > .ft-item.ft-directory:has(.ft-name:text("src"))').count();
   expect(srcBefore).toBe(1);
 
-  const search = page.locator('.ft-search');
+  const search = page.getByPlaceholder('Filter');
   await search.fill('*.md');
   await page.waitForTimeout(500);
 
@@ -275,7 +275,7 @@ test('search hides expanded directories without matches', async ({ page }) => {
 test('search keeps expanded directories with matches', async ({ page }) => {
   await expandDirNested(page, 'programming', 'react');
 
-  const search = page.locator('.ft-search');
+  const search = page.getByPlaceholder('Filter');
   await search.fill('*.md');
   await page.waitForTimeout(500);
 
@@ -291,7 +291,7 @@ test('search keeps expanded directories with matches', async ({ page }) => {
 
 test('clearing search restores previously expanded directories', async ({ page }) => {
   await expandDir(page, 'src');
-  const search = page.locator('.ft-search');
+  const search = page.getByPlaceholder('Filter');
   await search.fill('*.md');
   await page.waitForTimeout(500);
 
@@ -310,7 +310,7 @@ test('clearing search restores previously expanded directories', async ({ page }
 
 test('search + mdOnly: both filters apply simultaneously', async ({ page }) => {
   // Turn on mdOnly
-  await page.click('label:has-text(".md") input[type="checkbox"]');
+  await page.getByRole('checkbox', { name: /markdown/i }).click();
   await page.waitForTimeout(500);
 
   // Verify mdOnly works: only .md files visible
@@ -320,7 +320,7 @@ test('search + mdOnly: both filters apply simultaneously', async ({ page }) => {
   }
 
   // Search for a pattern with no matches
-  const search = page.locator('.ft-search');
+  const search = page.getByPlaceholder('Filter');
   await search.fill('zzz_no_match_zzz');
   await page.waitForTimeout(300);
 

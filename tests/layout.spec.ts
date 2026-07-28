@@ -26,7 +26,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('banner theme select changes theme', async ({ page }) => {
-  const themeSelect = page.locator('#themeSelect');
+  const themeSelect = page.getByRole('combobox');
   await expect(themeSelect).toBeVisible();
   // Change theme
   await themeSelect.selectOption('vscode-dark');
@@ -41,32 +41,32 @@ test('banner theme select changes theme', async ({ page }) => {
 });
 
 test('banner font size controls work', async ({ page }) => {
-  const fsInput = page.locator('#fsInput');
+  const fsInput = page.getByRole('spinbutton', { name: /font size/i });
   await expect(fsInput).toBeVisible();
   // Click decrease
-  await page.click('#fsDec');
+  await page.getByTitle('Decrease font size').click();
   await page.waitForTimeout(200);
   const val = await fsInput.inputValue();
   expect(parseInt(val)).toBe(14);
   // Click increase multiple times
-  await page.click('#fsInc');
+  await page.getByTitle('Increase font size').click();
   await page.waitForTimeout(200);
   expect(parseInt(await fsInput.inputValue())).toBe(16);
-  await page.click('#fsInc');
+  await page.getByTitle('Increase font size').click();
   await page.waitForTimeout(200);
   expect(parseInt(await fsInput.inputValue())).toBe(18);
-  await page.click('#fsInc');
+  await page.getByTitle('Increase font size').click();
   await page.waitForTimeout(200);
   expect(parseInt(await fsInput.inputValue())).toBe(20);
   // Click reset
-  await page.click('#fsReset');
+  await page.getByTitle('Reset font size to default').click();
   await page.waitForTimeout(200);
   const val2 = await fsInput.inputValue();
   expect(parseInt(val2)).toBe(16);
 });
 
 test('banner font size direct input works', async ({ page }) => {
-  const fsInput = page.locator('#fsInput');
+  const fsInput = page.getByRole('spinbutton', { name: /font size/i });
   await expect(fsInput).toBeVisible();
   // Type a custom value
   await fsInput.fill('20');
@@ -89,22 +89,22 @@ test('banner font size direct input works', async ({ page }) => {
 });
 
 test('banner scrollbar width controls work', async ({ page }) => {
-  const sbInput = page.locator('#sbInput');
+  const sbInput = page.getByRole('spinbutton', { name: /scrollbar width/i });
   await expect(sbInput).toBeVisible();
   // Click decrease
-  await page.click('#sbDec');
+  await page.getByTitle('Thinner scrollbars').click();
   await page.waitForTimeout(200);
   const val = await sbInput.inputValue();
   expect(parseInt(val)).toBe(12);
   // Click reset
-  await page.click('#sbReset');
+  await page.getByTitle('Reset scrollbar width to default').click();
   await page.waitForTimeout(200);
   const val2 = await sbInput.inputValue();
   expect(parseInt(val2)).toBe(16);
 });
 
 test('banner scrollbar direct input works', async ({ page }) => {
-  const sbInput = page.locator('#sbInput');
+  const sbInput = page.getByRole('spinbutton', { name: /scrollbar width/i });
   await expect(sbInput).toBeVisible();
   // Type a custom value
   await sbInput.fill('24');
@@ -115,7 +115,7 @@ test('banner scrollbar direct input works', async ({ page }) => {
 });
 
 test('banner max width direct input works', async ({ page }) => {
-  const mwInput = page.locator('#mwInput');
+  const mwInput = page.getByRole('spinbutton', { name: /max content width/i });
   await expect(mwInput).toBeVisible();
   // Type a custom value
   await mwInput.fill('600');
