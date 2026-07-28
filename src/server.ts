@@ -120,12 +120,21 @@ const IMAGE_MIME: Record<string, string> = {
 	'.bmp': 'image/bmp', '.ico': 'image/x-icon', '.svg': 'image/svg+xml',
 };
 
-function imagePageTemplate(id: string, title: string, dataUrl: string, fullPath: string, relPath: string, size: number): string {
+function imagePageTemplate(id: string, title: string, dataUrl: string, fullPath: string, relPath: string, rootDir: string, size: number): string {
 	return imgTemplate
+		.replace(/\{\{CSS\}\}/g, () => pageCss)
+		.replace(/\{\{THEMES\}\}/g, () => JSON.stringify(THEMES))
+		.replace(/\{\{ID_JSON\}\}/g, () => JSON.stringify(id))
 		.replace(/\{\{TITLE\}\}/g, () => escapeHtml(title))
 		.replace(/\{\{SRC\}\}/g, () => dataUrl)
 		.replace(/\{\{SIZE_JSON\}\}/g, () => JSON.stringify(`${(size / 1024).toFixed(1)} KB`))
-		.replace(/\{\{VERSION\}\}/g, () => escapeHtml(EXT_VERSION));
+		.replace(/\{\{FULL_PATH_JSON\}\}/g, () => JSON.stringify(fullPath))
+		.replace(/\{\{FULL_PATH_ATTR\}\}/g, () => escapeHtml(fullPath))
+		.replace(/\{\{ROOT_DIR_JSON\}\}/g, () => JSON.stringify(rootDir || ''))
+		.replace(/\{\{ROOT_DIR_ATTR\}\}/g, () => escapeHtml(rootDir || ''))
+		.replace(/\{\{VERSION\}\}/g, () => escapeHtml(EXT_VERSION))
+		.replace(/\{\{VERSION_JSON\}\}/g, () => JSON.stringify(EXT_VERSION))
+		.replace(/\{\{PREACT_JS\}\}/g, () => preactJs);
 }
 
 export class PreviewServer {
@@ -183,9 +192,9 @@ export class PreviewServer {
 				const buf = fs.readFileSync(fullPath);
 				const b64 = buf.toString('base64');
 				const dataUrl = `data:${mime};base64,${b64}`;
-				return { page: imagePageTemplate(id, title, dataUrl, fullPath, relPath, buf.length) };
+				return { page: imagePageTemplate(id, title, dataUrl, fullPath, relPath, rootDir, buf.length) };
 			} catch {
-				return { page: imagePageTemplate(id, title, '', fullPath, relPath, 0) };
+				return { page: imagePageTemplate(id, title, '', fullPath, relPath, rootDir, 0) };
 			}
 		}
 		const docDir = path.dirname(fullPath);
