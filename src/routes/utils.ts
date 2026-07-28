@@ -4,12 +4,15 @@ import { MARKDOWN_EXTS, SUPPORTED_EXTS, IMAGE_EXTS, isMarkdownExt } from '../com
 
 export const toPosix = (p: string): string => (path.sep !== '/' ? p.split(path.sep).join('/') : p);
 
-export type DocKind = 'markdown' | 'html';
+export type DocKind = 'markdown' | 'html' | 'image';
+
+const IMAGE_EXT_SET = new Set<string>(IMAGE_EXTS);
 
 export function kindFromPath(p: string): DocKind | null {
 	const ext = path.extname(p).toLowerCase();
 	if (isMarkdownExt(ext)) { return 'markdown'; }
 	if (ext === '.html' || ext === '.htm') { return 'html'; }
+	if (IMAGE_EXT_SET.has(ext)) { return 'image'; }
 	return null;
 }
 

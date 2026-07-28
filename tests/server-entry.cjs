@@ -61,7 +61,17 @@ async function main() {
     deepPath
   );
 
-  const info = { port: server.port, id, id2, id3, baseUrl: `http://127.0.0.1:${server.port}` };
+  const imgPath = path.join(FIXTURE_DIR, 'programming', 'react', 'images', 'photo.png');
+  const imgId = server.registerDocument(
+    'test://programming/react/images/photo.png',
+    'photo.png',
+    imgPath,
+    'image',
+    FIXTURE_DIR,
+    imgPath
+  );
+
+  const info = { port: server.port, id, id2, id3, imgId, baseUrl: `http://127.0.0.1:${server.port}` };
   const infoPath = path.join(__dirname, '.server-info.json');
   fs.writeFileSync(infoPath, JSON.stringify(info));
   console.log(`Server ready on port ${server.port}`);
