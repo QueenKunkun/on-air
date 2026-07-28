@@ -489,3 +489,16 @@ test('clicking image file in tree navigates to preview page', async ({ page }) =
   await expect(img).toBeVisible({ timeout: 5000 });
   await expect(img).toHaveAttribute('src', /^data:image\/png;base64,/);
 });
+
+test('image preview page shows file tree', async ({ page }) => {
+  await page.goto(`${baseUrl}/preview/${imgId}`);
+  await page.waitForLoadState('load');
+
+  // File tree root should exist
+  const fileTree = page.locator('#ft-preact-root');
+  await expect(fileTree).toBeVisible({ timeout: 5000 });
+
+  // Image should be visible
+  const img = page.locator('#img');
+  await expect(img).toBeVisible({ timeout: 5000 });
+});
