@@ -63,9 +63,14 @@ export function Banner({ connStatus }: BannerProps) {
 		};
 	}, []);
 
+	const [copied, setCopied] = useState(false);
+
 	const handleVerClick = useCallback(() => {
 		const ver = window.__ONAIR__?.version || 'dev';
-		navigator.clipboard?.writeText(ver).catch(() => {});
+		navigator.clipboard?.writeText(ver).then(() => {
+			setCopied(true);
+			setTimeout(() => setCopied(false), 1500);
+		}).catch(() => {});
 	}, []);
 
 	const themes = window.__ONAIR__?.themes || [];
@@ -125,7 +130,7 @@ export function Banner({ connStatus }: BannerProps) {
 			</div>
 			<div class="ver-badge" id="verBadge" title="Click to copy version"
 				onClick={handleVerClick}>
-				v{window.__ONAIR__?.version || 'dev'}
+				{copied ? 'Copied!' : `v${window.__ONAIR__?.version || 'dev'}`}
 			</div>
 		</div>
 	);
