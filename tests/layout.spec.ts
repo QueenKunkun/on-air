@@ -206,17 +206,17 @@ test('TOC expand all and collapse all', async ({ page }) => {
   await page.request.post(`${baseUrl}/test/update`, { data: JSON.stringify({ html: md }) });
   await page.waitForTimeout(1000);
   await expect(async () => {
-    const count = await page.locator('#toc-list .r').count();
+    const count = await page.locator('#toc-list [data-testid="toc-row"]').count();
     expect(count).toBeGreaterThanOrEqual(10);
   }).toPass({ timeout: 10000 });
 
   const header = page.locator('#toc-header');
   await expect(header).toBeVisible();
-  const collapseBtn = header.locator('.toc-m');
+  const collapseBtn = page.getByTitle(/expand all|collapse all/i);
   await expect(collapseBtn).toBeVisible();
 
   // Initial state: sections visible
-  const firstSection = page.locator('#toc-list .t').first();
+  const firstSection = page.locator('#toc-list [data-testid="toc-toggle"]').first();
   await expect(firstSection).toBeVisible();
 
   // Click collapse all (button shows "−")
@@ -224,7 +224,7 @@ test('TOC expand all and collapse all', async ({ page }) => {
   await page.waitForTimeout(300);
 
   // All nested lists should be collapsed (class "c")
-  const collapsedItems = await page.locator('#toc-list ul.c').count();
+  const collapsedItems = await page.locator('#toc-list ul[data-collapsed]').count();
   expect(collapsedItems).toBeGreaterThan(0);
 
   // Button should now show "+" (expand all)
@@ -236,7 +236,7 @@ test('TOC expand all and collapse all', async ({ page }) => {
   await page.waitForTimeout(300);
 
   // No collapsed lists
-  const collapsedAfter = await page.locator('#toc-list ul.c').count();
+  const collapsedAfter = await page.locator('#toc-list ul[data-collapsed]').count();
   expect(collapsedAfter).toBe(0);
 });
 
@@ -245,12 +245,12 @@ test('TOC individual section collapse and expand', async ({ page }) => {
   await page.request.post(`${baseUrl}/test/update`, { data: JSON.stringify({ html: md }) });
   await page.waitForTimeout(1000);
   await expect(async () => {
-    const count = await page.locator('#toc-list .r').count();
+    const count = await page.locator('#toc-list [data-testid="toc-row"]').count();
     expect(count).toBeGreaterThanOrEqual(5);
   }).toPass({ timeout: 10000 });
 
   // Each section with children should have a button.t
-  const buttons = page.locator('#toc-list .t');
+  const buttons = page.locator('#toc-list [data-testid="toc-toggle"]');
   const btnCount = await buttons.count();
   expect(btnCount).toBeGreaterThan(0);
 
@@ -267,10 +267,10 @@ test('TOC individual section collapse and expand', async ({ page }) => {
   const btnTextAfter = await firstBtn.textContent();
   expect(btnTextAfter).toBe('+');
 
-  // The sibling ul should have class "c" (collapsed)
+  // The sibling ul should have data-collapsed attribute (collapsed)
   const parentLi = firstBtn.locator('xpath=ancestor::li');
   const childUl = parentLi.locator(':scope > ul');
-  await expect(childUl).toHaveClass(/c/);
+  await expect(childUl).toHaveAttribute('data-collapsed', '');
 
   // Click again to expand
   await firstBtn.click();
@@ -279,8 +279,8 @@ test('TOC individual section collapse and expand', async ({ page }) => {
   const btnTextReexpand = await firstBtn.textContent();
   expect(btnTextReexpand).toBe('\u2212');
 
-  // ul should no longer have class "c"
-  await expect(childUl).not.toHaveClass(/c/);
+  // ul should no longer have data-collapsed attribute
+  await expect(childUl).not.toHaveAttribute('data-collapsed', '');
 });
 
 test('file tree locate button highlights current file', async ({ page }) => {
@@ -485,7 +485,7 @@ test('TOC rebuilds when content updates via WebSocket', async ({ page }) => {
   await page.waitForTimeout(500);
 
   // Record initial TOC item count (may be > 0 if prior tests updated content)
-  const initialTocItems = await toc.locator('.r').count();
+  const initialTocItems = await toc.locator('[data-testid="toc-row"]').count();
 
   // Update content via the test endpoint to include 3 headings (1 h1 + 2 h2)
   const newMd = '# Test Project\n\n## Section One\n\nHello world.\n\n## Section Two\n\nMore content.\n';
@@ -500,13 +500,13 @@ test('TOC rebuilds when content updates via WebSocket', async ({ page }) => {
 
   // Wait for TOC to rebuild with the new headings (3 total: h1 + 2 h2)
   await expect(async () => {
-    const items = await toc.locator('.r').count();
+    const items = await toc.locator('[data-testid="toc-row"]').count();
     expect(items).toBe(3);
   }).toPass({ timeout: 10000 });
 
   // Verify section headings are in the TOC
-  await expect(toc.locator('.r').nth(1).locator('a')).toContainText('Section One');
-  await expect(toc.locator('.r').nth(2).locator('a')).toContainText('Section Two');
+  await expect(toc.locator('[data-testid="toc-row"]').nth(1).locator('a')).toContainText('Section One');
+  await expect(toc.locator('[data-testid="toc-row"]').nth(2).locator('a')).toContainText('Section Two');
 });
 
 test('TOC toggle aligns with TOC resizer when files collapsed', async ({ page }) => {
@@ -606,7 +606,7 @@ test('TOC active item scrolls into view on content scroll', async ({ page }) => 
 
   // Wait for TOC to rebuild
   await expect(async () => {
-    const items = await page.locator('#toc-list .r').count();
+    const items = await page.locator('#toc-list [data-testid="toc-row"]').count();
     expect(items).toBeGreaterThanOrEqual(15);
   }).toPass({ timeout: 10000 });
 
@@ -665,7 +665,7 @@ test('TOC scrollIntoView does not change horizontal scroll position', async ({ p
   }
   expect(resp!.ok()).toBeTruthy();
   await expect(async () => {
-    const items = await page.locator('#toc-list .r').count();
+    const items = await page.locator('#toc-list [data-testid="toc-row"]').count();
     expect(items).toBeGreaterThanOrEqual(15);
   }).toPass({ timeout: 5000 });
 
@@ -717,7 +717,7 @@ test('TOC active tracking must not use scrollIntoView (causes document scroll le
 
   // Wait for WebSocket update to propagate and TOC to rebuild
   await expect(async () => {
-    const items = await page.locator('#toc-list .r').count();
+    const items = await page.locator('#toc-list [data-testid="toc-row"]').count();
     expect(items).toBeGreaterThanOrEqual(30);
   }).toPass({ timeout: 15000 });
 
@@ -745,7 +745,7 @@ test('TOC shows scrollbar when headings overflow', async ({ page }) => {
   await page.waitForTimeout(2000);
 
   await expect(async () => {
-    const items = await page.locator('#toc-list .r').count();
+    const items = await page.locator('#toc-list [data-testid="toc-row"]').count();
     expect(items).toBeGreaterThanOrEqual(30);
   }).toPass({ timeout: 10000 });
 

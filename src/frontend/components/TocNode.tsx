@@ -25,17 +25,17 @@ export function TocNode({ entry, collapsedAll }: TocNodeProps) {
 	}, []);
 
 	return (
-		<li>
-			<div class="r">
+		<li data-collapsed={hasChildren && collapsed ? '' : undefined}>
+			<div class="r" data-testid="toc-row">
 				{hasChildren ? (
-					<button class="t" title={collapsed ? 'Expand' : 'Collapse'} onClick={toggle}>{collapsed ? '+' : '\u2212'}</button>
+					<button class="t" data-testid="toc-toggle" title={collapsed ? 'Expand' : 'Collapse'} onClick={toggle}>{collapsed ? '+' : '\u2212'}</button>
 				) : (
 					<span class="s"></span>
 				)}
 				<a href={'#' + entry.id} title={entry.text}>{entry.text}</a>
 			</div>
 			{hasChildren && (
-				<ul class={collapsed ? 'c' : undefined}>
+				<ul class={collapsed ? 'c' : undefined} data-collapsed={collapsed ? '' : undefined}>
 					{entry.children.map(child => (
 						<TocNode key={child.id} entry={child} collapsedAll={collapsedAll} />
 					))}
