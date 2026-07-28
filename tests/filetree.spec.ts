@@ -460,21 +460,22 @@ test('hovering in ft-children gap does not highlight parent', async ({ page }) =
 
 // ─── File click navigation ───────────────────────────────────────────────────
 
-test('clicking md file navigates to preview', async ({ page }) => {
+test('clicking md file shows rendered markdown, not raw text', async ({ page }) => {
   // Expand programming/react to see hello.md
   await expandDirNested(page, 'programming', 'react');
 
   const mdFile = page.locator('.ft-item.ft-file:has(.ft-name:text("hello.md"))');
   await expect(mdFile).toBeVisible();
 
-  // Click the md file — should navigate to its preview
-  const [newPage] = await Promise.all([
-    page.waitForEvent('framenavigated'),
-    mdFile.click(),
-  ]);
+  // Click the md file — should navigate to rendered preview (302 redirect)
+  await mdFile.click();
+  await page.waitForLoadState('load', { timeout: 10000 });
 
-  // After navigation, URL should contain hello.md
-  expect(page.url()).toContain('hello');
+  // Content should be rendered HTML, not raw markdown text
+  const bodyText = await page.textContent('body');
+  expect(bodyText).toContain('React Notes');
+  // Should NOT contain raw markdown syntax (the # heading marker)
+  expect(bodyText).not.toMatch(/^# React Notes/m);
 });
 
 test('clicking image file shows image preview in content area', async ({ page }) => {

@@ -30,36 +30,31 @@ export function handleStatic(
 		return;
 	}
 
-	// If the request has a Referer pointing to a preview page (e.g. an <iframe>
-	// inside the preview), serve the raw file directly instead of redirecting
-	const referer = (req.headers.referer as string) || '';
-	const isEmbedded = referer.includes('/preview/');
-
-	if (!isEmbedded) {
-		const kind = kindFromPath(filePath);
-		if (kind) {
-			const frag = rel.includes('#') ? '#' + rel.split('#')[1] : '';
-			const uriKey = vscode.Uri.file(filePath).toString();
-			const existingId = uriToId.get(uriKey);
-			if (existingId) {
-				res.writeHead(302, { Location: `/preview/${existingId}${frag}` });
-				res.end();
-				return;
-			}
-			fs.readFile(filePath, 'utf8', (err, data) => {
-				if (err) {
-					res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-					res.end('File not found');
-					return;
-				}
-				const targetWs = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(filePath));
-				const targetRootDir = targetWs ? targetWs.uri.fsPath : path.dirname(filePath);
-				const newId = registerDocument(uriKey, path.basename(filePath), data, kind, targetRootDir, filePath);
-				res.writeHead(302, { Location: `/preview/${newId}${frag}` });
-				res.end();
-			});
+	// Document files (markdown/HTML) always redirect to rendered preview,
+	// even when navigated from a preview page (Referer contains /preview/).
+	const kind = kindFromPath(filePath);
+	if (kind) {
+		const frag = rel.includes('#') ? '#' + rel.split('#')[1] : '';
+		const uriKey = vscode.Uri.file(filePath).toString();
+		const existingId = uriToId.get(uriKey);
+		if (existingId) {
+			res.writeHead(302, { Location: `/preview/${existingId}${frag}` });
+			res.end();
 			return;
 		}
+		fs.readFile(filePath, 'utf8', (err, data) => {
+			if (err) {
+				res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+				res.end('File not found');
+				return;
+			}
+			const targetWs = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(filePath));
+			const targetRootDir = targetWs ? targetWs.uri.fsPath : path.dirname(filePath);
+			const newId = registerDocument(uriKey, path.basename(filePath), data, kind, targetRootDir, filePath);
+			res.writeHead(302, { Location: `/preview/${newId}${frag}` });
+			res.end();
+		});
+		return;
 	}
 
 	fs.readFile(filePath, (err, data) => {
