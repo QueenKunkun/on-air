@@ -328,10 +328,8 @@ export function FileTree({ id }: Props) {
     const contentEl = document.getElementById('content');
     if (!contentEl) return;
     const goBack = () => { document.getElementById('tabTree')?.click(); };
-    if (isTextFile(filePath)) {
+    if (isTextFile(filePath) || isImageFile(filePath)) {
       location.href = '/preview/' + id + '/' + encodeURIComponent(filePath);
-    } else if (isImageFile(filePath)) {
-      render(h(FilePreview, { filePath, id, onBack: goBack }), contentEl);
     } else {
       const params = 'id=' + encodeURIComponent(id) + '&path=' + encodeURIComponent(filePath);
       fetch('/api/file?' + params).then(r => r.json()).then(data => {

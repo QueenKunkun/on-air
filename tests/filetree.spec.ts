@@ -5,11 +5,13 @@ import * as path from 'path';
 const infoPath = path.join(__dirname, '.server-info.json');
 let baseUrl: string;
 let docId: string;
+let imgId: string;
 
 test.beforeAll(() => {
   const info = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
   baseUrl = info.baseUrl;
   docId = info.id;
+  imgId = info.imgId;
 });
 
 test.beforeEach(async ({ page }) => {
@@ -339,24 +341,6 @@ test('search + mdOnly: both filters apply simultaneously', async ({ page }) => {
   }
 });
 
-// ─── Image preview ──────────────────────────────────────────────────────────
-
-test('clicking image file shows image preview', async ({ page }) => {
-  await page.waitForTimeout(500);
-  await expandDirNested(page, 'programming', 'react', 'images');
-
-  const imgFile = page.locator('.ft-item.ft-file:has(.ft-name:text("photo.png"))');
-  await expect(imgFile).toBeVisible();
-  await imgFile.click();
-
-  const fileView = page.locator('#content .file-view');
-  await expect(fileView).toBeVisible({ timeout: 10000 });
-  const img = fileView.locator('img');
-  await expect(img).toBeVisible();
-  await expect(img).toHaveAttribute('src', /photo\.png/);
-  expect(await fileView.locator('.file-binary').count()).toBe(0);
-});
-
 // ─── Expand/Collapse toggle ─────────────────────────────────────────────────
 
 test('expand then collapse: children hidden after second click', async ({ page }) => {
@@ -478,24 +462,30 @@ test('clicking md file shows rendered markdown, not raw text', async ({ page }) 
   expect(bodyText).not.toMatch(/^# React Notes/m);
 });
 
-test('clicking image file shows image preview in content area', async ({ page }) => {
+// ─── Image preview (Jul 27 feature) ─────────────────────────────────────────
+
+test('image preview page shows rendered image, not raw binary', async ({ page }) => {
+  await page.goto(`${baseUrl}/preview/${imgId}`);
+  await page.waitForLoadState('load');
+
+  // Should have an <img> tag with base64 data URL
+  const img = page.locator('#img');
+  await expect(img).toBeVisible({ timeout: 5000 });
+  await expect(img).toHaveAttribute('src', /^data:image\/png;base64,/);
+});
+
+test('clicking image file in tree navigates to preview page', async ({ page }) => {
   await expandDirNested(page, 'programming', 'react', 'images');
 
   const imgFile = page.locator('.ft-item.ft-file:has(.ft-name:text("photo.png"))');
   await expect(imgFile).toBeVisible();
 
-  // Click image — should render FilePreview in #content (no navigation)
+  // Click image — should navigate to image preview page
   await imgFile.click();
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('load', { timeout: 10000 });
 
-  const urlAfterClick = page.url();
-  // URL should NOT change (image preview is in-page, not a navigation)
-  expect(urlAfterClick).not.toContain('photo.png');
-
-  const fileView = page.locator('#content .file-view');
-  await expect(fileView).toBeVisible({ timeout: 5000 });
-
-  const img = fileView.locator('img');
-  await expect(img).toBeVisible();
-  await expect(img).toHaveAttribute('src', /photo\.png/);
+  // Should be on a preview page with an <img> tag
+  const img = page.locator('#img');
+  await expect(img).toBeVisible({ timeout: 5000 });
+  await expect(img).toHaveAttribute('src', /^data:image\/png;base64,/);
 });
