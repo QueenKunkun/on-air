@@ -501,4 +501,38 @@ test('image preview page shows file tree', async ({ page }) => {
   // Image should be visible
   const img = page.locator('#img');
   await expect(img).toBeVisible({ timeout: 5000 });
+
+  // Version badge should be visible and clickable
+  const verBadge = page.locator('#verBadge');
+  await expect(verBadge).toBeVisible({ timeout: 5000 });
+  await expect(verBadge).toHaveText(/v/);
+});
+
+test('clicking version badge copies to clipboard', async ({ page }) => {
+  // Mock clipboard before page loads
+  await page.addInitScript(() => {
+    (window as any).__clipboardText = '';
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: (text: string) => {
+          (window as any).__clipboardText = text;
+          return Promise.resolve();
+        }
+      },
+      configurable: true
+    });
+  });
+
+  await page.goto(`${baseUrl}/preview/${imgId}`);
+  await page.waitForLoadState('load');
+
+  // Click version badge
+  const verBadge = page.locator('#verBadge');
+  await verBadge.click();
+
+  // Check clipboard content — should copy the version string
+  const clipboardText = await page.evaluate(() => (window as any).__clipboardText);
+  expect(clipboardText).toBeTruthy();
+  expect(clipboardText).not.toBe('dev');
+  expect(clipboardText).not.toBe('');
 });
