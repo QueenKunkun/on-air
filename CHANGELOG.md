@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.15.3] - 2026-07-28
+
+- feat: Add image preview with themes, file tree, and click navigation
+- feat: Add version badge copy with visual feedback
+
+
 ## [0.15.0] - 2026-07-27
 
 - feat: image preview (png/jpg/gif/webp/svg/bmp/ico render as inline base64 data URL)
