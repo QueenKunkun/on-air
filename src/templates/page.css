@@ -243,3 +243,12 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 .onair-unknown-html code code { display: inline; padding: 0; font-size: inherit; }
 /* Inline unknown tags */
 span.onair-unknown-html { display: inline; background: var(--pre-bg); padding: 2px 6px; border-radius: 4px; font-size: 85%; color: var(--quote-c); cursor: help; }
+
+/* Print styles - hide UI elements */
+@media print {
+	#banner, #filesSide, #tocCol, .files-resizer, .toc-resizer,
+	#edgeHandles, #toggle-layer, #annotSide, .annot-resizer,
+	.onair-unknown-html, .file-view-header, #annotToggle { display: none !important; }
+	#wrapper { display: block !important; padding: 0 !important; }
+	.markdown-body { max-width: 100% !important; padding: 0 !important; }
+}
