@@ -5,6 +5,7 @@ import markdownItFootnote from 'markdown-it-footnote';
 import markdownItMark from 'markdown-it-mark';
 import hljs from 'highlight.js/lib/core';
 import { MARKDOWN_EXTS } from '../common/extensions';
+import sanitizeUnknownHtml from './sanitize-unknown-html';
 
 // Language imports — only the subset we want to highlight.
 import javascript from 'highlight.js/lib/languages/javascript';
@@ -76,6 +77,7 @@ md.linkify.set({ fuzzyLink: false });
 
 md.use(markdownItFootnote);
 md.use(markdownItMark);
+md.use(sanitizeUnknownHtml);
 
 const slugify = (text: string): string =>
 	text.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w\u4e00-\u9fff\-]/g, '');
