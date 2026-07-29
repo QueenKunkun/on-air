@@ -7,7 +7,6 @@
 - Prevents dangerous tags like <script>, <link> from loading external resources
 - Handle self-closing tags without close tags
 - Add print styles to hide UI elements
-- Use ID selectors to avoid conflicts with user content
 
 
 ## [0.15.3] - 2026-07-28
