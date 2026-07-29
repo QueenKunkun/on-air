@@ -41,30 +41,12 @@ export function sanitizeUnknownHtml(source: string): string {
 	while (i < lines.length) {
 		const line = lines[i];
 
-		// Check for opening tags of unknown elements
-		const openMatch = line.match(/^<([a-zA-Z][a-zA-Z0-9_]*)[^>]*>$/);
-		if (openMatch && !isAllowed(openMatch[1])) {
-			const tagName = openMatch[1];
-			const content: string[] = [];
-
-			// Collect content until closing tag
-			i++;
-			while (i < lines.length) {
-				const closeMatch = lines[i].match(new RegExp(`^</${tagName}\\s*>$`, 'i'));
-				if (closeMatch) {
-					break;
-				}
-				content.push(lines[i]);
-				i++;
-			}
-
-			// Wrap in details block
-			const label = `<${tagName}>`;
-			const escapedContent = escapeHtml(content.join('\n').trim());
+		// Check for self-closing unknown tags (e.g., <tag ... />)
+		const selfCloseMatch = line.match(/^<([a-zA-Z][a-zA-Z0-9_]*)[^>]*\/>$/);
+		if (selfCloseMatch && !isAllowed(selfCloseMatch[1])) {
+			const label = `<${selfCloseMatch[0]}>`;
 			result.push('');
 			result.push(`<details class="onair-unknown-html"><summary>${escapeHtml(label)}</summary>`);
-			result.push('');
-			result.push(`<pre><code>${escapedContent}</code></pre>`);
 			result.push('');
 			result.push('</details>');
 			result.push('');
@@ -72,17 +54,47 @@ export function sanitizeUnknownHtml(source: string): string {
 			continue;
 		}
 
-		// Check for self-closing unknown tags
-		const selfCloseMatch = line.match(/^<([a-zA-Z][a-zA-Z0-9_]*)[^>]*\/>$/);
-		if (selfCloseMatch && !isAllowed(selfCloseMatch[1])) {
-			const tagName = selfCloseMatch[1];
-			const label = `<${tagName}/>`;
-			result.push('');
-			result.push(`<details class="onair-unknown-html"><summary>${escapeHtml(label)}</summary>`);
-			result.push('');
-			result.push('</details>');
-			result.push('');
-			i++;
+		// Check for opening tags of unknown elements (e.g., <tag ...>)
+		// But first check if it's actually an opening tag by looking for a closing tag
+		const openMatch = line.match(/^<([a-zA-Z][a-zA-Z0-9_]*)[^>]*>$/);
+		if (openMatch && !isAllowed(openMatch[1])) {
+			const tagName = openMatch[1];
+
+			// Look ahead to find closing tag (search up to 500 lines)
+			let foundClose = false;
+			let contentLines: string[] = [];
+			for (let j = i + 1; j < Math.min(i + 500, lines.length); j++) {
+				const closeMatch = lines[j].match(new RegExp(`^</${tagName}\\s*>$`, 'i'));
+				if (closeMatch) {
+					// Found closing tag
+					contentLines = lines.slice(i + 1, j);
+					foundClose = true;
+					i = j + 1; // Skip past closing tag
+					break;
+				}
+			}
+
+			if (foundClose) {
+				// Has closing tag - wrap in details block
+				const label = `<${tagName}>`;
+				const escapedContent = escapeHtml(contentLines.join('\n').trim());
+				result.push('');
+				result.push(`<details class="onair-unknown-html"><summary>${escapeHtml(label)}</summary>`);
+				result.push('');
+				result.push(`<pre><code>${escapedContent}</code></pre>`);
+				result.push('');
+				result.push('</details>');
+				result.push('');
+			} else {
+				// No closing tag found - treat as self-closing
+				const label = `<${tagName}>`;
+				result.push('');
+				result.push(`<details class="onair-unknown-html"><summary>${escapeHtml(label)}</summary>`);
+				result.push('');
+				result.push('</details>');
+				result.push('');
+				i++;
+			}
 			continue;
 		}
 
