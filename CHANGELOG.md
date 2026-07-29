@@ -1,5 +1,15 @@
 # Change Log
 
+## [0.15.4] - 2026-07-29
+
+- feat: sanitize unknown HTML tags in markdown rendering
+- Add markdown-it plugin to wrap non-standard HTML tags in collapsible <details> blocks
+- Prevents dangerous tags like <script>, <link> from loading external resources
+- Handle self-closing tags without close tags
+- Add print styles to hide UI elements
+- Use ID selectors to avoid conflicts with user content
+
+
 ## [0.15.3] - 2026-07-28
 
 - feat: Add image preview
