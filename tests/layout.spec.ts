@@ -734,6 +734,48 @@ test('TOC active tracking must not use scrollIntoView (causes document scroll le
   expect(calls).toBe(0);
 });
 
+test('TOC link click scrolls content to heading', async ({ page }) => {
+  await page.waitForTimeout(1000);
+
+  const md = [
+    '# Top\n',
+    ...Array.from({ length: 20 }, (_, i) =>
+      `## Section ${i + 1}\n\n${'Paragraph text here. '.repeat(8)}\n\n`
+    ),
+  ].join('');
+  let resp: any = null;
+  for (let i = 0; i < 3; i++) {
+    resp = await page.request.post(`${baseUrl}/test/update`, { data: JSON.stringify({ html: md }) });
+    if (resp.ok()) break;
+    await page.waitForTimeout(500);
+  }
+  expect(resp!.ok()).toBeTruthy();
+
+  await expect(async () => {
+    const items = await page.locator('#toc-list [data-testid="toc-row"]').count();
+    expect(items).toBeGreaterThanOrEqual(15);
+  }).toPass({ timeout: 10000 });
+
+  await page.waitForTimeout(300);
+
+  // Scroll to top first
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(200);
+
+  const scrollTopBefore = await page.evaluate(() => document.documentElement.scrollTop);
+
+  // Click the last TOC link
+  const tocLinks = page.locator('#toc-list a');
+  const lastLink = tocLinks.last();
+  await lastLink.click();
+
+  // Wait for smooth scroll to complete
+  await page.waitForTimeout(1500);
+
+  const scrollTopAfter = await page.evaluate(() => document.documentElement.scrollTop);
+  expect(scrollTopAfter).toBeGreaterThan(scrollTopBefore);
+});
+
 test('TOC shows scrollbar when headings overflow', async ({ page }) => {
   await page.goto(`${baseUrl}/preview/${docId}`);
   await page.waitForSelector('.ft-list', { timeout: 5000 });
