@@ -52,7 +52,7 @@ export function TOC({ contentEl, fullPath, relPath, contentVersion }: TOCProps) 
 		if (!tocListNode) { linksRef.current = []; return; }
 		linksRef.current = Array.from(tocListNode.querySelectorAll('a'));
 		forceLinks(n => n + 1);
-	});
+	}, [tocListNode, tocEntries, collapsedAll]);
 
 	// Portal-like: append rendered content to #toc
 	useEffect(() => {
