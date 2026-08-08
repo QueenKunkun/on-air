@@ -779,12 +779,13 @@ test('TOC link click scrolls content to heading', async ({ page }) => {
 test('TOC shows scrollbar when headings overflow', async ({ page }) => {
   await page.goto(`${baseUrl}/preview/${docId}`);
   await page.waitForSelector('.ft-list', { timeout: 5000 });
+  // Ensure WebSocket is connected before sending update
+  await page.waitForTimeout(1000);
 
   const md = Array.from({ length: 40 }, (_, i) =>
     `## Heading ${i + 1}\n\n${'Paragraph text here. '.repeat(8)}\n\n`
   ).join('');
   await page.request.post(`${baseUrl}/test/update`, { data: JSON.stringify({ html: md }) });
-  await page.waitForTimeout(2000);
 
   await expect(async () => {
     const items = await page.locator('#toc-list [data-testid="toc-row"]').count();
