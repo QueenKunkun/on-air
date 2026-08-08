@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.15.5] - 2026-08-08
+
+- fix: TOC link click not scrolling content to heading
+
+
 ## [0.15.4] - 2026-07-29
 
 - feat: sanitize unknown HTML tags in markdown rendering
