@@ -289,7 +289,7 @@ test('file tree locate button highlights current file', async ({ page }) => {
   // README.md is the currently open file — it should have ft-current class
   const readmeItem = page.locator('.ft-list .ft-file .ft-name', { hasText: 'README.md' });
   await expect(readmeItem).toBeVisible();
-  const readmeLi = readmeItem.locator('xpath=ancestor::li[1]');
+  const readmeLi = readmeItem.locator('xpath=ancestor::a[1]');
   const isCurrentBefore = await readmeLi.evaluate(el => el.classList.contains('ft-current'));
   expect(isCurrentBefore).toBe(true);
 

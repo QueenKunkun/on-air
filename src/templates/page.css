@@ -190,7 +190,7 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 .ft-list { list-style: none; padding: 0; margin: 0; }
 
 /* Tree items with grid for toggle + name + children stacking */
-.ft-item { padding: 2px 4px; border-radius: 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: none; }
+.ft-item { padding: 2px 4px; border-radius: 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: none; color: inherit; text-decoration: none; }
 .ft-item.ft-directory { display: flex; flex-direction: column; }
 .ft-item.ft-file { display: grid; grid-template-columns: 16px 1fr; align-items: center; }
 .ft-row { display: grid; grid-template-columns: 16px 1fr; align-items: center; }

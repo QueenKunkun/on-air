@@ -390,11 +390,12 @@ export function FileTree({ id }: Props) {
         );
       }
       const isCurrent = e.path === currentPath;
+      const href = '/preview/' + id + '/' + encodeURIComponent(e.path);
       return (
-        <li class={'ft-item ft-file' + (isCurrent ? ' ft-current' : '')} data-path={e.path} onClick={(ev: h.JSX.TargetedMouseEvent<HTMLLIElement>) => { ev.stopPropagation(); openFile(e.path); }}>
+        <a class={'ft-item ft-file' + (isCurrent ? ' ft-current' : '')} data-path={e.path} href={href} onClick={(ev: h.JSX.TargetedMouseEvent<HTMLAnchorElement>) => { ev.stopPropagation(); if (!ev.metaKey && !ev.ctrlKey) { ev.preventDefault(); openFile(e.path); } }}>
           <span class="ft-toggle ft-vis-hidden"></span>
           <span class="ft-name">{e.name}</span>
-        </li>
+        </a>
       );
     });
   }
