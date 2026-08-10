@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.15.6] - 2026-08-10
+
+- fix: enable opening file tree links in new tab/window
+
+
 ## [0.15.5] - 2026-08-08
 
 - fix: TOC link click not scrolling content to heading
