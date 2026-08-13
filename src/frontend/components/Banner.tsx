@@ -101,10 +101,10 @@ export function Banner({ connStatus }: BannerProps) {
 				</select>
 				<button class="wp-btn" id="wpBtn" title="Toggle word wrapping for code blocks"
 					onClick={() => setWpOn(!wpOn)}>
-					{wpOn ? 'Unwrap code' : 'Wrap code'}
+					↵
 				</button>
 				<button class="wp-btn" id="hoverBtn" title="Toggle hover preview for footnote/annotation notes">
-					Hover notes
+					💬
 				</button>
 				<span class="bp-group"><span class="bp-label" title="Font size">A</span>
 					<button class="bp-btn" id="fsDec" title="Decrease font size"
