@@ -99,7 +99,7 @@ export function Banner({ connStatus }: BannerProps) {
 					onChange={(e) => setTheme((e.target as HTMLSelectElement).value)}>
 					{themes.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
 				</select>
-				<button class="wp-btn" id="wpBtn" title="Toggle word wrapping for code blocks"
+				<button class={`wp-btn${wpOn ? ' on' : ''}`} id="wpBtn" title="Toggle word wrapping for code blocks"
 					onClick={() => setWpOn(!wpOn)}>
 					↵
 				</button>
