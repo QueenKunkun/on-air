@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.15.7] - 2026-08-13
+
+- Toolbar: replace Wrap code / Hover notes text with icons (↵ / 💬)
+- Toolbar: hide status text, show via title tooltip on hover
+- Toolbar: dynamic --banner-h so sidebar/TOC no longer overlap on small screens
+- Toolbar: tighten button padding; separate +/- and icon button widths
+
+
 ## [0.15.6] - 2026-08-10
 
 - fix: enable opening file tree links in new tab/window
