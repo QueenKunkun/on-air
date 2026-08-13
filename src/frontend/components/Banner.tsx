@@ -63,6 +63,21 @@ export function Banner({ connStatus }: BannerProps) {
 		};
 	}, []);
 
+	// Track banner height and sync to --banner-h CSS variable
+	useEffect(() => {
+		const banner = document.getElementById('banner');
+		if (!banner) return;
+
+		function updateHeight() {
+			document.documentElement.style.setProperty('--banner-h', banner!.offsetHeight + 'px');
+		}
+		updateHeight();
+
+		const ro = new ResizeObserver(updateHeight);
+		ro.observe(banner);
+		return () => ro.disconnect();
+	}, []);
+
 	const [copied, setCopied] = useState(false);
 
 	const handleVerClick = useCallback(() => {
