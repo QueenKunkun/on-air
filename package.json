@@ -112,5 +112,8 @@
     "preview",
     "live reload",
     "share link"
-  ]
+  ],
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
 }
