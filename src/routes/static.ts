@@ -38,11 +38,18 @@ export function handleStatic(
 	// UNLESS the request is from an embedded resource (iframe/sub-resource).
 	// Embedded requests have Referer pointing to /preview/ but Accept
 	// does not include text/html; direct navigation always includes text/html.
-	const kind = kindFromPath(filePath);
+		const kind = kindFromPath(filePath);
 	if (kind) {
 		const referer = (req.headers.referer as string) || '';
 		const accept = (req.headers.accept as string) || '';
-		const isEmbedded = referer.includes('/preview/') && !accept.includes('text/html');
+		const secFetchDest = (req.headers['sec-fetch-dest'] as string) || '';
+		// A request is an embedded sub-resource (served raw, no preview chrome) when:
+		//  - it comes from an iframe/embed — Sec-Fetch-Dest reliably reports 'iframe'/'embed',
+		//  - or (legacy clients) Referer points to /preview/ and Accept lacks text/html.
+		// Note: an <iframe> loading an HTML document DOES send `Accept: text/html`, so the
+		// Sec-Fetch-Dest check is required — otherwise HTML embeds get wrapped in preview chrome.
+		const isEmbedded = secFetchDest === 'iframe' || secFetchDest === 'embed'
+			|| (referer.includes('/preview/') && !accept.includes('text/html'));
 
 		if (isEmbedded) {
 			// Serve raw file for embedded requests (e.g. iframe in preview)
