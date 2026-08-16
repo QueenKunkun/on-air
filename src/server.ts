@@ -19,6 +19,7 @@ import { kindFromPath, toPosix } from './routes/utils';
 import type { DocKind, DocEntry } from './routes/types';
 
 import pageCss from './templates/page.css';
+import katexCss from 'katex/dist/katex.min.css';
 import mdTemplate from './templates/markdown-page.html';
 import htmlSnippet from './templates/html-snippet.html';
 import imgTemplate from './templates/image-page.html';
@@ -70,6 +71,7 @@ function computeDisplayPath(fsPath: string): string {
 function markdownPageTemplate(id: string, title: string, bodyHtml: string, fullPath: string, relPath: string, rootDir: string): string {
 	return mdTemplate
 		.replace(/\{\{CSS\}\}/g, () => pageCss)
+		.replace(/\{\{KATEX_CSS\}\}/g, () => katexCss.replace(/url\(\s*['"]?fonts\//g, 'url(/__onair__/katex/fonts/'))
 		.replace(/\{\{THEMES\}\}/g, () => JSON.stringify(THEMES))
 		.replace(/\{\{ID\}\}/g, () => id)
 		.replace(/\{\{TITLE\}\}/g, () => escapeHtml(title))
@@ -313,9 +315,35 @@ export class PreviewServer {
 			if (pageMatch)                     return handlePreview(typedReq, res, this.docs, (a, b, c, d, e, f) => this.registerDocument(a, b, c, d as DocKind, e, f));
 		}
 		if (/^\/xref\b/.test(url))            return handleXref(typedReq, res, this.docs, this.uriToId);
+		if (pathname.startsWith('/__onair__/katex/fonts/')) return this.handleKatexFont(pathname, res);
 
 		res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
 		res.end('Not found');
+	}
+
+	private handleKatexFont(pathname: string, res: http.ServerResponse): void {
+		const file = decodeURIComponent(pathname.slice('/__onair__/katex/fonts/'.length));
+		if (!/^[\w-]+\.(?:woff2?|ttf)$/i.test(file)) {
+			res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+			res.end('Bad request');
+			return;
+		}
+		const fontsDir = path.resolve(__dirname, '../node_modules/katex/dist/fonts');
+		const filePath = path.join(fontsDir, file);
+		try {
+			const data = fs.readFileSync(filePath);
+			const mime = /\.woff2$/i.test(file) ? 'font/woff2'
+				: /\.woff$/i.test(file) ? 'font/woff'
+				: 'font/ttf';
+			res.writeHead(200, {
+				'Content-Type': mime,
+				'Cache-Control': 'public, max-age=31536000, immutable',
+			});
+			res.end(data);
+		} catch {
+			res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+			res.end('Not found');
+		}
 	}
 
 	private handleUpgrade(req: http.IncomingMessage, socket: import('stream').Duplex, head: Buffer): void {

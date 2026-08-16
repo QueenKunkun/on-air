@@ -110,3 +110,23 @@ test('renderMarkdown does not rewrite anchor links', () => {
 	const html = renderMarkdown(src, '/doc', '/root');
 	assert.ok(html.includes('#section'), 'anchor link preserved');
 });
+
+test('renderMarkdown renders inline KaTeX math', () => {
+	const html = renderMarkdown('能量公式 $E=mc^2$ 在这里', '/doc', '/root');
+	assert.ok(html.includes('class="katex"'), 'inline math should render a katex span');
+	assert.ok(html.includes('katex-html'), 'inline math should include katex-html');
+});
+
+test('renderMarkdown renders block KaTeX math as display', () => {
+	const src = '$$\\int_0^1 x^2\\,dx = \\frac{1}{3}$$';
+	const html = renderMarkdown(src, '/doc', '/root');
+	assert.ok(html.includes('class="katex"'), 'block math should render a katex span');
+	assert.ok(html.includes('katex-display'), 'block math should use display mode');
+});
+
+test('renderMarkdown keeps bad LaTeX from breaking the document', () => {
+	const html = renderMarkdown('正常文本 $E = \\frac{1}{$ 和更多', '/doc', '/root');
+	// throwOnError:false → invalid formula rendered inline (katex-error), doc still renders
+	assert.ok(html.includes('正常文本'), 'surrounding text still present');
+	assert.ok(html.includes('katex-error'), 'invalid formula marked as katex-error, not thrown');
+});

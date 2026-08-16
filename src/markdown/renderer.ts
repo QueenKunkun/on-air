@@ -6,6 +6,7 @@ import markdownItMark from 'markdown-it-mark';
 import hljs from 'highlight.js/lib/core';
 import { MARKDOWN_EXTS } from '../common/extensions';
 import sanitizeUnknownHtml from './sanitize-unknown-html';
+import markdownItKatex from '@vscode/markdown-it-katex';
 
 // Language imports — only the subset we want to highlight.
 import javascript from 'highlight.js/lib/languages/javascript';
@@ -78,6 +79,9 @@ md.linkify.set({ fuzzyLink: false });
 md.use(markdownItFootnote);
 md.use(markdownItMark);
 md.use(sanitizeUnknownHtml);
+// KaTeX math: $..$ inline, $$..$$ block. throwOnError:false keeps a bad
+// formula from breaking the whole document render (shows raw LaTeX in red).
+md.use(markdownItKatex, { throwOnError: false });
 
 const slugify = (text: string): string =>
 	text.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w\u4e00-\u9fff\-]/g, '');
