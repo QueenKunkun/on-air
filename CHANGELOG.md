@@ -1,7 +1,8 @@
 # Change Log
 
-## [0.15.9] - 2026-08-16
+## [0.16.0] - 2026-08-16
 
+- feat: KaTeX/LaTeX math rendering with self-hosted fonts (offline/LAN ready)
 - fix: resolve sibling images/embeds relative to the document directory instead of the workspace root (fixes broken images/iframes when a file is opened outside its project)
 
 ## [0.15.8] - 2026-08-16
