@@ -18,7 +18,7 @@ function ask(question) {
 }
 
 console.log(`Packaging ${OUT} …`);
-execSync(`vsce package --no-dependencies -o ${OUT}`, { cwd: ROOT, stdio: 'inherit' });
+execSync(`npx @vscode/vsce package --no-dependencies -o ${OUT}`, { cwd: ROOT, stdio: 'inherit' });
 
 const size = statSync(`${ROOT}${OUT}`).size;
 
