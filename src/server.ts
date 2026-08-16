@@ -31,6 +31,20 @@ if (!preactJs) {
 	try { preactJs = fs.readFileSync(path.join(__dirname, '..', 'dist', 'preview.js'), 'utf8'); } catch {}
 }
 
+// KaTeX fonts are copied to dist/katex/fonts at build time (node_modules is not
+// shipped in the .vsix). The fallback covers running server.ts directly via tsx
+// (tests), where __dirname is src/ instead of dist/.
+const katexFontsDir = (() => {
+	const candidates = [
+		path.join(__dirname, 'katex', 'fonts'),
+		path.join(__dirname, '..', 'dist', 'katex', 'fonts'),
+	];
+	for (const dir of candidates) {
+		try { if (fs.existsSync(path.join(dir, 'KaTeX_Main-Regular.woff2'))) { return dir; } } catch { /* try next */ }
+	}
+	return candidates[0];
+})();
+
 // Re-export DocKind for extension.ts compatibility
 export type { DocKind } from './routes/types';
 
@@ -328,8 +342,7 @@ export class PreviewServer {
 			res.end('Bad request');
 			return;
 		}
-		const fontsDir = path.resolve(__dirname, '../node_modules/katex/dist/fonts');
-		const filePath = path.join(fontsDir, file);
+		const filePath = path.join(katexFontsDir, file);
 		try {
 			const data = fs.readFileSync(filePath);
 			const mime = /\.woff2$/i.test(file) ? 'font/woff2'
