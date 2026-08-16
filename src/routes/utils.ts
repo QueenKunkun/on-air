@@ -21,11 +21,19 @@ export function kindFromPath(p: string): DocKind | null {
  * Resolve a relative request path against a document's root directory, guarding
  * against path traversal. Returns the absolute file path if it's a real file
  * inside rootDir, or null otherwise.
+ *
+ * `baseDir` overrides the resolution base for the relative path (defaults to
+ * rootDir). This is used to resolve sub-resources (iframe/embed/img) relative to
+ * the referencing document's own directory rather than the workspace root, which
+ * matches browser semantics — e.g. an `<iframe src="embeds/x.html">` next to the
+ * markdown file resolves to `<docDir>/embeds/x.html>` even when the file lives in
+ * a subfolder of the workspace.
  */
-export function resolveStaticPath(rootDir: string, relPath: string): string | null {
+export function resolveStaticPath(rootDir: string, relPath: string, baseDir?: string): string | null {
 	const decoded = decodeURIComponent(relPath.split('?')[0].split('#')[0]);
 	const resolvedRoot = path.resolve(rootDir);
-	const resolvedTarget = path.resolve(resolvedRoot, decoded);
+	const base = path.resolve(baseDir ?? resolvedRoot);
+	const resolvedTarget = path.resolve(base, decoded);
 	const isInsideRoot = resolvedTarget === resolvedRoot || resolvedTarget.startsWith(resolvedRoot + path.sep);
 	if (!isInsideRoot) { return null; }
 	try {

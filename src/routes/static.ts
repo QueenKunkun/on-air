@@ -23,7 +23,11 @@ export function handleStatic(
 		return;
 	}
 	const rel = staticMatch[2];
-	const filePath = resolveStaticPath(entry.rootDir, rel);
+	// Resolve relative to the referencing document's own directory first (browser
+	// semantics for iframe/embed/img siblings), then fall back to the workspace root
+	// for backward compatibility.
+	const filePath = resolveStaticPath(entry.rootDir, rel, path.dirname(entry.fullPath))
+		?? resolveStaticPath(entry.rootDir, rel);
 	if (!filePath) {
 		res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
 		res.end('File not found');
