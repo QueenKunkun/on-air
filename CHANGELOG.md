@@ -1,12 +1,11 @@
 # Change Log
 
-## [0.15.7] - 2026-08-13
+## [0.15.8] - 2026-08-16
 
-- Toolbar: replace Wrap code / Hover notes text with icons (↵ / 💬)
-- Toolbar: hide status text, show via title tooltip on hover
-- Toolbar: dynamic --banner-h so sidebar/TOC no longer overlap on small screens
-- Toolbar: tighten button padding; separate +/- and icon button widths
-
+- fix: banner no longer overlaps sidebar/TOC on small screens (dynamic height)
+- fix: HTML embeds in markdown render as raw HTML, not wrapped in preview chrome
+- fix: relative embeds/images resolve next to the markdown file (works in subfolders and files outside any workspace)
+- style: toolbar "Wrap code" and "Hover notes" shown as icons; tighter, individually-sized buttons
 
 ## [0.15.6] - 2026-08-10
 
