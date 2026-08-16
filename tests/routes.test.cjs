@@ -265,6 +265,60 @@ test('handleStatic redirects HTML when no Referer (direct navigation)', async ()
   assert.ok(res.headers.location && res.headers.location.includes('/preview/'));
 });
 
+// ─── handleStatic: embedded HTML (iframe) must render raw, no preview chrome ──
+
+test('handleStatic serves raw HTML for iframe even when Accept includes text/html', async () => {
+  // Regression: browsers send `Accept: text/html` for iframe subresources, so the
+  // old Referer-only heuristic wrongly treated them as direct navigation and wrapped
+  // them in preview chrome (banner/TOC/live-reload). Sec-Fetch-Dest: iframe must serve raw.
+  const mdPath = path.join(FIXTURE_DIR, 'iframe-test.md');
+  if (!fs.existsSync(mdPath)) { return; }
+  const id = server.registerDocument(
+    'test://routes-static-iframe-dest.md', 'IframeDest', fs.readFileSync(mdPath, 'utf8'),
+    'markdown', FIXTURE_DIR, mdPath
+  );
+  const res = await httpGet(`${baseUrl}/preview/${id}/embeds/embed-001.html`, {
+    'Sec-Fetch-Dest': 'iframe',
+    'Referer': `${baseUrl}/preview/${id}`,
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  });
+  assert.equal(res.status, 200, 'iframe embed must be served raw (200), not redirected');
+  assert.ok(res.body.includes('Hello from iframe'), 'raw embed content expected');
+});
+
+test('handleStatic resolves relative embed against doc dir (subfolder), not rootDir', async () => {
+  // Regression: an <iframe src="embeds/x.html"> next to a markdown file in a SUBFOLDER
+  // of the workspace must resolve to <docDir>/embeds/x.html, not <rootDir>/embeds/x.html.
+  const mdPath = path.join(FIXTURE_DIR, 'sub-embed', 'export.md');
+  if (!fs.existsSync(mdPath)) { return; }
+  const id = server.registerDocument(
+    'test://routes-static-subdir.md', 'Subdir', fs.readFileSync(mdPath, 'utf8'),
+    'markdown', FIXTURE_DIR, mdPath
+  );
+  const res = await httpGet(`${baseUrl}/preview/${id}/embeds/child.html`, {
+    'Sec-Fetch-Dest': 'iframe',
+  });
+  assert.equal(res.status, 200, 'embed in subfolder must resolve against doc dir');
+  assert.ok(res.body.includes('Subfolder Embed Content'),
+    'must serve sub-embed/embeds/child.html, not rootDir/embeds/child.html');
+});
+
+test('handleStatic resolves relative embed against doc dir when rootDir is empty', async () => {
+  // Regression: a markdown opened OUTSIDE any workspace folder has rootDir=''. The embed
+  // must still resolve against the document's own directory, not the extension cwd.
+  const mdPath = path.join(FIXTURE_DIR, 'sub-embed', 'export.md');
+  if (!fs.existsSync(mdPath)) { return; }
+  const id = server.registerDocument(
+    'test://routes-static-emptydir.md', 'EmptyDir', fs.readFileSync(mdPath, 'utf8'),
+    'markdown', '', mdPath
+  );
+  const res = await httpGet(`${baseUrl}/preview/${id}/embeds/child.html`, {
+    'Sec-Fetch-Dest': 'iframe',
+  });
+  assert.equal(res.status, 200, 'embed must resolve against doc dir even with empty rootDir');
+  assert.ok(res.body.includes('Subfolder Embed Content'));
+});
+
 // ─── handlePreview ──────────────────────────────────────────────────────────
 
 test('handlePreview returns HTML page for known document', async () => {
