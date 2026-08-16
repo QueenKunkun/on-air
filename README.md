@@ -11,7 +11,7 @@ Turn the currently open Markdown, HTML, or image file into a **live local previe
 - **Table of contents** — nested navigation, scroll tracking, resizable, collapsible; shows the file's relative path; plus a **Related documents** list, and relative links to other docs open as previews
 - **File tree** — project file tree with search (`*.svg`), filter (`.md`, `.gitignore`, unsupported files), expand-to-current-file, and state persistence
 - **Multi-theme** — 16 preset themes
-- **Highlights & footnotes** — `==highlight==` text with notes shown as margin cards, and footnotes rendered in a collapsible block
+- **Annotations & footnotes** — `==highlight==` with an adjacent note (`^[...]` or `[^id]`) shows as a **right-margin annotation card** anchored to the highlighted text; other footnotes render in a collapsible bottom block. Notes open on click (or on hover with the toggle on); both blocks are collapsible
 - **Assets just work** — sibling files (`images/`, `embeds/`, …) and relative references are served automatically
 - **Reading comfort** — code highlighting with a wrap toggle, font size and scrollbar/content width controls
 - **Cross-references** — `.md` filename links to a path-proximity picker
