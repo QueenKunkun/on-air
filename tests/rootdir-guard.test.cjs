@@ -2,6 +2,7 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
+const os = require('node:os');
 const path = require('node:path');
 const fs = require('node:fs');
 const Module = require('node:module');
@@ -338,3 +339,64 @@ test('missing iframe: requesting the nonexistent file returns 404', async () => 
 
   assert.equal(res.status, 404, 'missing file should return 404');
 });
+
+// ─── Regression: asset next to doc but outside rootDir ──────────────────────
+// Scenario from issue: a markdown file lives in its OWN project folder (where
+// its sibling `images/` folder also lives), but VS Code reports a DIFFERENT
+// workspace root. Previously the relative path was computed from the workspace
+// root, producing an escaped `../../..` URL and a 404. The asset must resolve
+// relative to the document directory and still be served.
+
+function httpGetRaw(url, headers = {}) {
+  return new Promise((resolve, reject) => {
+    http.get(url, { headers }, (resp) => {
+      let data = '';
+      resp.on('data', (chunk) => { data += chunk; });
+      resp.on('end', () => resolve({ status: resp.statusCode, headers: resp.headers, body: data }));
+    }).on('error', reject);
+  });
+}
+
+test('asset next to doc is served even when rootDir is a different project', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'onair-img-'));
+  let id;
+  try {
+    const docDir = tmp;
+    const imgDir = path.join(docDir, 'images');
+    fs.mkdirSync(imgDir);
+    fs.writeFileSync(path.join(imgDir, 'pic.jpg'), 'fakeimagebytes');
+    const mdPath = path.join(docDir, 'doc.md');
+    const md = '![](images/pic.jpg)';
+    fs.writeFileSync(mdPath, md);
+
+    // Register with rootDir pointing at the FIXTURE dir — a DIFFERENT project
+    // than where the document (and its images) actually live.
+    id = server.registerDocument(
+      'test://img-outside-root.md',
+      'Img Outside Root',
+      md,
+      'markdown',
+      FIXTURE_DIR,
+      mdPath
+    );
+
+    // The rendered markdown must reference the image relative to the DOCUMENT
+    // directory (images/pic.jpg), NOT an escaped ../../.. path from rootDir.
+    const page = await httpGet(`${baseUrl}/preview/${id}`);
+    assert.equal(page.status, 200);
+    assert.ok(page.body.includes('src="images/pic.jpg"'), 'image src should be docDir-relative');
+    assert.ok(!page.body.includes('../'), 'image src should not be an escaped path');
+
+    // Requesting that (docDir-relative) URL as an embedded sub-resource must
+    // return the file, not a 404.
+    const img = await httpGetRaw(`${baseUrl}/preview/${id}/images/pic.jpg`, {
+      'Referer': `${baseUrl}/preview/${id}`,
+      'Accept': 'image/jpeg,*/*'
+    });
+    assert.equal(img.status, 200, 'image should be served (was 404 under old rootDir-relative logic)');
+    assert.equal(img.body, 'fakeimagebytes');
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+

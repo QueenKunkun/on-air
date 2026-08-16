@@ -31,15 +31,18 @@ export function kindFromPath(p: string): DocKind | null {
  */
 export function resolveStaticPath(rootDir: string, relPath: string, baseDir?: string): string | null {
 	const decoded = decodeURIComponent(relPath.split('?')[0].split('#')[0]);
-	// When no workspace root is known (file opened outside any folder), confine to
-	// the referencing document's directory instead of the extension's cwd — this
-	// still prevents traversal while allowing sibling embeds/images to resolve.
-	const confinementRoot = rootDir || baseDir || process.cwd();
-	const resolvedRoot = path.resolve(confinementRoot);
-	const base = path.resolve(baseDir ?? resolvedRoot);
+	// A sub-resource (iframe/embed/img) is referenced relative to the document that
+	// embeds it, so it may legitimately live inside the document's own directory
+	// (`baseDir`/`docDir`) — even when the document is opened outside any workspace
+	// or in a different project than `rootDir`. Allow the resolved target to sit
+	// inside either the document directory or the workspace root, but nowhere else
+	// (this still blocks path traversal).
+	const base = path.resolve(baseDir ?? rootDir ?? process.cwd());
+	const resolvedRoot = rootDir ? path.resolve(rootDir) : null;
 	const resolvedTarget = path.resolve(base, decoded);
-	const isInsideRoot = resolvedTarget === resolvedRoot || resolvedTarget.startsWith(resolvedRoot + path.sep);
-	if (!isInsideRoot) { return null; }
+	const allowedRoots = [base, resolvedRoot].filter((r): r is string => !!r);
+	const isInside = allowedRoots.some((r) => resolvedTarget === r || resolvedTarget.startsWith(r + path.sep));
+	if (!isInside) { return null; }
 	try {
 		if (fs.statSync(resolvedTarget).isFile()) { return resolvedTarget; }
 	} catch {

@@ -83,9 +83,10 @@ const slugify = (text: string): string =>
 	text.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w\u4e00-\u9fff\-]/g, '');
 
 /**
- * Rewrite a relative link/src to be relative to `rootDir` instead of the document's
- * own directory. This is what lets `../parent.md` and sibling links resolve correctly
- * once the preview's `<base href>` points at `/preview/<id>/`.
+ * Rewrite a relative <a> navigation link against the workspace root (`rootDir`).
+ * The server resolves direct navigations against rootDir (see the fallback in
+ * server.ts), and rootDir-relative paths never contain `..` for targets inside
+ * the workspace, so they don't escape `/preview/<id>/`.
  */
 export function rewriteLink(href: string, docDir: string, rootDir: string): string {
 	if (!rootDir || !docDir) { return href; }
@@ -98,7 +99,29 @@ export function rewriteLink(href: string, docDir: string, rootDir: string): stri
 	const raw = cut >= 0 ? href.slice(0, cut) : href;
 	if (!raw) { return href; }
 	const absTarget = path.resolve(docDir, raw);
-	let rel = path.relative(rootDir, absTarget);
+	return path.relative(rootDir, absTarget).split(path.sep).join('/') + (cut >= 0 ? href.slice(cut) : '');
+}
+
+/**
+ * Rewrite a relative src/href for an EMBEDDED asset (image, iframe, HTML
+ * sub-resource) against the document's own directory (`docDir`). The server
+ * resolves embedded sub-resources against `docDir` (the directory of the
+ * referencing file), so they must be docDir-relative. This is what makes a
+ * sibling `images/` folder resolve correctly even when the document is opened
+ * outside any workspace or in a different project than `rootDir`.
+ */
+export function rewriteLinkDocRelative(href: string, docDir: string): string {
+	if (!docDir) { return href; }
+	if (/^(https?:)?\/\//i.test(href) || href.startsWith('#') || href.startsWith('data:') || href.startsWith('mailto:') || href.startsWith('/')) {
+		return href;
+	}
+	const hashIdx = href.indexOf('#');
+	const qIdx = href.indexOf('?');
+	const cut = qIdx >= 0 && (hashIdx < 0 || qIdx < hashIdx) ? qIdx : hashIdx;
+	const raw = cut >= 0 ? href.slice(0, cut) : href;
+	if (!raw) { return href; }
+	const absTarget = path.resolve(docDir, raw);
+	let rel = path.relative(docDir, absTarget);
 	if (path.sep !== '/') { rel = rel.split(path.sep).join('/'); }
 	return rel + (cut >= 0 ? href.slice(cut) : '');
 }
@@ -106,7 +129,7 @@ export function rewriteLink(href: string, docDir: string, rootDir: string): stri
 function rewriteHtmlLinks(html: string, docDir: string, rootDir: string): string {
 	if (!rootDir || !docDir) { return html; }
 	return html.replace(/(href|src)="([^"]*)"/gi, (_m, attr: string, val: string) => {
-		const rewritten = rewriteLink(val, docDir, rootDir);
+		const rewritten = rewriteLinkDocRelative(val, docDir);
 		return rewritten === val ? _m : `${attr}="${rewritten}"`;
 	});
 }
@@ -165,11 +188,12 @@ md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
 	return self.renderToken(tokens, idx, options);
 };
 
-// Image rewriting
+// Image rewriting — embedded assets resolve against docDir, so rewrite relative
+// to the document directory (not the workspace root).
 md.renderer.rules.image = (tokens, idx, options, env, self) => {
 	const src = tokens[idx].attrGet('src');
-	if (src !== null && env?.docDir && env?.rootDir) {
-		const rewritten = rewriteLink(src, env.docDir, env.rootDir);
+	if (src !== null && env?.docDir) {
+		const rewritten = rewriteLinkDocRelative(src, env.docDir);
 		if (rewritten !== src) { tokens[idx].attrSet('src', rewritten); }
 	}
 	return self.renderToken(tokens, idx, options);
