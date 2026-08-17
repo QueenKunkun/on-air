@@ -15,6 +15,7 @@ Turn the currently open Markdown, HTML, or image file into a **live local previe
 - **Assets just work** — sibling files (`images/`, `embeds/`, …) and relative references are served automatically
 - **Reading comfort** — code highlighting with a wrap toggle, font size and scrollbar/content width controls
 - **Cross-references** — `.md` filename links to a path-proximity picker
+- **IEEE citations** — numeric citations `[3]`, `[2, 7]`, `[8-10]` link to the reference entries
 - **LAN sharing** — get a localhost and a LAN IP link so others on your WiFi can open the preview
 
 

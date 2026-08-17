@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.17.0] - 2026-08-17
+
+- feat: render IEEE numeric citations [N], [N, M], [N-M] as links to the reference entries
+
+
 ## [0.16.0] - 2026-08-16
 
 - feat: KaTeX/LaTeX math rendering with self-hosted fonts (offline/LAN ready)
