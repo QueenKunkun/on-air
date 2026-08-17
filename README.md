@@ -2,6 +2,8 @@
 
 Turn the currently open Markdown, HTML, or image file into a **live local preview link**: open it in a browser, or copy the link and share it with a colleague or another device. The browser content refreshes automatically as you edit — no need to manually refresh, and no need to save the file first.
 
+![screenshot](images/screenshot.png)
+
 ## Features
 
 - **Markdown, HTML & images** — generate a link from the Command Palette, right-click menu, or title bar icon, then **open in browser** or **copy the link**; image files (png/jpg/gif/webp/svg/bmp/ico) open as a live preview
