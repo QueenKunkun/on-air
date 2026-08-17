@@ -15,8 +15,6 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 	const edgeHandlesRef = useRef(document.getElementById('edgeHandles'));
 	const edgeFilesRef = useRef(document.querySelector('#edgeHandles [data-panel="files"]') as HTMLElement);
 	const edgeTocRef = useRef(document.querySelector('#edgeHandles [data-panel="toc"]') as HTMLElement);
-	const filesToggleRef = useRef(document.querySelector('#toggle-layer [data-panel="files"]') as HTMLElement);
-	const tocToggleRef = useRef(document.querySelector('#toggle-layer [data-panel="toc"]') as HTMLElement);
 
 	const fc = filesCollapsed === '1';
 	const tc = tocCollapsed === '1';
@@ -73,15 +71,11 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 	useEffect(() => {
 		const el = filesSideRef.current;
 		if (el) el.classList.toggle('collapsed', fc);
-		const toggle = filesToggleRef.current;
-		if (toggle) toggle.classList.toggle('hidden', fc);
 	}, [fc]);
 
 	useEffect(() => {
 		const el = tocColRef.current;
 		if (el) el.classList.toggle('collapsed', tc);
-		const toggle = tocToggleRef.current;
-		if (toggle) toggle.classList.toggle('hidden', tc);
 	}, [tc]);
 
 	// Edge handles visibility
@@ -93,41 +87,31 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		if (edgeTocRef.current) edgeTocRef.current.style.display = tc ? '' : 'none';
 	}, [fc, tc]);
 
-	// Bind toggle click handlers
+	// Bind collapse buttons (x in panel header) and edge handle click handlers
 	useEffect(() => {
-		const filesToggle = filesToggleRef.current;
-		const tocToggle = tocToggleRef.current;
-
-		function onFilesToggle(e: Event) {
-			e.stopPropagation();
+		function onCollapseFiles() {
 			if (filesResizerRef.current?.getAttribute('data-dragging')) return;
 			toggleFiles();
 		}
-		function onTocToggle(e: Event) {
-			e.stopPropagation();
+		function onCollapseToc() {
 			if (tocResizerRef.current?.getAttribute('data-dragging')) return;
 			toggleToc();
 		}
 
-		filesToggle?.addEventListener('click', onFilesToggle);
-		tocToggle?.addEventListener('click', onTocToggle);
-		return () => {
-			filesToggle?.removeEventListener('click', onFilesToggle);
-			tocToggle?.removeEventListener('click', onTocToggle);
-		};
-	}, [toggleFiles, toggleToc]);
+		window.addEventListener('onair:collapse-files', onCollapseFiles);
+		window.addEventListener('onair:collapse-toc', onCollapseToc);
 
-	// Bind edge handle click handlers
-	useEffect(() => {
 		const edgeFiles = edgeFilesRef.current;
 		const edgeToc = edgeTocRef.current;
 		edgeFiles?.addEventListener('click', expandFiles);
 		edgeToc?.addEventListener('click', expandToc);
 		return () => {
+			window.removeEventListener('onair:collapse-files', onCollapseFiles);
+			window.removeEventListener('onair:collapse-toc', onCollapseToc);
 			edgeFiles?.removeEventListener('click', expandFiles);
 			edgeToc?.removeEventListener('click', expandToc);
 		};
-	}, [expandFiles, expandToc]);
+	}, [toggleFiles, toggleToc, expandFiles, expandToc]);
 
 	// Hydrate CSS variables from initial DOM widths
 	useEffect(() => {

@@ -15,6 +15,7 @@ export function TocHeader({ title, fullPath, relPath, collapsedAll, onToggleAll 
 				<span id="tocTitle" title={fullPath}>{title}</span>
 				<button class="toc-copy" title="Copy full path" onClick={() => navigator.clipboard.writeText(fullPath).catch(() => {})}>{'\uD83D\uDCCB'}</button>
 				<button class="toc-m" title={collapsedAll ? 'Expand all' : 'Collapse all'} onClick={onToggleAll}>{collapsedAll ? '+' : '\u2212'}</button>
+				<button class="toc-x" title="Hide table of contents" onClick={() => window.dispatchEvent(new CustomEvent('onair:collapse-toc'))}>{'\u00D7'}</button>
 			</div>
 			{relPath && <div class="toc-path" title={fullPath}>{relPath}</div>}
 		</div>
