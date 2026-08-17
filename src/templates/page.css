@@ -65,7 +65,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
 #filesSide.collapsed ~ .files-resizer { display: none; }
 #tocCol.collapsed ~ .toc-resizer { display: none; }
 #filesSide:has(#ft-preact-root:empty) ~ .files-resizer,
-#tocCol:has(#toc:empty) ~ .toc-resizer { display: none; }
+#tocCol:has(#toc:empty) ~ .toc-resizer { visibility: hidden; }
 #edgeHandles { position: fixed; left: 0; top: 50%; transform: translateY(-50%); z-index: var(--z-edge); display: none; flex-direction: column; }
 #edgeHandles.visible { display: flex; }
 .edge-handle { writing-mode: vertical-rl; text-orientation: mixed; font-size: 12px; font-weight: 600; color: var(--quote-c); padding: 12px 6px; cursor: pointer; user-select: none; background: var(--bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); transition: background .15s, color .15s; }
