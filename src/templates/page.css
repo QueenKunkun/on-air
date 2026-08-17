@@ -181,6 +181,7 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 .ft-filter label { display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--quote-c); cursor: pointer; user-select: none; white-space: nowrap; }
 .ft-filter input[type="checkbox"] { margin: 0; accent-color: var(--link-c); }
 .ft-filter-spacer { flex: 1; }
+.ft-filter-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: auto; }
 .ft-search { width: 100px; padding: 2px 6px; font: inherit; font-size: 11px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); outline: none; transition: border-color .15s; }
 .ft-search:focus { border-color: var(--link-c); }
 .ft-search::placeholder { color: var(--quote-c); }

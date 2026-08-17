@@ -408,8 +408,10 @@ export function FileTree({ id }: Props) {
         <label><input type="checkbox" checked={filters.hideBinary} onChange={() => handleFilterChange('hideBinary')} /> Hide unsupported</label>
         <span class="ft-filter-spacer"></span>
         <input class="ft-search" type="text" placeholder="Filter: *.svg" value={searchQuery} onInput={(e: h.JSX.TargetedEvent<HTMLInputElement>) => setSearchQuery((e.target as HTMLInputElement).value)} onKeydown={(e: h.JSX.TargetedKeyboardEvent<HTMLInputElement>) => { if (e.key === 'Escape') setSearchQuery(''); }} />
-        <button class="ft-locate-btn" onClick={handleLocate} title="Scroll to current file">📍</button>
-        <button class="ft-x" onClick={() => window.dispatchEvent(new CustomEvent('onair:collapse-files'))} title="Hide file tree">×</button>
+        <span class="ft-filter-actions">
+          <button class="ft-locate-btn" onClick={handleLocate} title="Scroll to current file">📍</button>
+          <button class="ft-x" onClick={() => window.dispatchEvent(new CustomEvent('onair:collapse-files'))} title="Hide file tree">×</button>
+        </span>
       </div>
       <div class="ft-scroll">
         {!loaded ? (
