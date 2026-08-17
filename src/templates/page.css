@@ -85,6 +85,10 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
 .annot-card > :last-child { margin-bottom: 0; }
 .markdown-body mark { background: var(--mark-bg); color: inherit; border-radius: 2px; padding: 0 1px; }
 .markdown-body .footnote-ref a { text-decoration: none; }
+/* IEEE numeric citations: [3], [2, 7], [8-10] */
+.markdown-body a.onair-citation { text-decoration: none; border-bottom: 1px dotted var(--link-c); }
+.markdown-body a.onair-citation:hover { text-decoration: underline; }
+.markdown-body [id^="ref-"] { scroll-margin-top: 50px; }
 .annot-mark { cursor: pointer; border-bottom: 2px dotted var(--link-c); }
 .annot-mark.active { box-shadow: 0 0 0 2px var(--link-c); }
 #annot-pop { position: absolute; z-index: 60; max-width: 320px; background: var(--pre-bg); color: var(--text); border: 1px solid var(--border); border-left: 3px solid var(--link-c); border-radius: 6px; padding: 8px 12px; font-size: 13px; line-height: 1.55; box-shadow: 0 4px 16px rgba(0,0,0,.18); }

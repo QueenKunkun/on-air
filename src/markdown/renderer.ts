@@ -6,6 +6,7 @@ import markdownItMark from 'markdown-it-mark';
 import hljs from 'highlight.js/lib/core';
 import { MARKDOWN_EXTS } from '../common/extensions';
 import sanitizeUnknownHtml from './sanitize-unknown-html';
+import citationsPlugin from './citations';
 import markdownItKatex from '@vscode/markdown-it-katex';
 
 // Language imports — only the subset we want to highlight.
@@ -82,6 +83,8 @@ md.use(sanitizeUnknownHtml);
 // KaTeX math: $..$ inline, $$..$$ block. throwOnError:false keeps a bad
 // formula from breaking the whole document render (shows raw LaTeX in red).
 md.use(markdownItKatex, { throwOnError: false });
+// IEEE numeric citations: [3], [2, 7], [8-10] → links to the reference entries.
+md.use(citationsPlugin);
 
 const slugify = (text: string): string =>
 	text.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w\u4e00-\u9fff\-]/g, '');

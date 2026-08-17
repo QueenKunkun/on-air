@@ -130,3 +130,61 @@ test('renderMarkdown keeps bad LaTeX from breaking the document', () => {
 	assert.ok(html.includes('正常文本'), 'surrounding text still present');
 	assert.ok(html.includes('katex-error'), 'invalid formula marked as katex-error, not thrown');
 });
+
+// ─── IEEE numeric citations ────────────────────────────────────────────────
+
+const REFS_DOC = (body) => `${body}\n\n## References\n\n[2] Ref two.\n\n[3] Ref three.\n\n[7] Ref seven.\n\n[8] Ref eight.\n\n[9] Ref nine.\n\n[10] Ref ten.`;
+
+test('citations: single [N] becomes a link to the reference entry', () => {
+	const html = renderMarkdown(REFS_DOC('See [3].'), '/doc', '/root');
+	assert.ok(html.includes('<a href="#ref-3"'), 'single citation linked');
+	assert.ok(html.includes('class="onair-citation"'), 'citation link has class');
+});
+
+test('citations: multi [N, M] links each number', () => {
+	const html = renderMarkdown(REFS_DOC('See [2, 7].'), '/doc', '/root');
+	assert.ok(html.includes('<a href="#ref-2"'), 'first number linked');
+	assert.ok(html.includes('<a href="#ref-7"'), 'second number linked');
+	assert.ok(html.includes(', '), 'separator preserved');
+});
+
+test('citations: range [N-M] links endpoints', () => {
+	const html = renderMarkdown(REFS_DOC('See [8-10].'), '/doc', '/root');
+	assert.ok(html.includes('<a href="#ref-8"'), 'range start linked');
+	assert.ok(html.includes('<a href="#ref-10"'), 'range end linked');
+});
+
+test('citations: undefined numbers are left untouched', () => {
+	const html = renderMarkdown(REFS_DOC('Interval [0, 1] and [99] are not citations.'), '/doc', '/root');
+	assert.ok(!html.includes('href="#ref-0"'), '0 not a citation');
+	assert.ok(!html.includes('href="#ref-1"'), '1 not a citation');
+	assert.ok(!html.includes('href="#ref-99"'), '99 not a citation');
+	assert.ok(html.includes('[0, 1]'), 'interval text preserved');
+	assert.ok(html.includes('[99]'), 'unknown ref text preserved');
+});
+
+test('citations: reference entries get ref-N anchor ids', () => {
+	const html = renderMarkdown(REFS_DOC('See [3].'), '/doc', '/root');
+	assert.ok(html.includes('id="ref-3"'), 'entry has ref-3 anchor');
+	assert.ok(html.includes('id="ref-2"'), 'entry has ref-2 anchor');
+	assert.ok(html.includes('id="ref-10"'), 'entry has ref-10 anchor');
+});
+
+test('citations: no References section means no citation linking', () => {
+	const html = renderMarkdown('Just [3] with no reference list.', '/doc', '/root');
+	assert.ok(!html.includes('href="#ref-3"'), 'no refs section → no links');
+	assert.ok(html.includes('[3]'), 'citation text preserved');
+});
+
+test('citations: footnote-style [^N] refs stay as footnotes', () => {
+	const html = renderMarkdown('A[^1] B.\n\n## References\n\n[^1]: Footnote ref.', '/doc', '/root');
+	assert.ok(html.includes('class="footnote-ref"'), 'footnote ref rendered');
+	assert.ok(!html.includes('class="onair-citation"'), 'no citation link for footnote ref');
+});
+
+test('citations: citations inside math are not linked', () => {
+	const html = renderMarkdown(REFS_DOC('Math $[0,1]$ here[3].'), '/doc', '/root');
+	assert.ok(html.includes('class="katex"'), 'math rendered');
+	assert.ok(html.includes('href="#ref-3"'), 'citation outside math linked');
+	assert.ok(!html.includes('href="#ref-0"'), 'number inside math not linked');
+});
