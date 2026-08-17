@@ -51,6 +51,135 @@ function collectRefNumbers(src: string): Set<number> {
 	return refs;
 }
 
+/** Refs set that also counts existing `[^N]:` footnote definitions. */
+function collectRefNumbersWithFootnotes(src: string): Set<number> {
+	const refs = collectRefNumbers(src);
+	const lines = src.split('\n');
+	let inRefs = false;
+	for (const line of lines) {
+		if (!inRefs) {
+			if (REFS_HEADING_RE.test(line)) { inRefs = true; }
+			continue;
+		}
+		const m = line.match(/^\[\^(\d+)\]:\s/);
+		if (m) { refs.add(Number(m[1])); }
+	}
+	return refs;
+}
+
+/** Rewrite one body line: IEEE citations → markdown footnote refs, skipping math/code. */
+function convertBodyLine(line: string, refs: Set<number>): string {
+	let out = '';
+	let i = 0;
+	while (i < line.length) {
+		const ch = line[i];
+		if (ch === '`') {
+			let run = 1;
+			while (line[i + run] === '`') { run++; }
+			const delim = '`'.repeat(run);
+			const close = line.indexOf(delim, i + run);
+			if (close === -1) { out += line.slice(i); break; }
+			out += line.slice(i, close + run);
+			i = close + run;
+			continue;
+		}
+		if (ch === '$') {
+			const close = line.indexOf('$', i + 1);
+			if (close !== -1) {
+				const inner = line.slice(i + 1, close);
+				// Pure-citation math like `$[54-56],$` → unwrap and convert.
+				const m = inner.match(/^(\[(\d+(?:\s*[,-]\s*\d+)*)\])(.*)$/);
+				if (m) {
+					const nums = parseCitation(m[2]);
+					if (nums && nums.length && nums.every((n) => refs.has(n))) {
+						out += nums.map((n) => `[^${n}]`).join('') + m[3];
+						i = close + 1;
+						continue;
+					}
+				}
+				out += line.slice(i, close + 1);
+				i = close + 1;
+				continue;
+			}
+			out += line.slice(i);
+			break;
+		}
+		if (ch === '[') {
+			const m = CITATION_RE.exec(line.slice(i));
+			if (m) {
+				const nums = parseCitation(m[1]);
+				if (nums && nums.length && nums.every((n) => refs.has(n))) {
+					out += nums.map((n) => `[^${n}]`).join('');
+					i += m[0].length;
+					continue;
+				}
+			}
+			out += ch;
+			i++;
+			continue;
+		}
+		out += ch;
+		i++;
+	}
+	return out;
+}
+
+/**
+ * Rewrite IEEE numeric citations (`[N]`, `[N, M]`, `[N-M]`) into markdown
+ * footnote syntax (`[^N]...`) so the footnote/annotation pipeline renders them.
+ * Reference entries in the References section become `[^N]:` definitions.
+ * Existing `[^N]` footnotes, code blocks, inline code and math are preserved.
+ */
+export function toFootnoteSyntax(src: string): string {
+	const refs = collectRefNumbersWithFootnotes(src);
+	if (refs.size === 0) { return src; }
+	const lines = src.split('\n');
+	const out: string[] = [];
+	let inRefs = false;
+	let inFence = false;
+	let fenceChar = '';
+	let fenceLen = 0;
+	let inBlockMath = false;
+	for (const line of lines) {
+		if (inFence) {
+			out.push(line);
+			const m = line.match(/^(`{3,}|~{3,})/);
+			if (m && m[1][0] === fenceChar && m[1].length >= fenceLen) { inFence = false; }
+			continue;
+		}
+		if (inBlockMath) {
+			out.push(line);
+			if (line.includes('$$')) { inBlockMath = false; }
+			continue;
+		}
+		const fm = line.match(/^(`{3,}|~{3,})/);
+		if (fm) {
+			inFence = true;
+			fenceChar = fm[1][0];
+			fenceLen = fm[1].length;
+			out.push(line);
+			continue;
+		}
+		if (line.trim().startsWith('$$')) {
+			out.push(line);
+			if (!line.includes('$$', 2)) { inBlockMath = true; }
+			continue;
+		}
+		if (!inRefs && REFS_HEADING_RE.test(line)) { inRefs = true; out.push(line); continue; }
+		if (inRefs) {
+			const m = line.match(/^\[(\d+)\]\s/);
+			if (m && refs.has(Number(m[1]))) {
+				out.push(line.replace(/^\[\d+\]\s/, `[^${m[1]}]: `));
+			} else {
+				out.push(line);
+			}
+			continue;
+		}
+		out.push(convertBodyLine(line, refs));
+	}
+	return out.join('\n');
+}
+
 /**
  * markdown-it plugin adding IEEE numeric citation support.
  */

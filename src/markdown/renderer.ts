@@ -6,7 +6,7 @@ import markdownItMark from 'markdown-it-mark';
 import hljs from 'highlight.js/lib/core';
 import { MARKDOWN_EXTS } from '../common/extensions';
 import sanitizeUnknownHtml from './sanitize-unknown-html';
-import citationsPlugin from './citations';
+import citationsPlugin, { toFootnoteSyntax } from './citations';
 import markdownItKatex from '@vscode/markdown-it-katex';
 
 // Language imports — only the subset we want to highlight.
@@ -207,8 +207,9 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
 };
 
 /** Render Markdown source to HTML with link rewriting and xref linkification. */
-export function renderMarkdown(source: string, docDir: string, rootDir: string, fromId?: string): string {
-	return linkifyMdTokens(md.render(renderFrontmatter(source), { docDir, rootDir }), fromId);
+export function renderMarkdown(source: string, docDir: string, rootDir: string, fromId?: string, opts?: { citeStyle?: 'link' | 'footnotes' }): string {
+	const src = opts?.citeStyle === 'footnotes' ? toFootnoteSyntax(source) : source;
+	return linkifyMdTokens(md.render(renderFrontmatter(src), { docDir, rootDir }), fromId);
 }
 
 /** Rewrite relative links in raw HTML (used by html-snippet path). */

@@ -8,6 +8,7 @@ import { DEFAULT_PORT } from './common/constants';
 import * as vscode from 'vscode';
 import { WebSocketServer, WebSocket } from 'ws';
 import { renderMarkdown, escapeHtml, rewriteHtmlLinks, md } from './markdown/renderer';
+import type { DocKind, DocEntry, CiteStyle } from './routes/types';
 import { THEMES } from './templates/themes';
 import { handleTree } from './routes/tree';
 import { handleFile } from './routes/file';
@@ -16,7 +17,6 @@ import { handleStatic } from './routes/static';
 import { handlePreview } from './routes/preview';
 import { handleXref } from './routes/xref';
 import { kindFromPath, toPosix } from './routes/utils';
-import type { DocKind, DocEntry } from './routes/types';
 
 import pageCss from './templates/page.css';
 import katexCss from 'katex/dist/katex.min.css';
@@ -197,7 +197,7 @@ export class PreviewServer {
 		this.server.close();
 	}
 
-	private renderPage(kind: DocKind, id: string, title: string, content: string, fullPath: string, rootDir: string): { page: string; bodyHtml?: string } {
+	private renderPage(kind: DocKind, id: string, title: string, content: string, fullPath: string, rootDir: string, citeStyle?: CiteStyle): { page: string; bodyHtml?: string } {
 		const relPath = computeDisplayPath(fullPath);
 		if (kind === 'html') {
 			return { page: htmlPageTemplate(id, content, title, fullPath, relPath, rootDir) };
@@ -215,7 +215,7 @@ export class PreviewServer {
 			}
 		}
 		const docDir = path.dirname(fullPath);
-		const bodyHtml = renderMarkdown(content, docDir, rootDir, id);
+		const bodyHtml = renderMarkdown(content, docDir, rootDir, id, { citeStyle });
 		return { page: markdownPageTemplate(id, title, bodyHtml, fullPath, relPath, rootDir), bodyHtml };
 	}
 
@@ -228,7 +228,8 @@ export class PreviewServer {
 			this.uriToId.set(uriKey, id);
 		}
 		const existing = this.docs.get(id);
-		const rendered = this.renderPage(kind, id, title, content, fullPath, rootDir);
+		const citeStyle = existing?.citeStyle ?? 'link';
+		const rendered = this.renderPage(kind, id, title, content, fullPath, rootDir, citeStyle);
 		this.docs.set(id, {
 			id,
 			title,
@@ -237,6 +238,8 @@ export class PreviewServer {
 			page: rendered.page,
 			bodyHtml: rendered.bodyHtml,
 			rootDir,
+			content,
+			citeStyle,
 			clients: existing?.clients ?? new Set<WebSocket>(),
 		});
 		return id;
@@ -250,7 +253,8 @@ export class PreviewServer {
 		entry.title = title;
 		entry.fullPath = fullPath;
 		entry.kind = kind;
-		const rendered = this.renderPage(kind, id, title, content, fullPath, entry.rootDir);
+		entry.content = content;
+		const rendered = this.renderPage(kind, id, title, content, fullPath, entry.rootDir, entry.citeStyle);
 		entry.page = rendered.page;
 		entry.bodyHtml = rendered.bodyHtml;
 
@@ -374,6 +378,29 @@ export class PreviewServer {
 				return;
 			}
 			entry.clients.add(ws);
+			ws.on('message', (data) => {
+				let msg: { type?: string; style?: string } | null = null;
+				try { msg = JSON.parse(data.toString()); } catch { /* ignore malformed */ }
+				if (!msg || msg.type !== 'set-cite-style' || (msg.style !== 'link' && msg.style !== 'footnotes')) {
+					return;
+				}
+				if (entry.citeStyle === msg.style) { return; }
+				entry.citeStyle = msg.style;
+				if (entry.kind !== 'markdown' || !entry.content) { return; }
+				const rendered = this.renderPage(entry.kind, entry.id, entry.title, entry.content, entry.fullPath, entry.rootDir, entry.citeStyle);
+				entry.page = rendered.page;
+				entry.bodyHtml = rendered.bodyHtml;
+				const payload = JSON.stringify({
+					type: 'update',
+					title: entry.title,
+					html: entry.bodyHtml,
+					fullPath: entry.fullPath,
+					relPath: computeDisplayPath(entry.fullPath),
+				});
+				for (const client of entry.clients) {
+					if (client.readyState === client.OPEN) { client.send(payload); }
+				}
+			});
 			ws.on('close', () => entry.clients.delete(ws));
 		});
 	}

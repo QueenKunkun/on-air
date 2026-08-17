@@ -22,6 +22,9 @@ export const LS_KEYS = {
 	ANNOT_WIDTH: 'onair-annot-width',
 	ANNOT_COLLAPSED: 'onair-annot-collapsed',
 
+	/** Citation display style */
+	CITE_STYLE: 'onair-cite-style',
+
 	/** File tree */
 	FT_FILTERS: 'onair-ft-filters',
 	FT_EXPANDED: 'onair-ft-expanded',

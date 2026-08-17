@@ -2,6 +2,8 @@ import type { WebSocket } from 'ws';
 
 export type DocKind = 'markdown' | 'html' | 'image';
 
+export type CiteStyle = 'link' | 'footnotes';
+
 export interface DocEntry {
 	id: string;
 	title: string;
@@ -10,5 +12,7 @@ export interface DocEntry {
 	page: string;
 	bodyHtml?: string;
 	rootDir: string;
+	content?: string;
+	citeStyle?: CiteStyle;
 	clients: Set<WebSocket>;
 }

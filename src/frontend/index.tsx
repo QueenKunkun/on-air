@@ -26,7 +26,7 @@ function App() {
 		setContentVersion(n => n + 1);
 	}, []);
 
-	const connStatus = useWebSocket(handleUpdate);
+	const { status: connStatus, send } = useWebSocket(handleUpdate);
 
 	useEffect(() => {
 		const content = document.getElementById('content');
@@ -60,7 +60,7 @@ function App() {
 	}
 
 	return h(Layout, null,
-		h(Banner, { connStatus }),
+		h(Banner, { connStatus, send }),
 		h(TOC, { contentEl, fullPath, relPath, contentVersion }),
 		h(FootnotesBlock, { contentEl, contentVersion }),
 		h(Annotations, { contentEl, contentVersion }),
