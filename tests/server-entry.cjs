@@ -71,7 +71,17 @@ async function main() {
     imgPath
   );
 
-  const info = { port: server.port, id, id2, id3, imgId, baseUrl: `http://127.0.0.1:${server.port}` };
+  const demoPath = path.join(__dirname, '..', 'examples', 'footnotes-annotations-demo.md');
+  const demoId = server.registerDocument(
+    'test://footnotes-annotations-demo.md',
+    'Footnotes & Annotations demo',
+    fs.readFileSync(demoPath, 'utf8'),
+    'markdown',
+    FIXTURE_DIR,
+    demoPath
+  );
+
+  const info = { port: server.port, id, id2, id3, imgId, demoId, baseUrl: `http://127.0.0.1:${server.port}` };
   const infoPath = path.join(__dirname, '.server-info.json');
   fs.writeFileSync(infoPath, JSON.stringify(info));
   console.log(`Server ready on port ${server.port}`);

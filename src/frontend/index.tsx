@@ -33,6 +33,27 @@ function App() {
 		if (content) setContentEl(content);
 	}, []);
 
+	// In-page hash anchors (`#fn1` footnote refs/backrefs, user `#anchor` links)
+	// resolve against `<base href="/preview/<id>/">`, which differs from the
+	// page URL (no trailing slash), so a plain click triggers a full-page
+	// reload + WebSocket reconnect. Intercept and smooth-scroll instead.
+	useEffect(() => {
+		const onClick = (e: MouseEvent) => {
+			if (e.defaultPrevented) return;
+			const a = (e.target as HTMLElement)?.closest?.('a[href^="#"]');
+			if (!a) return;
+			const id = a.getAttribute('href')!.slice(1);
+			if (!id) return;
+			const el = document.getElementById(id);
+			if (!el) return;
+			e.preventDefault();
+			el.scrollIntoView({ behavior: 'smooth' });
+			history.replaceState(null, '', '#' + id);
+		};
+		document.addEventListener('click', onClick);
+		return () => document.removeEventListener('click', onClick);
+	}, []);
+
 	const banner = document.getElementById('banner');
 	if (banner) {
 		banner.classList.toggle('offline', connStatus.offline);
