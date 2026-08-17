@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  katex: 0.18.4
+
 importers:
 
   .:
@@ -21,7 +24,7 @@ importers:
         specifier: ^7.0.6
         version: 7.0.6
       katex:
-        specifier: ^0.18.4
+        specifier: 0.18.4
         version: 0.18.4
       markdown-it:
         specifier: ^14.1.0
@@ -912,10 +915,6 @@ packages:
   json-stable-stringify-without-jsonify@1.0.1:
     resolution: {integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==}
 
-  katex@0.16.47:
-    resolution: {integrity: sha512-Eeo8Ys1doU1z+x8AZsPpQu+p/QcZBI5PeOo7QGQdy2x2m0MU/hYagBbGOmXwr5KVbEfVuWv9LpnQWeehogurjg==}
-    hasBin: true
-
   katex@0.18.4:
     resolution: {integrity: sha512-IMPntbRLOU+eu88XDiFKqQ8Akhr9Tv7jDMXqPhjG9SI1JMA4DIgXk4x9k4skJz2NZJXBRbC+2pYBLj9olqcZow==}
     hasBin: true
@@ -1645,7 +1644,7 @@ snapshots:
 
   '@vscode/markdown-it-katex@1.1.2':
     dependencies:
-      katex: 0.16.47
+      katex: 0.18.4
 
   '@webassemblyjs/ast@1.14.1':
     dependencies:
@@ -2133,10 +2132,6 @@ snapshots:
   json-schema-traverse@1.0.0: {}
 
   json-stable-stringify-without-jsonify@1.0.1: {}
-
-  katex@0.16.47:
-    dependencies:
-      commander: 8.3.0
 
   katex@0.18.4:
     dependencies:

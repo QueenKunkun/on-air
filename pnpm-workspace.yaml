@@ -1,2 +1,9 @@
 allowBuilds:
   esbuild: true
+
+# Force @vscode/markdown-it-katex (declares katex ^0.16.4) to render with the
+# same katex version whose CSS/fonts we embed (0.18.4). Otherwise the plugin's
+# nested katex 0.16.x emits `sizing` classes that the 0.18 CSS (`katex-sizing`)
+# never matches, so subscripts/superscripts are not shrunk.
+overrides:
+  katex: 0.18.4
