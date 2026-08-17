@@ -64,6 +64,8 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
 #tocCol.collapsed #toc { display: none; }
 #filesSide.collapsed ~ .files-resizer { display: none; }
 #tocCol.collapsed ~ .toc-resizer { display: none; }
+#filesSide:has(#ft-preact-root:empty) ~ .files-resizer,
+#tocCol:has(#toc:empty) ~ .toc-resizer { display: none; }
 #edgeHandles { position: fixed; left: 0; top: 50%; transform: translateY(-50%); z-index: var(--z-edge); display: none; flex-direction: column; }
 #edgeHandles.visible { display: flex; }
 .edge-handle { writing-mode: vertical-rl; text-orientation: mixed; font-size: 12px; font-weight: 600; color: var(--quote-c); padding: 12px 6px; cursor: pointer; user-select: none; background: var(--bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); transition: background .15s, color .15s; }
@@ -174,14 +176,14 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 /* ---- file tree panel ---- */
 #fileTree { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; font-size: 13px; line-height: 1.6; width: 100%; box-sizing: border-box; }
 #ft-preact-root { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.ft-root { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.ft-root { display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; }
 
 /* Filter row */
-.ft-filter { display: flex; align-items: center; gap: 6px; padding: 6px 8px; flex-shrink: 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.ft-filter { display: flex; align-items: center; gap: 6px; padding: 6px 8px; padding-right: 64px; flex-shrink: 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .ft-filter label { display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--quote-c); cursor: pointer; user-select: none; white-space: nowrap; }
 .ft-filter input[type="checkbox"] { margin: 0; accent-color: var(--link-c); }
 .ft-filter-spacer { flex: 1; }
-.ft-filter-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: auto; }
+.ft-filter-actions { position: absolute; top: 6px; right: 8px; display: flex; align-items: center; gap: 6px; z-index: 5; background: var(--bg); }
 .ft-search { width: 100px; padding: 2px 6px; font: inherit; font-size: 11px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); outline: none; transition: border-color .15s; }
 .ft-search:focus { border-color: var(--link-c); }
 .ft-search::placeholder { color: var(--quote-c); }
