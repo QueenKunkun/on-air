@@ -88,10 +88,14 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
 /* IEEE numeric citations: [3], [2, 7], [8-10] */
 .markdown-body a.onair-citation { text-decoration: none; border-bottom: 1px dotted var(--link-c); }
 .markdown-body a.onair-citation:hover { text-decoration: underline; }
+/* Footnote-style citation display (citeStyle=footnotes): superscript marker */
+.markdown-body sup.cite-ref { font-size: 78%; line-height: 0; vertical-align: super; color: var(--quote-c); }
+.markdown-body sup.cite-ref a.onair-citation { color: var(--quote-c); border-bottom-color: var(--quote-c); }
 .markdown-body [id^="ref-"] { scroll-margin-top: 50px; }
 .annot-mark { cursor: pointer; border-bottom: 2px dotted var(--link-c); }
 .annot-mark.active { box-shadow: 0 0 0 2px var(--link-c); }
 #annot-pop { position: absolute; z-index: 60; max-width: 320px; background: var(--pre-bg); color: var(--text); border: 1px solid var(--border); border-left: 3px solid var(--link-c); border-radius: 6px; padding: 8px 12px; font-size: 13px; line-height: 1.55; box-shadow: 0 4px 16px rgba(0,0,0,.18); }
+#annot-pop.cite { border-left-color: var(--btn-c); }
 #annot-pop > :first-child { margin-top: 0; }
 #annot-pop > :last-child { margin-bottom: 0; }
 @media (max-width: 1000px) { #annotSide, .annot-resizer { display: none !important; } }

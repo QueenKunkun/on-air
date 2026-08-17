@@ -17,10 +17,11 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 		if (popRef.current) popRef.current.style.display = 'none';
 	};
 
-	const showPopover = (evt: MouseEvent, htmlStr: string) => {
+	const showPopover = (evt: MouseEvent, htmlStr: string, cite?: boolean) => {
 		const pop = popRef.current;
 		if (!pop) return;
 		pop.innerHTML = htmlStr;
+		pop.classList.toggle('cite', !!cite);
 		pop.style.display = 'block';
 		pop.style.left = '0px';
 		pop.style.top = '0px';
@@ -108,6 +109,25 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 				for (let i = 0; i < lis.length; i++) liById[lis[i].id] = lis[i] as HTMLLIElement;
 			}
 
+			const cloneNote = (li: Element) => {
+				const clone = li.cloneNode(true) as HTMLLIElement;
+				const back = clone.querySelector('.footnote-backref');
+				if (back) back.parentNode?.removeChild(back);
+				return clone.innerHTML;
+			};
+
+			// Citation hover preview: show the reference entry text in the popover.
+			const citeRefs = contentEl!.querySelectorAll('a.onair-citation[href^="#ref-"]');
+			for (let c = 0; c < citeRefs.length; c++) {
+				const a = citeRefs[c] as HTMLAnchorElement;
+				const href = a.getAttribute('href') || '';
+				const entry = document.getElementById(href.slice(1));
+				if (!entry) continue;
+				const htmlStr = cloneNote(entry);
+				a.onmouseenter = (e: MouseEvent) => { if (hoverOn.current) showPopover(e, htmlStr, true); };
+				a.onmouseleave = () => { if (hoverOn.current) hidePopover(); };
+			}
+
 			let annId = 0;
 			for (let r = 0; r < refs.length; r++) {
 				const ref = refs[r];
@@ -116,10 +136,7 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 					const a = ref.querySelector('a');
 					const fli = a && liById[(a.getAttribute('href') || '').replace(/^#/, '')];
 					if (fli) {
-						const fclone = fli.cloneNode(true) as HTMLLIElement;
-						const fback = fclone.querySelector('.footnote-backref');
-						if (fback) fback.parentNode?.removeChild(fback);
-						const htmlStr = fclone.innerHTML;
+						const htmlStr = cloneNote(fli);
 						(ref as HTMLElement).onmouseenter = (e: MouseEvent) => { if (hoverOn.current) showPopover(e, htmlStr); };
 						(ref as HTMLElement).onmouseleave = () => { if (hoverOn.current) hidePopover(); };
 					}

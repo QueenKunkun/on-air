@@ -193,59 +193,62 @@ test('citations: citations inside math are not linked', () => {
 
 const FOOTNOTES = { citeStyle: 'footnotes' };
 
-test('footnotes mode: [N] becomes a footnote-ref', () => {
+test('footnotes mode: [N] becomes a superscript cite-ref wrapping the link', () => {
 	const html = renderMarkdown(REFS_DOC('See [3].'), '/doc', '/root', undefined, FOOTNOTES);
-	assert.ok(html.includes('class="footnote-ref"'), 'citation rendered as footnote ref');
-	assert.ok(!html.includes('class="onair-citation"'), 'no citation link in footnotes mode');
+	assert.ok(html.includes('sup class="cite-ref"'), 'citation rendered as superscript cite-ref');
+	assert.ok(html.includes('class="onair-citation"'), 'citation link still present inside sup');
+	assert.ok(html.includes('href="#ref-3"'), 'link still points at the reference entry');
 });
 
-test('footnotes mode: footnote items render with reference text', () => {
-	const html = renderMarkdown(REFS_DOC('See [3].'), '/doc', '/root', undefined, FOOTNOTES);
-	assert.ok(html.includes('Ref three.'), 'reference entry text present as footnote body');
-	assert.ok(html.includes('footnote-item'), 'footnote item rendered');
-});
-
-test('footnotes mode: multi [N, M] renders one footnote-ref per number', () => {
-	const html = renderMarkdown(REFS_DOC('See [2, 7].'), '/doc', '/root', undefined, FOOTNOTES);
-	const refs = html.match(/class="footnote-ref"/g) || [];
-	assert.equal(refs.length, 2, 'two footnote refs for two numbers');
-	assert.ok(html.includes('Ref two.'), 'ref 2 body present');
-	assert.ok(html.includes('Ref seven.'), 'ref 7 body present');
-});
-
-test('footnotes mode: range [N-M] renders a ref per endpoint', () => {
+test('footnotes mode: keeps original numbers (no renumbering)', () => {
 	const html = renderMarkdown(REFS_DOC('See [8-10].'), '/doc', '/root', undefined, FOOTNOTES);
-	const refs = html.match(/class="footnote-ref"/g) || [];
-	assert.equal(refs.length, 3, 'three footnote refs for a 3-number range');
-	assert.ok(html.includes('Ref ten.'), 'range end body present');
+	assert.ok(html.includes('href="#ref-8"'), 'range start number preserved');
+	assert.ok(html.includes('href="#ref-10"'), 'range end number preserved');
+	assert.ok(!html.includes('#fn'), 'no footnote-style renumbering');
+});
+
+test('footnotes mode: does not create a footnotes section', () => {
+	const html = renderMarkdown(REFS_DOC('See [3].'), '/doc', '/root', undefined, FOOTNOTES);
+	assert.ok(!html.includes('section.footnotes'), 'citations are not converted into footnotes');
+	assert.ok(!html.includes('footnote-ref'), 'no markdown footnote refs');
+});
+
+test('footnotes mode: multi [N, M] renders one link per number inside one sup', () => {
+	const html = renderMarkdown(REFS_DOC('See [2, 7].'), '/doc', '/root', undefined, FOOTNOTES);
+	const sups = html.match(/sup class="cite-ref"/g) || [];
+	assert.equal(sups.length, 1, 'one sup wrapper for the group');
+	const inner = html.match(/sup class="cite-ref">(.*?)<\/sup>/s)?.[1] || '';
+	const links = inner.match(/class="onair-citation"/g) || [];
+	assert.equal(links.length, 2, 'two citation links inside the sup');
 });
 
 test('footnotes mode: undefined numbers are left as text', () => {
 	const html = renderMarkdown(REFS_DOC('Interval [0, 1] and [99].'), '/doc', '/root', undefined, FOOTNOTES);
-	assert.ok(!html.includes('footnote-ref'), 'no footnote refs');
+	assert.ok(!html.includes('sup class="cite-ref"'), 'no sup wrapper for unknown refs');
 	assert.ok(html.includes('[0, 1]'), 'interval text preserved');
 	assert.ok(html.includes('[99]'), 'unknown ref text preserved');
 });
 
-test('footnotes mode: existing [^N] footnote defs are preserved', () => {
+test('footnotes mode: existing [^N] footnotes still render as footnotes', () => {
 	const html = renderMarkdown('A[^1] and [3].\n\n## References\n\n[^1]: Footnote one.\n\n[2] Ref two.\n\n[3] Ref three.', '/doc', '/root', undefined, FOOTNOTES);
+	assert.ok(html.includes('footnote-ref'), 'real footnote still a footnote');
 	assert.ok(html.includes('Footnote one.'), 'existing footnote body preserved');
-	assert.ok(html.includes('Ref three.'), 'converted ref body present');
+	assert.ok(html.includes('sup class="cite-ref"'), 'citation still a cite-ref');
 });
 
-test('footnotes mode: pure-citation math like $[3],$ is unwrapped and converted', () => {
+test('footnotes mode: pure-citation math stays as KaTeX', () => {
 	const html = renderMarkdown(REFS_DOC('Math $[8-10],$ here.'), '/doc', '/root', undefined, FOOTNOTES);
-	assert.ok(!html.includes('katex'), 'pure-citation math not rendered as katex');
-	const refs = html.match(/class="footnote-ref"/g) || [];
-	assert.equal(refs.length, 3, 'math-wrapped citations converted to footnote refs');
-	assert.ok(html.includes('Ref ten.'), 'range end body present');
+	assert.ok(html.includes('class="katex"'), 'math-wrapped citation still rendered as math');
+	assert.ok(!html.includes('cite-ref'), 'no conversion inside math');
 });
 
 test('footnotes mode: genuine math keeps citations unlinked', () => {
 	const html = renderMarkdown(REFS_DOC('Math $x[3] \\to y$ and [7].'), '/doc', '/root', undefined, FOOTNOTES);
 	assert.ok(html.includes('class="katex"'), 'genuine math still rendered');
-	assert.ok(!html.includes('href="#ref-3"'), 'citation inside math not converted');
-	assert.ok(html.includes('Ref seven.'), 'citation outside math converted');
+	const mathHtml = html.slice(html.indexOf('class="katex"'));
+	assert.ok(!/onair-citation/.test(mathHtml.slice(0, mathHtml.indexOf('</span>'))), 'no citation link inside math');
+	const sups = html.match(/sup class="cite-ref"/g) || [];
+	assert.equal(sups.length, 1, 'citation outside math converted');
 });
 
 test('footnotes mode: code fences and inline code are skipped', () => {
@@ -253,18 +256,18 @@ test('footnotes mode: code fences and inline code are skipped', () => {
 	const html = renderMarkdown(src, '/doc', '/root', undefined, FOOTNOTES);
 	assert.ok(html.includes('const a = [3];'), 'code fence content unchanged');
 	assert.ok(html.includes('inline [7] code'), 'inline code unchanged');
-	const refs = html.match(/class="footnote-ref"/g) || [];
-	assert.equal(refs.length, 1, 'only real citation converted');
+	const sups = html.match(/sup class="cite-ref"/g) || [];
+	assert.equal(sups.length, 1, 'only real citation converted');
 });
 
 test('footnotes mode: no References section leaves source untouched', () => {
 	const html = renderMarkdown('Just [3] with no list.', '/doc', '/root', undefined, FOOTNOTES);
 	assert.ok(html.includes('[3]'), 'citation text preserved');
-	assert.ok(!html.includes('footnote-ref'), 'no footnote refs without References section');
+	assert.ok(!html.includes('onair-citation'), 'no citation links without References section');
 });
 
 test('footnotes mode: link mode is unchanged when citeStyle is default', () => {
 	const html = renderMarkdown(REFS_DOC('See [3].'), '/doc', '/root');
 	assert.ok(html.includes('class="onair-citation"'), 'default stays link mode');
-	assert.ok(!html.includes('class="footnote-ref"'), 'no footnote refs in link mode');
+	assert.ok(!html.includes('sup class="cite-ref"'), 'no sup wrapper in link mode');
 });

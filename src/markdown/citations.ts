@@ -202,12 +202,18 @@ export default function citationsPlugin(md: MarkdownIt): void {
 		if (!nums || !nums.every((n) => refs.has(n))) { return false; }
 		if (silent) { return true; }
 
+		// Wrap body citations in a superscript marker in footnotes mode. Reference
+		// entry labels (`[N]` at paragraph start, e.g. `[3] Ref text.`) keep the
+		// plain link so the References section reads naturally.
+		const footnotes = state.env.citeStyle === 'footnotes' && state.pos > 0;
+
 		// `[<a href="#ref-N">N</a>, ...]` — preserve the original separator text.
 		const push = (type: string, tag: string, nesting: 1 | 0 | -1, content?: string) => {
 			const t = state.push(type, tag, nesting);
 			if (content !== undefined) { t.content = content; }
 			return t;
 		};
+		if (footnotes) { push('sup_open', 'sup', 1).attrSet('class', 'cite-ref'); }
 		push('text', '', 0, '[');
 		let last = 0;
 		for (const mm of m[1].matchAll(/\d+/g)) {
@@ -222,6 +228,7 @@ export default function citationsPlugin(md: MarkdownIt): void {
 		}
 		if (last < m[1].length) { push('text', '', 0, m[1].slice(last)); }
 		push('text', '', 0, ']');
+		if (footnotes) { push('sup_close', 'sup', -1); }
 		state.pos = start + m[0].length;
 		return true;
 	});
