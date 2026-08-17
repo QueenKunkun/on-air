@@ -5,20 +5,16 @@ import { LS_KEYS } from '../../common/localStorageKeys';
 import { ConnectionStatus } from './ConnectionStatus';
 import type { ConnectionStatus as ConnectionStatusType } from '../hooks/useWebSocket';
 
-type CiteStyle = 'link' | 'footnotes';
-
 interface BannerProps {
 	connStatus?: ConnectionStatusType;
-	send?: (msg: object) => void;
 }
 
-export function Banner({ connStatus, send }: BannerProps) {
+export function Banner({ connStatus }: BannerProps) {
 	const [theme, setTheme] = useLocalStorage(LS_KEYS.THEME, 'auto');
 	const [fs, setFs] = useLocalStorage(LS_KEYS.FONT_SIZE, '16');
 	const [sbw, setSbw] = useLocalStorage(LS_KEYS.SCROLLBAR_WIDTH, '16');
 	const [mw, setMw] = useLocalStorage(LS_KEYS.MAX_WIDTH, '920');
 	const [wpOn, setWpOn] = useState(false);
-	const [citeStyle, setCiteStyle] = useLocalStorage<CiteStyle>(LS_KEYS.CITE_STYLE, 'link');
 	const rootRef = useRef<HTMLDivElement>(null);
 	const contentRef = useRef<HTMLElement | null>(null);
 
@@ -52,11 +48,6 @@ export function Banner({ connStatus, send }: BannerProps) {
 	useEffect(() => {
 		contentRef.current?.classList.toggle('wp', wpOn);
 	}, [wpOn]);
-
-	// Sync stored citation style to server (applies on load / reconnect)
-	useEffect(() => {
-		send?.({ type: 'set-cite-style', style: citeStyle });
-	}, [citeStyle, send]);
 
 	// Portal-like: append rendered content to #banner
 	useEffect(() => {
@@ -111,14 +102,6 @@ export function Banner({ connStatus, send }: BannerProps) {
 			<button class={`wp-btn${wpOn ? ' on' : ''}`} id="wpBtn" title="Toggle word wrapping for code blocks"
 				onClick={() => setWpOn(!wpOn)}>
 				↵
-			</button>
-			<button class={`cite-btn${citeStyle === 'footnotes' ? ' on' : ''}`} id="citeStyleBtn" title="Toggle citation style: inline numbered links vs footnote refs"
-				onClick={() => {
-					const next = citeStyle === 'link' ? 'footnotes' : 'link';
-					setCiteStyle(next);
-					send?.({ type: 'set-cite-style', style: next });
-				}}>
-				{citeStyle === 'footnotes' ? '¹' : '[1]'}
 			</button>
 				<button class="wp-btn" id="hoverBtn" title="Toggle hover preview for footnote/annotation notes">
 					💬
