@@ -12,6 +12,24 @@
 	<div class="md-online-banner" id="banner"></div>
 	<div id="wrapper"><div id="filesSide"><div id="fileTree"><div id="ft-preact-root" data-id="{{ID}}" data-fullpath="{{FULL_PATH_ATTR}}" data-rootdir="{{ROOT_DIR_ATTR}}"></div></div></div><div class="files-resizer" id="filesResizer"></div><div id="tocCol"><nav id="toc" class="toc"></nav></div><div class="toc-resizer" id="tocResizer"></div><div id="edgeHandles"><div class="edge-handle" data-panel="files" title="Show file tree">Files</div><div class="edge-handle" data-panel="toc" title="Show table of contents">TOC</div></div><article class="markdown-body" id="content">{{BODY}}</article><div class="annot-resizer" id="annotResizer"></div><div id="annotSide"><div id="annots"></div><button id="annotToggle" class="annot-toggle" aria-label="Toggle annotations">&gt;</button></div></div>
 	<script>
+	(function () {
+		try {
+			var filesCollapsed = localStorage.getItem('onair-files-collapsed') === '1';
+			var tocCollapsed = localStorage.getItem('onair-toc-collapsed') === '1';
+			var filesSide = document.getElementById('filesSide');
+			var tocCol = document.getElementById('tocCol');
+			if (filesSide) filesSide.classList.toggle('collapsed', filesCollapsed);
+			if (tocCol) tocCol.classList.toggle('collapsed', tocCollapsed);
+			var handles = document.getElementById('edgeHandles');
+			if (handles) handles.classList.toggle('visible', filesCollapsed || tocCollapsed);
+			var edgeFiles = document.querySelector('#edgeHandles [data-panel="files"]');
+			var edgeToc = document.querySelector('#edgeHandles [data-panel="toc"]');
+			if (edgeFiles) edgeFiles.style.display = filesCollapsed ? '' : 'none';
+			if (edgeToc) edgeToc.style.display = tocCollapsed ? '' : 'none';
+		} catch (e) {}
+	})();
+	</script>
+	<script>
 	window.__ONAIR__ = {
 		id: {{ID_JSON}},
 		fullPath: {{FULL_PATH_JSON}},

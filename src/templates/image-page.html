@@ -31,6 +31,19 @@
 <div class="md-online-banner" id="banner"></div>
 <div id="wrapper"><div id="filesSide"><div id="fileTree"><div id="ft-preact-root" data-id="{{ID}}" data-fullpath="{{FULL_PATH_ATTR}}" data-rootdir="{{ROOT_DIR_ATTR}}"></div></div></div><div class="files-resizer" id="filesResizer"></div><div id="edgeHandles"><div class="edge-handle" data-panel="files" title="Show file tree">Files</div></div><article id="content"><div class="title">{{TITLE}}</div><img src="{{SRC}}" alt="{{TITLE}}" id="img" /><div class="info" id="info"></div></article></div>
 <script>
+(function () {
+	try {
+		var filesCollapsed = localStorage.getItem('onair-files-collapsed') === '1';
+		var filesSide = document.getElementById('filesSide');
+		if (filesSide) filesSide.classList.toggle('collapsed', filesCollapsed);
+		var handles = document.getElementById('edgeHandles');
+		if (handles) handles.classList.toggle('visible', filesCollapsed);
+		var edgeFiles = document.querySelector('#edgeHandles [data-panel="files"]');
+		if (edgeFiles) edgeFiles.style.display = filesCollapsed ? '' : 'none';
+	} catch (e) {}
+})();
+</script>
+<script>
 window.__ONAIR__ = {
 	id: {{ID_JSON}},
 	fullPath: {{FULL_PATH_JSON}},
