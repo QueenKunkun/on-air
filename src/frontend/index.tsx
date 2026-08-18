@@ -4,6 +4,7 @@ import { Banner } from './components/Banner';
 import { Layout } from './components/Layout';
 import { TOC } from './components/TOC';
 import { Annotations } from './components/Annotations';
+import { MathSource } from './components/MathSource';
 import { FootnotesBlock } from './components/FootnotesBlock';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -64,6 +65,7 @@ function App() {
 		h(TOC, { contentEl, fullPath, relPath, contentVersion }),
 		h(FootnotesBlock, { contentEl, contentVersion }),
 		h(Annotations, { contentEl, contentVersion }),
+		h(MathSource, { contentEl, contentVersion }),
 	);
 }
 

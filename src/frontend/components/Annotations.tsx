@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import { LS_KEYS } from '../../common/localStorageKeys';
+import { getPopover, hidePopover, showPopover } from '../popover';
 
 interface CardEntry {
 	id: string;
@@ -11,32 +12,6 @@ interface CardEntry {
 export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElement | null; contentVersion: number }) {
 	const hoverOn = useRef(localStorage.getItem(LS_KEYS.ANNOT_HOVER) === '1');
 	const cardRegistry = useRef<CardEntry[]>([]);
-	const popRef = useRef<HTMLDivElement | null>(null);
-
-	const hidePopover = () => {
-		if (popRef.current) popRef.current.style.display = 'none';
-	};
-
-	const showPopover = (evt: MouseEvent, htmlStr: string, cite?: boolean) => {
-		const pop = popRef.current;
-		if (!pop) return;
-		pop.innerHTML = htmlStr;
-		pop.classList.toggle('cite', !!cite);
-		pop.style.display = 'block';
-		pop.style.left = '0px';
-		pop.style.top = '0px';
-		const el = (evt.currentTarget || evt.target) as HTMLElement;
-		const r = el.getBoundingClientRect();
-		const ph = pop.offsetHeight;
-		const pw = pop.offsetWidth;
-		const gap = 30;
-		let top = r.bottom + gap;
-		if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 12);
-		let left = r.left;
-		if (left + pw > window.innerWidth - 8) left = Math.max(8, window.innerWidth - pw - 8);
-		pop.style.top = (top + window.pageYOffset) + 'px';
-		pop.style.left = (left + window.pageXOffset) + 'px';
-	};
 
 	const annotColumnVisible = () => {
 		const side = document.getElementById('annotSide');
@@ -85,13 +60,6 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 	useEffect(() => {
 		if (!contentEl) return;
 
-		// Create popover
-		const pop = document.createElement('div');
-		pop.id = 'annot-pop';
-		pop.style.display = 'none';
-		document.body.appendChild(pop);
-		popRef.current = pop;
-
 		const side = document.getElementById('annotSide');
 		const annots = document.getElementById('annots');
 		const resizer = document.getElementById('annotResizer');
@@ -124,7 +92,7 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 				const entry = document.getElementById(href.slice(1));
 				if (!entry) continue;
 				const htmlStr = cloneNote(entry);
-				a.onmouseenter = (e: MouseEvent) => { if (hoverOn.current) showPopover(e, htmlStr, true); };
+				a.onmouseenter = (e: MouseEvent) => { if (hoverOn.current) showPopover(e, htmlStr, 'cite'); };
 				a.onmouseleave = () => { if (hoverOn.current) hidePopover(); };
 			}
 
@@ -247,6 +215,7 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 
 		// Click outside popover to close
 		function onDocClick(e: MouseEvent) {
+			const pop = getPopover();
 			if (pop.style.display !== 'none' && !pop.contains(e.target as Node) && !(e.target as HTMLElement)?.closest?.('.annot-mark')) {
 				hidePopover();
 			}
@@ -260,7 +229,6 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 			handle?.removeEventListener('click', onToggleClick);
 			hoverBtn?.removeEventListener('click', onHoverBtnClick);
 			document.removeEventListener('click', onDocClick);
-			pop.remove();
 		};
 	}, [contentEl, contentVersion]);
 
