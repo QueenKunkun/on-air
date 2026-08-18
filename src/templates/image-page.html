@@ -2,6 +2,18 @@
 <html lang="en" class="onair-md">
 <head>
 <meta charset="UTF-8" />
+<style>body { visibility: hidden; }</style>
+<script>
+(function () {
+	try {
+		var theme = localStorage.getItem('onair-theme');
+		if (theme && theme !== 'auto') {
+			document.documentElement.setAttribute('data-theme', theme);
+		}
+	} catch (e) {}
+	document.body.style.visibility = 'visible';
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <base href="/preview/{{ID}}/" />
 <title>{{TITLE}} · OnAir</title>
@@ -30,16 +42,6 @@
 <body>
 <div class="md-online-banner" id="banner"></div>
 <div id="wrapper"><div id="filesSide"><div id="fileTree"><div id="ft-preact-root" data-id="{{ID}}" data-fullpath="{{FULL_PATH_ATTR}}" data-rootdir="{{ROOT_DIR_ATTR}}"></div></div></div><div class="files-resizer" id="filesResizer"></div><div id="edgeHandles"><div class="edge-handle" data-panel="files" title="Show file tree">Files</div></div><article id="content"><div class="title">{{TITLE}}</div><img src="{{SRC}}" alt="{{TITLE}}" id="img" /><div class="info" id="info"></div></article></div>
-<script>
-(function () {
-	try {
-		var theme = localStorage.getItem('onair-theme');
-		if (theme && theme !== 'auto') {
-			document.documentElement.setAttribute('data-theme', theme);
-		}
-	} catch (e) {}
-})();
-</script>
 <script>
 (function () {
 	try {
