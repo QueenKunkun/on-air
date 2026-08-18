@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.18.0] - 2026-08-18
+
+- feat: hover a rendered formula to preview and copy its original LaTeX source
+
+
 ## [0.17.0] - 2026-08-17
 
 - feat: render IEEE numeric citations [N], [N, M], [N-M] as links to the reference entries

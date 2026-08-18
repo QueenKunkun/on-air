@@ -9,7 +9,7 @@ Turn the currently open Markdown, HTML, or image file into a **live local previe
 - **Markdown, HTML & images** — generate a link from the Command Palette, right-click menu, or title bar icon, then **open in browser** or **copy the link**; image files (png/jpg/gif/webp/svg/bmp/ico) open as a live preview
 - **Stable links** — the same file always gets the same address; multiple files can preview at once
 - **Live sync** — edits refresh automatically (no save needed); Markdown updates in place, HTML reloads
-- **Math formulas** — `$..$` and `$$..$$` LaTeX rendered with KaTeX
+- **Math formulas** — `$..$` and `$$..$$` LaTeX rendered with KaTeX; hover a formula to preview and copy its source
 - **Table of contents** — nested navigation, scroll tracking, resizable, collapsible; shows the file's relative path; plus a **Related documents** list, and relative links to other docs open as previews
 - **File tree** — project file tree with search (`*.svg`), filter (`.md`, `.gitignore`, unsupported files), expand-to-current-file, and state persistence
 - **Multi-theme** — 16 preset themes
