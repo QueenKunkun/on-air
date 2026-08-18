@@ -28,11 +28,23 @@ export function MathSource({ contentEl, contentVersion }: { contentEl: HTMLEleme
 	useEffect(() => {
 		if (!contentEl) return;
 
-		// Moving the cursor from a formula onto the popover must not dismiss it
-		// instantly, or the copy button would be unreachable. Defer the hide by
-		// a short grace period and cancel it when the cursor enters the popover.
+		// Show is deferred so a passing glance over a formula does not flash a
+		// popover (noisy). Hiding is also deferred briefly so the cursor can move
+		// from the formula onto the popover to reach the copy button.
+		let showTimer: number | null = null;
 		let hideTimer: number | null = null;
+
+		const cancelShow = () => {
+			if (showTimer) { clearTimeout(showTimer); showTimer = null; }
+		};
+		const scheduleShow = (fn: () => void) => {
+			const pop = getPopover();
+			if (pop.style.display !== 'none') { fn(); return; }
+			cancelShow();
+			showTimer = window.setTimeout(() => { showTimer = null; fn(); }, 300);
+		};
 		const scheduleHide = () => {
+			cancelShow();
 			if (hideTimer) clearTimeout(hideTimer);
 			hideTimer = window.setTimeout(hidePopover, 150);
 		};
@@ -58,20 +70,22 @@ export function MathSource({ contentEl, contentVersion }: { contentEl: HTMLEleme
 			const code = escapeHtml(full);
 
 			el.onmouseenter = (e: MouseEvent) => {
-				showPopover(e,
-					'<code>' + code + '</code>' +
-					'<button class="math-copy" type="button">Copy</button>',
-					'math');
-				const btn = document.querySelector('#annot-pop .math-copy');
-				if (btn) {
-					btn.onclick = (ce: MouseEvent) => {
-						ce.stopPropagation();
-						copyText(full).then(() => {
-							btn.textContent = 'Copied';
-							setTimeout(() => { btn.textContent = 'Copy'; }, 1200);
-						});
-					};
-				}
+				scheduleShow(() => {
+					showPopover(e,
+						'<code>' + code + '</code>' +
+						'<button class="math-copy" type="button">Copy</button>',
+						'math');
+					const btn = document.querySelector('#annot-pop .math-copy');
+					if (btn) {
+						btn.onclick = (ce: MouseEvent) => {
+							ce.stopPropagation();
+							copyText(full).then(() => {
+								btn.textContent = 'Copied';
+								setTimeout(() => { btn.textContent = 'Copy'; }, 1200);
+							});
+						};
+					}
+				});
 			};
 			el.onmouseleave = scheduleHide;
 		}
@@ -79,6 +93,7 @@ export function MathSource({ contentEl, contentVersion }: { contentEl: HTMLEleme
 		return () => {
 			pop.removeEventListener('mouseenter', cancelHide);
 			pop.removeEventListener('mouseleave', scheduleHide);
+			if (showTimer) clearTimeout(showTimer);
 			if (hideTimer) clearTimeout(hideTimer);
 		};
 	}, [contentEl, contentVersion]);

@@ -54,3 +54,18 @@ test('math popover hides when the mouse leaves the formula', async ({ page }) =>
 	await page.mouse.move(0, 0);
 	await expect(page.locator('#annot-pop.math')).not.toBeVisible();
 });
+
+test('popover appears after a short hover delay', async ({ page }) => {
+	const inline = page.locator('#content .katex-html').first();
+	await inline.hover();
+	await expect(page.locator('#annot-pop.math')).not.toBeVisible({ timeout: 150 });
+	await expect(page.locator('#annot-pop.math')).toBeVisible({ timeout: 3000 });
+});
+
+test('quick pass over a formula does not flash the popover', async ({ page }) => {
+	const inline = page.locator('#content .katex-html').first();
+	await inline.hover();
+	await page.waitForTimeout(120);
+	await page.mouse.move(0, 0);
+	await expect(page.locator('#annot-pop.math')).not.toBeVisible({ timeout: 1000 });
+});
