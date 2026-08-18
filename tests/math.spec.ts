@@ -6,6 +6,9 @@ const infoPath = path.join(__dirname, '.server-info.json');
 let baseUrl: string;
 let mathId: string;
 
+const showDelay = (page: import('@playwright/test').Page) =>
+	page.evaluate(() => parseInt(document.documentElement.dataset.mathShowDelay || '300', 10));
+
 test.beforeAll(() => {
 	const info = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
 	baseUrl = info.baseUrl;
@@ -56,21 +59,24 @@ test('math popover hides when the mouse leaves the formula', async ({ page }) =>
 });
 
 test('popover appears after a short hover delay', async ({ page }) => {
+	const delay = await showDelay(page);
 	const inline = page.locator('#content .katex-html').first();
 	await inline.hover();
-	await expect(page.locator('#annot-pop.math')).not.toBeVisible({ timeout: 150 });
-	await expect(page.locator('#annot-pop.math')).toBeVisible({ timeout: 3000 });
+	await expect(page.locator('#annot-pop.math')).not.toBeVisible({ timeout: Math.max(1, delay - 50) });
+	await expect(page.locator('#annot-pop.math')).toBeVisible({ timeout: delay + 1000 });
 });
 
 test('quick pass over a formula does not flash the popover', async ({ page }) => {
+	const delay = await showDelay(page);
 	const inline = page.locator('#content .katex-html').first();
 	await inline.hover();
-	await page.waitForTimeout(120);
+	await page.waitForTimeout(Math.max(1, delay - 100));
 	await page.mouse.move(0, 0);
-	await expect(page.locator('#annot-pop.math')).not.toBeVisible({ timeout: 1000 });
+	await expect(page.locator('#annot-pop.math')).not.toBeVisible({ timeout: delay + 500 });
 });
 
 test('sliding to another formula waits the hover delay instead of flashing', async ({ page }) => {
+	const delay = await showDelay(page);
 	const first = page.locator('#content .katex-html').first();
 	const second = page.locator('#content .katex-html').nth(1);
 	const popCode = page.locator('#annot-pop.math code');
@@ -79,7 +85,7 @@ test('sliding to another formula waits the hover delay instead of flashing', asy
 	await expect(popCode).toHaveText('$E = mc^2$');
 
 	await second.hover();
-	await expect(popCode).not.toHaveText(/\$\\Gamma/, { timeout: 150 });
-	await expect(popCode).toHaveText(/\$\\Gamma/, { timeout: 3000 });
-	await expect(page.locator('#annot-pop.math')).toBeVisible({ timeout: 500 });
+	await expect(popCode).not.toHaveText(/\$\\Gamma/, { timeout: Math.max(1, delay - 50) });
+	await expect(popCode).toHaveText(/\$\\Gamma/, { timeout: delay + 1000 });
+	await expect(page.locator('#annot-pop.math')).toBeVisible({ timeout: delay + 1000 });
 });

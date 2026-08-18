@@ -24,6 +24,12 @@ function fallbackCopy(text: string): void {
 	document.body.removeChild(ta);
 }
 
+// Tune these freely to change the hover feel; the value is exposed to the DOM
+// (data-math-show-delay) so the e2e tests derive their timings from it instead
+// of hardcoding a number.
+const SHOW_DELAY_MS = 300;
+const HIDE_GRACE_MS = 150;
+
 export function MathSource({ contentEl, contentVersion }: { contentEl: HTMLElement | null; contentVersion: number }) {
 	useEffect(() => {
 		if (!contentEl) return;
@@ -31,6 +37,8 @@ export function MathSource({ contentEl, contentVersion }: { contentEl: HTMLEleme
 		// Show is deferred so a passing glance over a formula does not flash a
 		// popover (noisy). Hiding is also deferred briefly so the cursor can move
 		// from the formula onto the popover to reach the copy button.
+		document.documentElement.dataset.mathShowDelay = String(SHOW_DELAY_MS);
+
 		let showTimer: number | null = null;
 		let hideTimer: number | null = null;
 
@@ -39,12 +47,12 @@ export function MathSource({ contentEl, contentVersion }: { contentEl: HTMLEleme
 		};
 		const scheduleShow = (fn: () => void) => {
 			cancelShow();
-			showTimer = window.setTimeout(() => { showTimer = null; fn(); }, 300);
+			showTimer = window.setTimeout(() => { showTimer = null; fn(); }, SHOW_DELAY_MS);
 		};
 		const scheduleHide = () => {
 			cancelShow();
 			if (hideTimer) clearTimeout(hideTimer);
-			hideTimer = window.setTimeout(hidePopover, 150);
+			hideTimer = window.setTimeout(hidePopover, HIDE_GRACE_MS);
 		};
 		const cancelHide = () => {
 			if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
