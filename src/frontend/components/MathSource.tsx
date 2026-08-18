@@ -41,7 +41,7 @@ export function MathSource({ contentEl, contentVersion }: { contentEl: HTMLEleme
 			const pop = getPopover();
 			if (pop.style.display !== 'none') { fn(); return; }
 			cancelShow();
-			showTimer = window.setTimeout(() => { showTimer = null; fn(); }, 300);
+			showTimer = window.setTimeout(() => { showTimer = null; fn(); }, 2000);
 		};
 		const scheduleHide = () => {
 			cancelShow();
