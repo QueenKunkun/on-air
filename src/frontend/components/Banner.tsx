@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { LS_KEYS } from '../../common/localStorageKeys';
 import { ConnectionStatus } from './ConnectionStatus';
+import { ThemeSelect } from './ThemeSelect';
 import type { ConnectionStatus as ConnectionStatusType } from '../hooks/useWebSocket';
 
 interface BannerProps {
@@ -94,11 +95,7 @@ export function Banner({ connStatus }: BannerProps) {
 		<div ref={rootRef} style={{ display: 'contents' }}>
 			{connStatus && <ConnectionStatus icon={connStatus.icon} message={connStatus.message} offline={connStatus.offline} />}
 			<div class="tb-center">
-				<select class="bp-select" id="themeSelect" title="Theme"
-					value={theme}
-					onChange={(e) => setTheme((e.target as HTMLSelectElement).value)}>
-					{themes.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-				</select>
+				<ThemeSelect themes={themes} value={theme} onChange={setTheme} />
 			<button class={`wp-btn${wpOn ? ' on' : ''}`} id="wpBtn" title="Toggle word wrapping for code blocks"
 				onClick={() => setWpOn(!wpOn)}>
 				↵

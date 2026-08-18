@@ -26,15 +26,17 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('banner theme select changes theme', async ({ page }) => {
-  const themeSelect = page.getByRole('combobox');
-  await expect(themeSelect).toBeVisible();
+  const themeBtn = page.locator('#themeSelect .theme-btn');
+  await expect(themeBtn).toBeVisible();
   // Change theme
-  await themeSelect.selectOption('vscode-dark');
+  await themeBtn.click();
+  await page.locator('#themeSelect .theme-menu li', { hasText: 'VS Code Dark' }).click();
   await page.waitForTimeout(200);
   const theme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
   expect(theme).toBe('vscode-dark');
   // Change back
-  await themeSelect.selectOption('auto');
+  await themeBtn.click();
+  await page.locator('#themeSelect .theme-menu li', { hasText: 'Auto' }).click();
   await page.waitForTimeout(200);
   const theme2 = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
   expect(theme2).toBeNull();

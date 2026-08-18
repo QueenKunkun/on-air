@@ -119,10 +119,14 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
 .bp-btn:active, .wp-btn:active { transform: translateY(0); }
 .wp-btn { padding: 0 6px; }
 .wp-btn.on { background: var(--btn-on-bg); color: var(--btn-on-c); border-color: var(--btn-on-border); }
-.bp-select { font: inherit; height: 26px; padding: 0 24px 0 8px; line-height: 1; border: 1px solid var(--btn-border); border-radius: 4px; background: transparent; color: var(--btn-c); cursor: pointer; user-select: none; transition: background .15s, transform .15s; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 7px center; background-size: 10px 6px; }
-.bp-select:hover { background-color: var(--btn-hover-bg); transform: translateY(-1px); }
-.bp-select:active { transform: translateY(0); }
-.bp-select option { background: var(--bg); color: var(--text); }
+.theme-wrap { position: relative; }
+.theme-btn { font: inherit; height: 26px; min-width: 30px; padding: 0 8px; line-height: 1; border: 1px solid var(--btn-border); border-radius: 4px; background: transparent; color: var(--btn-c); cursor: pointer; user-select: none; transition: background .15s, transform .15s; }
+.theme-btn:hover { background: var(--btn-hover-bg); transform: translateY(-1px); }
+.theme-btn:active { transform: translateY(0); }
+.theme-menu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 60; list-style: none; margin: 0; padding: 4px; min-width: 160px; max-height: 60vh; overflow: auto; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.22); }
+.theme-menu li { padding: 5px 8px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+.theme-menu li:hover { background: var(--pre-bg); color: var(--link-c); }
+.theme-menu li.active { background: var(--pre-bg); color: var(--link-c); font-weight: 600; }
 .fs-input { font: inherit; width: 44px; height: 26px; padding: 0; text-align: center; border: 1px solid var(--btn-border); border-radius: 4px; background: transparent; color: var(--btn-c); -moz-appearance: textfield; }
 .fs-input::-webkit-inner-spin-button, .fs-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .banner-msg { display: none; }
