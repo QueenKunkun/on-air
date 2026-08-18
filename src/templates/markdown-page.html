@@ -14,6 +14,16 @@
 	<script>
 	(function () {
 		try {
+			var theme = localStorage.getItem('onair-theme');
+			if (theme && theme !== 'auto') {
+				document.documentElement.setAttribute('data-theme', theme);
+			}
+		} catch (e) {}
+	})();
+	</script>
+	<script>
+	(function () {
+		try {
 			var filesCollapsed = localStorage.getItem('onair-files-collapsed') === '1';
 			var tocCollapsed = localStorage.getItem('onair-toc-collapsed') === '1';
 			var filesSide = document.getElementById('filesSide');

@@ -33,6 +33,16 @@
 <script>
 (function () {
 	try {
+		var theme = localStorage.getItem('onair-theme');
+		if (theme && theme !== 'auto') {
+			document.documentElement.setAttribute('data-theme', theme);
+		}
+	} catch (e) {}
+})();
+</script>
+<script>
+(function () {
+	try {
 		var filesCollapsed = localStorage.getItem('onair-files-collapsed') === '1';
 		var filesSide = document.getElementById('filesSide');
 		if (filesSide) filesSide.classList.toggle('collapsed', filesCollapsed);
