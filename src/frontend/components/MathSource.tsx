@@ -38,10 +38,8 @@ export function MathSource({ contentEl, contentVersion }: { contentEl: HTMLEleme
 			if (showTimer) { clearTimeout(showTimer); showTimer = null; }
 		};
 		const scheduleShow = (fn: () => void) => {
-			const pop = getPopover();
-			if (pop.style.display !== 'none') { fn(); return; }
 			cancelShow();
-			showTimer = window.setTimeout(() => { showTimer = null; fn(); }, 2000);
+			showTimer = window.setTimeout(() => { showTimer = null; fn(); }, 300);
 		};
 		const scheduleHide = () => {
 			cancelShow();
@@ -70,6 +68,8 @@ export function MathSource({ contentEl, contentVersion }: { contentEl: HTMLEleme
 			const code = escapeHtml(full);
 
 			el.onmouseenter = (e: MouseEvent) => {
+				cancelHide();
+				hidePopover();
 				scheduleShow(() => {
 					showPopover(e,
 						'<code>' + code + '</code>' +

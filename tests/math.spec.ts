@@ -69,3 +69,17 @@ test('quick pass over a formula does not flash the popover', async ({ page }) =>
 	await page.mouse.move(0, 0);
 	await expect(page.locator('#annot-pop.math')).not.toBeVisible({ timeout: 1000 });
 });
+
+test('sliding to another formula waits the hover delay instead of flashing', async ({ page }) => {
+	const first = page.locator('#content .katex-html').first();
+	const second = page.locator('#content .katex-html').nth(1);
+	const popCode = page.locator('#annot-pop.math code');
+
+	await first.hover();
+	await expect(popCode).toHaveText('$E = mc^2$');
+
+	await second.hover();
+	await expect(popCode).not.toHaveText(/\$\\Gamma/, { timeout: 150 });
+	await expect(popCode).toHaveText(/\$\\Gamma/, { timeout: 3000 });
+	await expect(page.locator('#annot-pop.math')).toBeVisible({ timeout: 500 });
+});
