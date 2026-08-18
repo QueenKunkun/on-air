@@ -27,7 +27,7 @@ function fallbackCopy(text: string): void {
 // Tune these freely to change the hover feel; the value is exposed to the DOM
 // (data-math-show-delay) so the e2e tests derive their timings from it instead
 // of hardcoding a number.
-const SHOW_DELAY_MS = 300;
+const SHOW_DELAY_MS = 500;
 const HIDE_GRACE_MS = 150;
 
 export function MathSource({ contentEl, contentVersion }: { contentEl: HTMLElement | null; contentVersion: number }) {
