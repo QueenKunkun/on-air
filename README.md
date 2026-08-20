@@ -18,6 +18,7 @@ Turn the currently open Markdown, HTML, or image file into a **live local previe
 - **Reading comfort** — code highlighting with a wrap toggle, font size and scrollbar/content width controls
 - **Cross-references** — `.md` filename links to a path-proximity picker
 - **IEEE citations** — numeric citations `[3]`, `[2, 7]`, `[8-10]` link to the reference entries
+- **Diagrams** — render Mermaid flowcharts and sequence diagrams from ` ```mermaid ` ``` fences (auto-themed, offline fallback)
 - **LAN sharing** — get a localhost and a LAN IP link so others on your WiFi can open the preview
 
 

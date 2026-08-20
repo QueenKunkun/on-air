@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.19.0] - 2026-08-20
+
+- feat: Add Mermaid diagram rendering
+
+
 ## [0.18.0] - 2026-08-18
 
 - feat: hover a rendered formula to preview and copy its original LaTeX source
