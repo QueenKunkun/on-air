@@ -126,3 +126,16 @@ pnpm publish-all && open http://127.0.0.1:6868
 
     Second paragraph of the same note, demonstrating multi-paragraph content in a
     right-margin card.
+## Diagrams
+
+Render a Mermaid flowchart or sequence diagram straight from a fenced block (lazy-loaded, falls back to plain source when offline):
+
+```mermaid
+flowchart LR
+    A["写 Markdown"] --> B["OnAir 实时预览"]
+    B --> C["刷新浏览器"]
+    B --> D["Mermaid 图表"]
+    C --> E{"满意?"}
+    E -- 否 --> A
+    E -- 是 --> F["发布 🎉"]
+```

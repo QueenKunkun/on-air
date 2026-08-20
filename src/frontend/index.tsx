@@ -6,6 +6,7 @@ import { TOC } from './components/TOC';
 import { Annotations } from './components/Annotations';
 import { MathSource } from './components/MathSource';
 import { FootnotesBlock } from './components/FootnotesBlock';
+import { Mermaid } from './components/Mermaid';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useCallback, useEffect, useState } from 'preact/hooks';
@@ -66,6 +67,7 @@ function App() {
 		h(FootnotesBlock, { contentEl, contentVersion }),
 		h(Annotations, { contentEl, contentVersion }),
 		h(MathSource, { contentEl, contentVersion }),
+		h(Mermaid, { contentEl, contentVersion }),
 	);
 }
 

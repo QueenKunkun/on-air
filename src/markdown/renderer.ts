@@ -70,7 +70,15 @@ export const md: MarkdownIt = new MarkdownIt({
 	html: true,
 	linkify: true,
 	typographer: true,
-	highlight: (code, lang) => `<pre class="hljs"><code>${highlightCode(code, lang)}</code></pre>`,
+	highlight: (code, lang) => {
+		if (lang === 'mermaid') {
+			// Mermaid diagrams: kept as raw source in a <pre class="mermaid"> that the
+			// frontend renders client-side (lazy CDN load). Falls back to plain text
+			// when the library can't be fetched (offline).
+			return `<pre class="mermaid">${md.utils.escapeHtml(code)}</pre>`;
+		}
+		return `<pre class="hljs"><code>${highlightCode(code, lang)}</code></pre>`;
+	},
 });
 
 // Disable fuzzy (schemaless) linkification to prevent bare tokens like
