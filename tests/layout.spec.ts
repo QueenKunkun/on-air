@@ -479,6 +479,36 @@ test('toc has scrollable content when headings exist', async ({ page }) => {
   expect(tocStyles!.flexDirection).toBe('column');
 });
 
+test('TOC copy-path button copies the path with feedback', async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as any).__clipboardText = '';
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: (text: string) => {
+          (window as any).__clipboardText = text;
+          return Promise.resolve();
+        }
+      },
+      configurable: true
+    });
+  });
+
+  await page.goto(`${baseUrl}/preview/${docId}`);
+  const copyBtn = page.locator('#toc-header .toc-copy');
+  await expect(copyBtn).toBeVisible({ timeout: 5000 });
+
+  await copyBtn.click();
+  await expect(copyBtn).toHaveClass(/copied/);
+  await expect(copyBtn).toHaveText('\u2713');
+  await expect(copyBtn).toHaveAttribute('title', 'Copied');
+
+  const clipboardText = await page.evaluate(() => (window as any).__clipboardText);
+  expect(clipboardText).toBeTruthy();
+
+  // Feedback reverts after 1.5s
+  await expect(copyBtn).not.toHaveClass(/copied/, { timeout: 3000 });
+});
+
 test('TOC rebuilds when content updates via WebSocket', async ({ page }) => {
   const toc = page.locator('#toc');
   await expect(toc).toBeAttached();
