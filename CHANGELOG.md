@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.19.1] - 2026-08-21
+
+- feat: add toggle for proportional scrollbar thumb
+
+
 ## [0.19.0] - 2026-08-20
 
 - feat: Add Mermaid diagram rendering
