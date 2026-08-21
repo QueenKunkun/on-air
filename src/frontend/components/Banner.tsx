@@ -16,6 +16,7 @@ export function Banner({ connStatus }: BannerProps) {
 	const [sbw, setSbw] = useLocalStorage(LS_KEYS.SCROLLBAR_WIDTH, '16');
 	const [mw, setMw] = useLocalStorage(LS_KEYS.MAX_WIDTH, '920');
 	const [wpOn, setWpOn] = useState(false);
+	const [sbProp, setSbProp] = useState(false);
 	const rootRef = useRef<HTMLDivElement>(null);
 	const contentRef = useRef<HTMLElement | null>(null);
 
@@ -39,6 +40,12 @@ export function Banner({ connStatus }: BannerProps) {
 	useEffect(() => {
 		document.documentElement.style.setProperty('--sb-w', sbw + 'px');
 	}, [sbw]);
+
+	// Scrollbar proportional thumb sync
+	useEffect(() => {
+		if (sbProp) document.documentElement.style.setProperty('--sb-thumb-min', '0px');
+		else document.documentElement.style.removeProperty('--sb-thumb-min');
+	}, [sbProp]);
 
 	// Max width sync
 	useEffect(() => {
@@ -100,9 +107,13 @@ export function Banner({ connStatus }: BannerProps) {
 				onClick={() => setWpOn(!wpOn)}>
 				↵
 			</button>
-				<button class="wp-btn" id="hoverBtn" title="Toggle hover preview for footnote/annotation notes">
-					💬
-				</button>
+			<button class="wp-btn" id="hoverBtn" title="Toggle hover preview for footnote/annotation notes">
+				💬
+			</button>
+			<button class={`wp-btn${sbProp ? ' on' : ''}`} id="sbPropBtn" title="Toggle proportional scrollbar thumb"
+				onClick={() => setSbProp(v => !v)}>
+				∷
+			</button>
 				<span class="bp-group"><span class="bp-label" title="Font size">A</span>
 					<button class="bp-btn" id="fsDec" title="Decrease font size"
 						onClick={() => setFs(String(Math.max(12, Math.min(28, parseInt(fs) - 2))))}>−</button>

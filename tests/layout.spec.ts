@@ -116,6 +116,18 @@ test('banner scrollbar direct input works', async ({ page }) => {
   expect(parseInt(val)).toBe(24);
 });
 
+test('banner proportional scrollbar toggle works', async ({ page }) => {
+  // default: --sb-thumb-min not set
+  const html = page.locator('html');
+  await expect(html).not.toHaveAttribute('style', /--sb-thumb-min/);
+  // toggle on → inline style sets var
+  await page.getByTitle('Toggle proportional scrollbar thumb').click();
+  await expect(html).toHaveAttribute('style', /--sb-thumb-min:\s*0px/);
+  // toggle off → var removed
+  await page.getByTitle('Toggle proportional scrollbar thumb').click();
+  await expect(html).not.toHaveAttribute('style', /--sb-thumb-min/);
+});
+
 test('banner max width direct input works', async ({ page }) => {
   const mwInput = page.getByRole('spinbutton', { name: /max content width/i });
   await expect(mwInput).toBeVisible();
