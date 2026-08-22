@@ -17,6 +17,16 @@
 <title>{{TITLE}} · OnAir</title>
 <style>{{CSS}}</style>
 <style>{{KATEX_CSS}}</style>
+<script>
+(function () {
+	try {
+		var v = localStorage.getItem('onair-scrollbar-proportional');
+		if (v === 'true') {
+			document.documentElement.style.setProperty('--sb-thumb-min', '0px');
+		}
+	} catch (e) {}
+})();
+</script>
 </head>
 <body>
 	<div class="md-online-banner" id="banner"></div>
