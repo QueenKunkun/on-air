@@ -16,7 +16,7 @@ import { handleFileIndex } from './routes/fileIndex';
 import { handleStatic } from './routes/static';
 import { handlePreview } from './routes/preview';
 import { handleXref } from './routes/xref';
-import { toPosix, resolveStaticPath, mimeType } from './routes/utils';
+import { toPosix, mimeType } from './routes/utils';
 
 import pageCss from './templates/page.css';
 import katexCss from 'katex/dist/katex.min.css';
@@ -375,7 +375,7 @@ export class PreviewServer {
 	// Fallback for ID-less /preview/ paths: the browser resolved a relative URL
 	// (e.g. ../public/icon/foo.svg) against <base href="/preview/ID/">, stripping
 	// the ID. Look up the document from the Referer header, walk up from the
-	// document's directory to find the referenced file.
+	// document's directory (within rootDir bounds) to find the referenced file.
 	private handleFallbackFromReferer(req: http.IncomingMessage, res: http.ServerResponse, rawUrl: string): void {
 		const refMatch = (req.headers.referer || '').match(/\/preview\/([a-f0-9]+)/);
 		if (!refMatch) return;
@@ -383,23 +383,25 @@ export class PreviewServer {
 		if (!refEntry) return;
 		const rel = decodeURIComponent(rawUrl.replace(/^\/preview\//, ''));
 		const docDir = path.dirname(refEntry.fullPath);
-		// Walk up from docDir: the browser collapsed ../ so the path is relative
-		// to some ancestor of docDir, not docDir itself.
-		let filePath: string | null = null;
+		const resolvedRoot = refEntry.rootDir ? path.resolve(refEntry.rootDir) : null;
+		// Walk up from docDir to find the file. Stop at rootDir's parent — the
+		// walk-up must not escape the workspace. This allows resolving references
+		// like ../public/icon/foo.svg when rootDir equals docDir (no workspace).
+		const stopDir = resolvedRoot ? path.dirname(resolvedRoot) : null;
 		let dir = docDir;
 		for (let i = 0; i < 10; i++) {
-			filePath = resolveStaticPath(refEntry.rootDir, rel, dir);
-			if (filePath && fs.existsSync(filePath)) break;
+			// Don't walk above rootDir's parent (security boundary).
+			if (stopDir && !dir.startsWith(stopDir) && dir !== stopDir) break;
+			const candidate = path.resolve(dir, rel);
+			try {
+				const data = fs.readFileSync(candidate);
+				res.writeHead(200, { 'Content-Type': mimeType(candidate) }); res.end(data);
+				return;
+			} catch { /* file doesn't exist at this level */ }
 			const parent = path.dirname(dir);
 			if (parent === dir) break;
 			dir = parent;
-			filePath = null;
 		}
-		if (!filePath) return;
-		try {
-			const data = fs.readFileSync(filePath);
-			res.writeHead(200, { 'Content-Type': mimeType(filePath) }); res.end(data);
-		} catch { /* fall through */ }
 	}
 
 	private handleUpgrade(req: http.IncomingMessage, socket: import('stream').Duplex, head: Buffer): void {

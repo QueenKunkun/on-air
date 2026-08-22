@@ -11,9 +11,10 @@ export function handleStatic(
 	uriToId: Map<string, string>,
 	registerDocument: (uriKey: string, title: string, content: string, kind: string, rootDir: string, fullPath: string) => string,
 ): void {
-	const u = new URL(req.url || '', 'http://localhost');
-	const pathname = u.pathname;
-	const staticMatch = pathname.match(/^\/preview\/([a-f0-9]+)\/(.+)$/);
+	// Use raw URL matching (not URL normalization) to preserve ".." segments.
+	// new URL() collapses /preview/ID/../x to /preview/x, breaking the ID capture.
+	const rawUrl = req.url || '';
+	const staticMatch = rawUrl.match(/^\/preview\/([a-f0-9]+)\/(.+)$/);
 	if (!staticMatch) return;
 
 	const entry = docs.get(staticMatch[1]);
