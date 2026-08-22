@@ -117,11 +117,14 @@ test('banner scrollbar direct input works', async ({ page }) => {
 });
 
 test('banner proportional scrollbar toggle works', async ({ page }) => {
-  // default: --sb-thumb-min not set
   const html = page.locator('html');
+  // default: --sb-thumb-min not set
   await expect(html).not.toHaveAttribute('style', /--sb-thumb-min/);
   // toggle on → inline style sets var
   await page.getByTitle('Toggle proportional scrollbar thumb').click();
+  await expect(html).toHaveAttribute('style', /--sb-thumb-min:\s*0px/);
+  // persists across reload
+  await page.reload();
   await expect(html).toHaveAttribute('style', /--sb-thumb-min:\s*0px/);
   // toggle off → var removed
   await page.getByTitle('Toggle proportional scrollbar thumb').click();

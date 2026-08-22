@@ -16,9 +16,15 @@ export function Banner({ connStatus }: BannerProps) {
 	const [sbw, setSbw] = useLocalStorage(LS_KEYS.SCROLLBAR_WIDTH, '16');
 	const [mw, setMw] = useLocalStorage(LS_KEYS.MAX_WIDTH, '920');
 	const [wpOn, setWpOn] = useState(false);
-	const [sbProp, setSbProp] = useState(false);
+	const [sbProp, setSbProp] = useState(() => {
+		try { return localStorage.getItem(LS_KEYS.SCROLLBAR_PROPORTIONAL) === 'true'; } catch { return false; }
+	});
 	const rootRef = useRef<HTMLDivElement>(null);
 	const contentRef = useRef<HTMLElement | null>(null);
+
+	useEffect(() => {
+		try { localStorage.setItem(LS_KEYS.SCROLLBAR_PROPORTIONAL, String(sbProp)); } catch { /* ignore */ }
+	}, [sbProp]);
 
 	useEffect(() => {
 		contentRef.current = document.getElementById('content');

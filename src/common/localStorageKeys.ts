@@ -4,6 +4,7 @@ export const LS_KEYS = {
 	THEME: 'onair-theme',
 	FONT_SIZE: 'onair-font-size',
 	SCROLLBAR_WIDTH: 'onair-scrollbar-width',
+	SCROLLBAR_PROPORTIONAL: 'onair-scrollbar-proportional',
 	MAX_WIDTH: 'onair-max-width',
 
 	/** Panel collapse state */
