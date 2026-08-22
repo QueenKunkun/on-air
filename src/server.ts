@@ -16,7 +16,7 @@ import { handleFileIndex } from './routes/fileIndex';
 import { handleStatic } from './routes/static';
 import { handlePreview } from './routes/preview';
 import { handleXref } from './routes/xref';
-import { kindFromPath, toPosix, resolveStaticPath, mimeType } from './routes/utils';
+import { toPosix, resolveStaticPath, mimeType } from './routes/utils';
 
 import pageCss from './templates/page.css';
 import katexCss from 'katex/dist/katex.min.css';
