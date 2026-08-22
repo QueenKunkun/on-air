@@ -16,7 +16,7 @@ import { handleFileIndex } from './routes/fileIndex';
 import { handleStatic } from './routes/static';
 import { handlePreview } from './routes/preview';
 import { handleXref } from './routes/xref';
-import { kindFromPath, toPosix } from './routes/utils';
+import { kindFromPath, toPosix, resolveStaticPath, mimeType } from './routes/utils';
 
 import pageCss from './templates/page.css';
 import katexCss from 'katex/dist/katex.min.css';
@@ -317,23 +317,32 @@ export class PreviewServer {
 	}
 
 	private handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
-		const url = req.url || '';
-		const { pathname } = new URL(url, 'http://localhost');
+		const rawUrl = req.url || '';
+		const pathname = new URL(rawUrl, 'http://localhost').pathname;
 		console.log('[on-air] handleRequest:', pathname, 'docs.size=', this.docs.size, 'port=', this.port);
-		const typedReq = { url } as { url: string };
-		const typedReqWithHeaders = { url, headers: req.headers };
+		const typedReq = { url: rawUrl } as { url: string };
+		const typedReqWithHeaders = { url: rawUrl, headers: req.headers };
 
 		if (pathname === '/api/tree')          return handleTree(typedReq, res, this.docs);
 		if (pathname === '/api/file')          return handleFile(typedReq, res, this.docs);
 		if (pathname === '/api/file-index')    return handleFileIndex(typedReq, res, this.docs);
 		if (pathname.startsWith('/preview/'))  {
-			const staticMatch = pathname.match(/^\/preview\/([a-f0-9]+)\/(.+)$/);
+			// Use rawUrl (not pathname) for static matching to preserve ".."
+			// segments — new URL() normalizes /preview/ID/../x to /preview/x,
+			// breaking the ID capture group.
+			const staticMatch = rawUrl.match(/^\/preview\/([a-f0-9]+)\/(.+)$/);
 			if (staticMatch)                   return handleStatic(typedReqWithHeaders, res, this.docs, this.uriToId, (a, b, c, d, e, f) => this.registerDocument(a, b, c, d as DocKind, e, f));
 			const pageMatch = pathname.match(/^\/preview\/([a-f0-9]+)\/?$/);
 			if (pageMatch)                     return handlePreview(typedReq, res, this.docs, (a, b, c, d, e, f) => this.registerDocument(a, b, c, d as DocKind, e, f));
 		}
-		if (/^\/xref\b/.test(url))            return handleXref(typedReq, res, this.docs, this.uriToId);
+		if (/^\/xref\b/.test(rawUrl))         return handleXref(typedReq, res, this.docs, this.uriToId);
 		if (pathname.startsWith('/__onair__/katex/fonts/')) return this.handleKatexFont(pathname, res);
+
+		// Fallback: ID-less /preview/ path — try to resolve from Referer
+		if (pathname.startsWith('/preview/') && !pathname.match(/^\/preview\/[a-f0-9]+/)) {
+			this.handleFallbackFromReferer(req, res, rawUrl);
+			if (res.writableEnded) return;
+		}
 
 		res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
 		res.end('Not found');
@@ -361,6 +370,36 @@ export class PreviewServer {
 			res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
 			res.end('Not found');
 		}
+	}
+
+	// Fallback for ID-less /preview/ paths: the browser resolved a relative URL
+	// (e.g. ../public/icon/foo.svg) against <base href="/preview/ID/">, stripping
+	// the ID. Look up the document from the Referer header, walk up from the
+	// document's directory to find the referenced file.
+	private handleFallbackFromReferer(req: http.IncomingMessage, res: http.ServerResponse, rawUrl: string): void {
+		const refMatch = (req.headers.referer || '').match(/\/preview\/([a-f0-9]+)/);
+		if (!refMatch) return;
+		const refEntry = this.docs.get(refMatch[1]);
+		if (!refEntry) return;
+		const rel = decodeURIComponent(rawUrl.replace(/^\/preview\//, ''));
+		const docDir = path.dirname(refEntry.fullPath);
+		// Walk up from docDir: the browser collapsed ../ so the path is relative
+		// to some ancestor of docDir, not docDir itself.
+		let filePath: string | null = null;
+		let dir = docDir;
+		for (let i = 0; i < 10; i++) {
+			filePath = resolveStaticPath(refEntry.rootDir, rel, dir);
+			if (filePath && fs.existsSync(filePath)) break;
+			const parent = path.dirname(dir);
+			if (parent === dir) break;
+			dir = parent;
+			filePath = null;
+		}
+		if (!filePath) return;
+		try {
+			const data = fs.readFileSync(filePath);
+			res.writeHead(200, { 'Content-Type': mimeType(filePath) }); res.end(data);
+		} catch { /* fall through */ }
 	}
 
 	private handleUpgrade(req: http.IncomingMessage, socket: import('stream').Duplex, head: Buffer): void {

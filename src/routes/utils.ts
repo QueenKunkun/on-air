@@ -40,13 +40,29 @@ export function resolveStaticPath(rootDir: string, relPath: string, baseDir?: st
 	const base = path.resolve(baseDir ?? rootDir ?? process.cwd());
 	const resolvedRoot = rootDir ? path.resolve(rootDir) : null;
 	const resolvedTarget = path.resolve(base, decoded);
+	// Check: target inside base (docDir) or root (workspace)?
 	const allowedRoots = [base, resolvedRoot].filter((r): r is string => !!r);
-	const isInside = allowedRoots.some((r) => resolvedTarget === r || resolvedTarget.startsWith(r + path.sep));
-	if (!isInside) { return null; }
-	try {
-		if (fs.statSync(resolvedTarget).isFile()) { return resolvedTarget; }
-	} catch {
-		// File doesn't exist or isn't accessible
+	if (allowedRoots.some((r) => resolvedTarget === r || resolvedTarget.startsWith(r + path.sep))) {
+		try {
+			if (fs.statSync(resolvedTarget).isFile()) { return resolvedTarget; }
+		} catch { /* file doesn't exist */ }
+		return null;
+	}
+	// Fallback: walk up from baseDir to find the nearest common ancestor.
+	// This handles the case where a single file is opened outside any workspace
+	// and references a sibling directory (e.g. ../public/icon/foo.svg from store/).
+	const MAX_WALK = 5;
+	let cur = base;
+	for (let i = 0; i < MAX_WALK; i++) {
+		const parent = path.dirname(cur);
+		if (parent === cur) break; // filesystem root
+		cur = parent;
+		if (resolvedTarget.startsWith(cur + path.sep) || resolvedTarget === cur) {
+			try {
+				if (fs.statSync(resolvedTarget).isFile()) { return resolvedTarget; }
+			} catch { /* file doesn't exist */ }
+			return null;
+		}
 	}
 	return null;
 }
