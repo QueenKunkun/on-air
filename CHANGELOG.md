@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.19.2] - 2026-08-22
+
+- feat: persist proportional scrollbar toggle across reloads
+- fix: sibling-asset resolution for files opened outside workspace
+
+
 ## [0.19.1] - 2026-08-21
 
 - feat: add toggle for proportional scrollbar thumb
