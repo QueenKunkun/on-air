@@ -34,102 +34,36 @@ function ensurePdfJs(): Promise<unknown> {
 	return pdfjsPromise;
 }
 
-async function renderPdf(pdfUrl: string, container: HTMLElement): Promise<void> {
+async function renderAllPages(pdfUrl: string, container: HTMLElement): Promise<boolean> {
 	const pdfjs = await ensurePdfJs();
-	if (!isPdfJs(pdfjs)) {
-		// CDN unavailable — let the iframe fallback handle it
-		return;
-	}
+	if (!isPdfJs(pdfjs)) return false;
 
 	try {
 		const loadingTask = (pdfjs as any).getDocument({ url: pdfUrl });
 		const pdf = await loadingTask.promise;
 		const totalPages = pdf.numPages;
 
-		// Create toolbar
-		const toolbar = document.createElement('div');
-		toolbar.className = 'pdf-toolbar';
-		toolbar.innerHTML = `
-			<button class="pdf-prev" disabled>&laquo; Prev</button>
-			<span class="pdf-page-info">Page <input class="pdf-page-num" type="number" value="1" min="1" max="${totalPages}" /> / ${totalPages}</span>
-			<button class="pdf-next" disabled>&raquo; Next</button>
-			<span class="pdf-sep"></span>
-			<button class="pdf-zoom-out" title="Zoom out">&minus;</button>
-			<span class="pdf-zoom-info">100%</span>
-			<button class="pdf-zoom-in" title="Zoom in">+</button>
-		`;
-		container.appendChild(toolbar);
+		// Render all pages vertically (continuous scroll)
+		for (let i = 1; i <= totalPages; i++) {
+			const page = await pdf.getPage(i);
+			const viewport = page.getViewport({ scale: 1.5 });
 
-		// Create viewer area
-		const viewer = document.createElement('div');
-		viewer.className = 'pdf-viewer';
-		container.appendChild(viewer);
-
-		let currentPage = 1;
-		let scale = 1.5;
-		const PAGE_GAP = 8;
-
-		const prevBtn = toolbar.querySelector('.pdf-prev') as HTMLButtonElement;
-		const nextBtn = toolbar.querySelector('.pdf-next') as HTMLButtonElement;
-		const pageNumInput = toolbar.querySelector('.pdf-page-num') as HTMLInputElement;
-		const zoomOutBtn = toolbar.querySelector('.pdf-zoom-out') as HTMLButtonElement;
-		const zoomInBtn = toolbar.querySelector('.pdf-zoom-in') as HTMLButtonElement;
-		const zoomInfo = toolbar.querySelector('.pdf-zoom-info') as HTMLSpanElement;
-
-		async function renderPage(pageNum: number) {
-			const page = await pdf.getPage(pageNum);
-			const viewport = page.getViewport({ scale });
 			const canvas = document.createElement('canvas');
-			const ctx = canvas.getContext('2d')!;
 			canvas.width = viewport.width;
 			canvas.height = viewport.height;
-			canvas.style.width = '100%';
-			canvas.style.maxWidth = viewport.width + 'px';
+			canvas.style.width = viewport.width + 'px';
+			canvas.style.maxWidth = '100%';
+			canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,.3)';
+			canvas.style.borderRadius = '2px';
+
+			container.appendChild(canvas);
+
+			const ctx = canvas.getContext('2d')!;
 			await page.render({ canvasContext: ctx, viewport }).promise;
-			return canvas;
 		}
-
-		async function showPage(pageNum: number) {
-			if (pageNum < 1 || pageNum > totalPages) return;
-			currentPage = pageNum;
-			viewer.innerHTML = '';
-			const canvas = await renderPage(pageNum);
-			viewer.appendChild(canvas);
-			pageNumInput.value = String(pageNum);
-			prevBtn.disabled = pageNum <= 1;
-			nextBtn.disabled = pageNum >= totalPages;
-		}
-
-		function updateZoom() {
-			zoomInfo.textContent = Math.round(scale * 100 / 1.5) + '%';
-		}
-
-		prevBtn.addEventListener('click', () => showPage(currentPage - 1));
-		nextBtn.addEventListener('click', () => showPage(currentPage + 1));
-		pageNumInput.addEventListener('change', () => {
-			const n = parseInt(pageNumInput.value, 10);
-			if (!isNaN(n)) showPage(n);
-		});
-		pageNumInput.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter') {
-				const n = parseInt(pageNumInput.value, 10);
-				if (!isNaN(n)) showPage(n);
-			}
-		});
-		zoomOutBtn.addEventListener('click', () => {
-			scale = Math.max(0.5, scale - 0.25);
-			updateZoom();
-			showPage(currentPage);
-		});
-		zoomInBtn.addEventListener('click', () => {
-			scale = Math.min(5, scale + 0.25);
-			updateZoom();
-			showPage(currentPage);
-		});
-
-		await showPage(1);
+		return true;
 	} catch {
-		// PDF.js rendering failed — let iframe fallback take over
+		return false;
 	}
 }
 
@@ -145,19 +79,14 @@ export function PdfViewer() {
 
 		const pdfUrl = `/preview/${id}/__raw_pdf__`;
 
-		// Show loading state
 		if (loading) loading.style.display = 'flex';
 
-		renderPdf(pdfUrl, container).then(() => {
-			// Check if pdf.js actually rendered something (toolbar present)
-			const hasContent = container.querySelector('.pdf-toolbar');
+		renderAllPages(pdfUrl, container).then((ok) => {
 			if (loading) loading.style.display = 'none';
-			if (hasContent) {
+			if (ok && container.children.length > 0) {
 				container.style.display = 'flex';
-				container.style.flexDirection = 'column';
 				fallback.style.display = 'none';
 			} else {
-				// pdf.js failed or CDN unavailable — use iframe fallback
 				container.style.display = 'none';
 				fallback.style.display = 'block';
 				fallback.src = pdfUrl;
