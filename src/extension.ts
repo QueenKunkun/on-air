@@ -26,6 +26,8 @@ function docKind(doc: vscode.TextDocument): DocKind | null {
 
 export async function activate(context: vscode.ExtensionContext) {
 	setDebugEnabled(!!process.env.ONAIR_DEBUG);
+	const logChannel = vscode.window.createOutputChannel("我的扩展日志");
+	context.subscriptions.push(logChannel); // 顺便注册销毁，防止内存泄漏
 	server = new PreviewServer();
 		try {
 			await server.start(DEFAULT_PORT);
@@ -116,6 +118,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 
 		vscode.workspace.onDidCloseTextDocument((doc) => {
+			console.log(`on did close ---------`)
+			debug(`on did close ---------`)
+			logChannel.appendLine(`on did close ---------`)
+			
 			const kind = docKind(doc);
 			if (!kind || kind === 'pdf') { return; }
 			server?.closeDocument(doc.uri.toString());

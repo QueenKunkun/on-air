@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.20.0] - 2026-08-24
+
+- feat: add PDF preview with continuous scroll powered by pdf.js
+
+
 ## [0.19.2] - 2026-08-22
 
 - feat: persist proportional scrollbar toggle across reloads
