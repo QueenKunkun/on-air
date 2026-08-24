@@ -164,19 +164,19 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 		// Annotation column resize
 		function onResizerMouseDown(e: MouseEvent) {
 			startPos = e.clientX;
-			startSize = side!.offsetWidth;
-			resizer!.classList.add('active');
+			startSize = side ? side.offsetWidth : 0;
+			if (resizer) resizer.classList.add('active');
 			document.addEventListener('mousemove', onResizerMouseMove);
 			document.addEventListener('mouseup', onResizerMouseUp);
 			e.preventDefault();
 		}
 		function onResizerMouseMove(e: MouseEvent) {
 			const size = Math.max(120, startSize - (e.clientX - startPos));
-			side!.style.width = size + 'px';
+			if (side) side.style.width = size + 'px';
 		}
 		function onResizerMouseUp() {
-			resizer!.classList.remove('active');
-			localStorage.setItem(LS_KEYS.ANNOT_WIDTH, String(side!.offsetWidth));
+			if (resizer) resizer.classList.remove('active');
+			if (side) localStorage.setItem(LS_KEYS.ANNOT_WIDTH, String(side.offsetWidth));
 			document.removeEventListener('mousemove', onResizerMouseMove);
 			document.removeEventListener('mouseup', onResizerMouseUp);
 		}
@@ -189,7 +189,7 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 		// Annotation column collapse handle
 		const handle = document.getElementById('annotToggle');
 		function setAnnotCollapsed(c: boolean) {
-			side!.classList.toggle('collapsed', c);
+			if (side) side.classList.toggle('collapsed', c);
 			if (handle) {
 				handle.textContent = c ? '<' : '>';
 				handle.title = c ? 'Show annotations' : 'Hide annotations';
@@ -199,7 +199,7 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 			if (!c) layoutCards();
 		}
 		setAnnotCollapsed(localStorage.getItem(LS_KEYS.ANNOT_COLLAPSED) === '1');
-		function onToggleClick() { setAnnotCollapsed(!side!.classList.contains('collapsed')); }
+		function onToggleClick() { if (side) setAnnotCollapsed(!side.classList.contains('collapsed')); }
 		handle?.addEventListener('click', onToggleClick);
 
 		// Hover preview

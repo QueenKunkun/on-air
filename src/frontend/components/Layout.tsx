@@ -4,6 +4,19 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useResizer } from '../hooks/useResizer';
 import { LS_KEYS } from '../../common/localStorageKeys';
 
+function updateEdgeHandles() {
+	const filesEl = document.getElementById('filesSide');
+	const tocEl = document.getElementById('tocCol');
+	const fc = filesEl ? filesEl.classList.contains('collapsed') : false;
+	const tc = tocEl ? tocEl.classList.contains('collapsed') : false;
+	const edgeHandles = document.getElementById('edgeHandles');
+	if (edgeHandles) edgeHandles.classList.toggle('visible', fc || tc);
+	const edgeFiles = document.querySelector<HTMLElement>('#edgeHandles [data-panel="files"]');
+	if (edgeFiles) edgeFiles.style.display = fc ? '' : 'none';
+	const edgeToc = document.querySelector<HTMLElement>('#edgeHandles [data-panel="toc"]');
+	if (edgeToc) edgeToc.style.display = tc ? '' : 'none';
+}
+
 export function Layout({ children }: { children: preact.ComponentChildren }) {
 	const [filesCollapsed, setFilesCollapsed] = useLocalStorage(LS_KEYS.FILES_COLLAPSED, '0');
 	const [tocCollapsed, setTocCollapsed] = useLocalStorage(LS_KEYS.TOC_COLLAPSED, '0');
@@ -36,6 +49,7 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		document.documentElement.style.setProperty('--files-w', next ? '0px' : (localStorage.getItem(LS_KEYS.FILES_WIDTH) || '300') + 'px');
 		document.documentElement.style.setProperty('--files-resizer-w', next ? '0px' : 'var(--resizer-w)');
 		if (!next) window.dispatchEvent(new CustomEvent('onair:tree-activate'));
+		updateEdgeHandles();
 	}, [filesCollapsed, setFilesCollapsed]);
 
 	const toggleToc = useCallback(() => {
@@ -45,6 +59,7 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		if (el) el.classList.toggle('collapsed', next);
 		document.documentElement.style.setProperty('--toc-w', next ? '0px' : (localStorage.getItem(LS_KEYS.TOC_WIDTH) || '200') + 'px');
 		document.documentElement.style.setProperty('--toc-resizer-w', next ? '0px' : 'var(--resizer-w)');
+		updateEdgeHandles();
 	}, [tocCollapsed, setTocCollapsed]);
 
 	const expandFiles = useCallback(() => {
@@ -54,6 +69,7 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		document.documentElement.style.setProperty('--files-w', (localStorage.getItem(LS_KEYS.FILES_WIDTH) || '300') + 'px');
 		document.documentElement.style.setProperty('--files-resizer-w', 'var(--resizer-w)');
 		window.dispatchEvent(new CustomEvent('onair:tree-activate'));
+		updateEdgeHandles();
 	}, [setFilesCollapsed]);
 
 	const expandToc = useCallback(() => {
@@ -62,6 +78,7 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		if (el) el.classList.remove('collapsed');
 		document.documentElement.style.setProperty('--toc-w', (localStorage.getItem(LS_KEYS.TOC_WIDTH) || '200') + 'px');
 		document.documentElement.style.setProperty('--toc-resizer-w', 'var(--resizer-w)');
+		updateEdgeHandles();
 	}, [setTocCollapsed]);
 
 	// Sync collapsed classes on mount and when state changes
@@ -75,20 +92,12 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		if (el) el.classList.toggle('collapsed', tc);
 	}, [tc]);
 
-	// Edge handles visibility
+	// Edge handles: sync on mount from DOM classes (handles pre-collapsed state from inline script)
 	useEffect(() => {
-		const anyCollapsed = fc || tc;
-		const edgeHandles = document.getElementById('edgeHandles');
-		if (edgeHandles) edgeHandles.classList.toggle('visible', anyCollapsed);
-		const edgeFiles = document.querySelector<HTMLElement>('#edgeHandles [data-panel="files"]');
-		if (edgeFiles) edgeFiles.style.display = fc ? '' : 'none';
-		const edgeToc = document.querySelector<HTMLElement>('#edgeHandles [data-panel="toc"]');
-		if (edgeToc) edgeToc.style.display = tc ? '' : 'none';
-	}, [fc, tc]);
+		updateEdgeHandles();
+	}, []);
 
 	// Bind collapse buttons (x in panel header) and edge handle click handlers.
-	// Use refs for callbacks so the listener effect runs only once (avoids
-	// remove/add churn on every state change).
 	const toggleFilesRef = useRef(toggleFiles);
 	const toggleTocRef = useRef(toggleToc);
 	const expandFilesRef = useRef(expandFiles);
@@ -111,7 +120,6 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		window.addEventListener('onair:collapse-files', onCollapseFiles);
 		window.addEventListener('onair:collapse-toc', onCollapseToc);
 
-		// Find elements directly — refs may not survive Preact re-renders
 		const edgeFiles = document.querySelector<HTMLElement>('#edgeHandles [data-panel="files"]');
 		const edgeToc = document.querySelector<HTMLElement>('#edgeHandles [data-panel="toc"]');
 		const onExpandFiles = () => expandFilesRef.current();
