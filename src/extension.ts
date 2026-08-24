@@ -116,7 +116,8 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 
 		vscode.workspace.onDidCloseTextDocument((doc) => {
-			if (!docKind(doc)) { return; }
+			const kind = docKind(doc);
+			if (!kind || kind === 'pdf') { return; }
 			server?.closeDocument(doc.uri.toString());
 		}),
 
