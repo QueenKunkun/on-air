@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" class="onair-md">
+<head>
+<meta charset="UTF-8" />
+<script>
+(function () {
+	try {
+		var theme = localStorage.getItem('onair-theme');
+		if (theme && theme !== 'auto') {
+			document.documentElement.setAttribute('data-theme', theme);
+		}
+	} catch (e) {}
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<base href="/preview/{{ID}}/" />
+<title>{{TITLE}} · OnAir</title>
+<style>{{CSS}}</style>
+<style>
+#content {
+	flex: 1; min-width: 0;
+	display: flex; flex-direction: column;
+	padding: 0; box-sizing: border-box; overflow: hidden;
+	height: 100%;
+}
+#pdf-container {
+	flex: 1; width: 100%; height: 100%;
+	border: none;
+}
+#pdf-fallback {
+	flex: 1; width: 100%; height: 100%;
+	border: none;
+}
+.pdf-loading {
+	display: flex; align-items: center; justify-content: center;
+	height: 100%; color: #888; font: 14px ui-monospace, Menlo, monospace;
+}
+</style>
+</head>
+<body>
+<div class="md-online-banner" id="banner"></div>
+<div id="wrapper"><div id="filesSide"><div id="fileTree"><div id="ft-preact-root" data-id="{{ID}}" data-fullpath="{{FULL_PATH_ATTR}}" data-rootdir="{{ROOT_DIR_ATTR}}"></div></div></div><div class="files-resizer" id="filesResizer"></div><div id="edgeHandles"><div class="edge-handle" data-panel="files" title="Show file tree">Files</div></div><article id="content"><div class="pdf-loading" id="pdf-loading">Loading PDF…</div><div id="pdf-container" style="display:none"></div><iframe id="pdf-fallback" style="display:none"></iframe></article></div>
+<script>
+(function () {
+	try {
+		var filesCollapsed = localStorage.getItem('onair-files-collapsed') === '1';
+		var filesSide = document.getElementById('filesSide');
+		if (filesSide) filesSide.classList.toggle('collapsed', filesCollapsed);
+		var handles = document.getElementById('edgeHandles');
+		if (handles) handles.classList.toggle('visible', filesCollapsed);
+		var edgeFiles = document.querySelector('#edgeHandles [data-panel="files"]');
+		if (edgeFiles) edgeFiles.style.display = filesCollapsed ? '' : 'none';
+	} catch (e) {}
+})();
+</script>
+<script>
+window.__ONAIR__ = {
+	id: {{ID_JSON}},
+	fullPath: {{FULL_PATH_JSON}},
+	relPath: '',
+	rootDir: {{ROOT_DIR_JSON}},
+	themes: {{THEMES}},
+	version: {{VERSION_JSON}}
+};
+</script>
+<script>{{PREACT_JS}}</script>
+</body>
+</html>

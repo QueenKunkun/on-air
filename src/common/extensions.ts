@@ -21,6 +21,9 @@ export const IMAGE_EXTS = [
 	'.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico',
 ] as const;
 
+/** PDF extensions */
+export const PDF_EXTS = ['.pdf'] as const;
+
 /** Common binary file extensions (fast path for isBinaryFile) */
 export const BINARY_EXTS = [
 	// Archives
@@ -44,6 +47,11 @@ export function isMarkdownExt(ext: string): boolean {
 /** Check if extension is any document type */
 export function isDocumentExt(ext: string): boolean {
 	return (DOCUMENT_EXTS as readonly string[]).includes(ext);
+}
+
+/** Check if extension is a PDF */
+export function isPdfExt(ext: string): boolean {
+	return (PDF_EXTS as readonly string[]).includes(ext);
 }
 
 /** Get markdown ext filter string for /api/query (comma-separated) */

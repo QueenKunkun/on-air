@@ -4,7 +4,7 @@ import { MARKDOWN_EXTS, SUPPORTED_EXTS, IMAGE_EXTS, BINARY_EXTS, isMarkdownExt }
 
 export const toPosix = (p: string): string => (path.sep !== '/' ? p.split(path.sep).join('/') : p);
 
-export type DocKind = 'markdown' | 'html' | 'image';
+export type DocKind = 'markdown' | 'html' | 'image' | 'pdf';
 
 const IMAGE_EXT_SET = new Set<string>(IMAGE_EXTS);
 const BINARY_EXT_SET = new Set<string>(BINARY_EXTS);
@@ -14,6 +14,7 @@ export function kindFromPath(p: string): DocKind | null {
 	if (isMarkdownExt(ext)) { return 'markdown'; }
 	if (ext === '.html' || ext === '.htm') { return 'html'; }
 	if (IMAGE_EXT_SET.has(ext)) { return 'image'; }
+	if (ext === '.pdf') { return 'pdf'; }
 	return null;
 }
 

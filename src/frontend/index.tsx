@@ -7,6 +7,7 @@ import { Annotations } from './components/Annotations';
 import { MathSource } from './components/MathSource';
 import { FootnotesBlock } from './components/FootnotesBlock';
 import { Mermaid } from './components/Mermaid';
+import { PdfViewer } from './components/PdfViewer';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useCallback, useEffect, useState } from 'preact/hooks';
@@ -68,6 +69,7 @@ function App() {
 		h(Annotations, { contentEl, contentVersion }),
 		h(MathSource, { contentEl, contentVersion }),
 		h(Mermaid, { contentEl, contentVersion }),
+		h(PdfViewer, null),
 	);
 }
 

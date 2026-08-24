@@ -20,6 +20,7 @@ function docKind(doc: vscode.TextDocument): DocKind | null {
 	if (doc.languageId === 'html') { return 'html'; }
 	const ext = path.extname(doc.fileName).toLowerCase();
 	if (IMAGE_EXT_SET.has(ext)) { return 'image'; }
+	if (ext === '.pdf') { return 'pdf'; }
 	return null;
 }
 
@@ -51,7 +52,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		const wsFolder = doc.uri.scheme === 'file' ? vscode.workspace.getWorkspaceFolder(doc.uri) : undefined;
 		const rootDir = wsFolder ? wsFolder.uri.fsPath : '';
 		debug(`generateUrl: scheme=${doc.uri.scheme} rootDir=${rootDir || '(none)'} file=${doc.fileName}`);
-		const content = kind === 'image' ? doc.fileName : doc.getText();
+		const content = (kind === 'image' || kind === 'pdf') ? doc.fileName : doc.getText();
 		const id = server.registerDocument(uriKey, fileTitle(doc), content, kind, rootDir, doc.fileName);
 			const url = server.buildUrl(id);
 			const lanIp = server.getLanIp();

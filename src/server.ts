@@ -23,6 +23,7 @@ import katexCss from 'katex/dist/katex.min.css';
 import mdTemplate from './templates/markdown-page.html';
 import htmlSnippet from './templates/html-snippet.html';
 import imgTemplate from './templates/image-page.html';
+import pdfTemplate from './templates/pdf-page.html';
 import { tocJs } from './templates/toc-common';
 
 let preactJs = '';
@@ -154,6 +155,22 @@ function imagePageTemplate(id: string, title: string, dataUrl: string, fullPath:
 		.replace(/\{\{PREACT_JS\}\}/g, () => preactJs);
 }
 
+function pdfPageTemplate(id: string, title: string, fullPath: string, relPath: string, rootDir: string): string {
+	return pdfTemplate
+		.replace(/\{\{CSS\}\}/g, () => pageCss)
+		.replace(/\{\{THEMES\}\}/g, () => JSON.stringify(THEMES))
+		.replace(/\{\{ID\}\}/g, () => id)
+		.replace(/\{\{ID_JSON\}\}/g, () => JSON.stringify(id))
+		.replace(/\{\{TITLE\}\}/g, () => escapeHtml(title))
+		.replace(/\{\{FULL_PATH_JSON\}\}/g, () => JSON.stringify(fullPath))
+		.replace(/\{\{FULL_PATH_ATTR\}\}/g, () => escapeHtml(fullPath))
+		.replace(/\{\{ROOT_DIR_JSON\}\}/g, () => JSON.stringify(rootDir || ''))
+		.replace(/\{\{ROOT_DIR_ATTR\}\}/g, () => escapeHtml(rootDir || ''))
+		.replace(/\{\{VERSION\}\}/g, () => escapeHtml(EXT_VERSION))
+		.replace(/\{\{VERSION_JSON\}\}/g, () => JSON.stringify(EXT_VERSION))
+		.replace(/\{\{PREACT_JS\}\}/g, () => preactJs);
+}
+
 export class PreviewServer {
 	private server: http.Server;
 	private wss: WebSocketServer;
@@ -213,6 +230,9 @@ export class PreviewServer {
 			} catch {
 				return { page: imagePageTemplate(id, title, '', fullPath, relPath, rootDir, 0) };
 			}
+		}
+		if (kind === 'pdf') {
+			return { page: pdfPageTemplate(id, title, fullPath, relPath, rootDir) };
 		}
 		const docDir = path.dirname(fullPath);
 		const bodyHtml = renderMarkdown(content, docDir, rootDir, id, { citeStyle });
@@ -327,6 +347,22 @@ export class PreviewServer {
 		if (pathname === '/api/file')          return handleFile(typedReq, res, this.docs);
 		if (pathname === '/api/file-index')    return handleFileIndex(typedReq, res, this.docs);
 		if (pathname.startsWith('/preview/'))  {
+			// Raw PDF serving for iframe/pdf.js embedding
+			const rawPdfMatch = pathname.match(/^\/preview\/([a-f0-9]+)\/__raw_pdf__$/);
+			if (rawPdfMatch) {
+				const entry = this.docs.get(rawPdfMatch[1]);
+				if (entry && entry.kind === 'pdf') {
+					try {
+						const data = fs.readFileSync(entry.fullPath);
+						res.writeHead(200, { 'Content-Type': 'application/pdf', 'Cache-Control': 'public, max-age=300' });
+						res.end(data);
+						return;
+					} catch { /* fall through */ }
+				}
+				res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+				res.end('PDF not found');
+				return;
+			}
 			// Use rawUrl (not pathname) for static matching to preserve ".."
 			// segments — new URL() normalizes /preview/ID/../x to /preview/x,
 			// breaking the ID capture group.

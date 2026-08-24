@@ -40,21 +40,21 @@
       "editor/title": [
         {
           "command": "onAir.generateUrl",
-          "when": "editorLangId == markdown || editorLangId == html || resourceExtname =~ /\\.(png|jpe?g|gif|webp|avif|bmp|ico|svg)$/i",
+          "when": "editorLangId == markdown || editorLangId == html || resourceExtname =~ /\\.(png|jpe?g|gif|webp|avif|bmp|ico|svg|pdf)$/i",
           "group": "navigation"
         }
       ],
       "editor/context": [
         {
           "command": "onAir.generateUrl",
-          "when": "editorLangId == markdown || editorLangId == html || resourceExtname =~ /\\.(png|jpe?g|gif|webp|avif|bmp|ico|svg)$/i",
+          "when": "editorLangId == markdown || editorLangId == html || resourceExtname =~ /\\.(png|jpe?g|gif|webp|avif|bmp|ico|svg|pdf)$/i",
           "group": "9_markdown"
         }
       ],
       "commandPalette": [
         {
           "command": "onAir.generateUrl",
-          "when": "editorLangId == markdown || editorLangId == html || resourceExtname =~ /\\.(png|jpe?g|gif|webp|avif|bmp|ico|svg)$/i"
+          "when": "editorLangId == markdown || editorLangId == html || resourceExtname =~ /\\.(png|jpe?g|gif|webp|avif|bmp|ico|svg|pdf)$/i"
         }
       ]
     }

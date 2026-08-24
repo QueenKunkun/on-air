@@ -1,6 +1,6 @@
 import type { WebSocket } from 'ws';
 
-export type DocKind = 'markdown' | 'html' | 'image';
+export type DocKind = 'markdown' | 'html' | 'image' | 'pdf';
 
 export type CiteStyle = 'link' | 'footnotes';
 

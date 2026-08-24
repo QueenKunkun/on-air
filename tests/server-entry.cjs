@@ -111,7 +111,17 @@ async function main() {
     mermaidPath
   );
 
-  const info = { port: server.port, id, id2, id3, imgId, demoId, citeId, mathId, mermaidId, baseUrl: `http://127.0.0.1:${server.port}` };
+  const pdfPath = path.join(FIXTURE_DIR, 'test.pdf');
+  const pdfId = server.registerDocument(
+    'test://test.pdf',
+    'Test PDF',
+    pdfPath,
+    'pdf',
+    FIXTURE_DIR,
+    pdfPath
+  );
+
+  const info = { port: server.port, id, id2, id3, imgId, demoId, citeId, mathId, mermaidId, pdfId, baseUrl: `http://127.0.0.1:${server.port}` };
   const infoPath = path.join(__dirname, '.server-info.json');
   fs.writeFileSync(infoPath, JSON.stringify(info));
   console.log(`Server ready on port ${server.port}`);
