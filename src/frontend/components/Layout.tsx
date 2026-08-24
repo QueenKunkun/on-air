@@ -12,9 +12,6 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 	const tocColRef = useRef(document.getElementById('tocCol'));
 	const filesResizerRef = useRef(document.getElementById('filesResizer'));
 	const tocResizerRef = useRef(document.getElementById('tocResizer'));
-	const edgeHandlesRef = useRef(document.getElementById('edgeHandles'));
-	const edgeFilesRef = useRef(document.querySelector('#edgeHandles [data-panel="files"]') as HTMLElement);
-	const edgeTocRef = useRef(document.querySelector('#edgeHandles [data-panel="toc"]') as HTMLElement);
 
 	const fc = filesCollapsed === '1';
 	const tc = tocCollapsed === '1';
@@ -81,10 +78,12 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 	// Edge handles visibility
 	useEffect(() => {
 		const anyCollapsed = fc || tc;
-		const edgeHandles = edgeHandlesRef.current;
+		const edgeHandles = document.getElementById('edgeHandles');
 		if (edgeHandles) edgeHandles.classList.toggle('visible', anyCollapsed);
-		if (edgeFilesRef.current) edgeFilesRef.current.style.display = fc ? '' : 'none';
-		if (edgeTocRef.current) edgeTocRef.current.style.display = tc ? '' : 'none';
+		const edgeFiles = document.querySelector<HTMLElement>('#edgeHandles [data-panel="files"]');
+		if (edgeFiles) edgeFiles.style.display = fc ? '' : 'none';
+		const edgeToc = document.querySelector<HTMLElement>('#edgeHandles [data-panel="toc"]');
+		if (edgeToc) edgeToc.style.display = tc ? '' : 'none';
 	}, [fc, tc]);
 
 	// Bind collapse buttons (x in panel header) and edge handle click handlers.
@@ -112,8 +111,9 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		window.addEventListener('onair:collapse-files', onCollapseFiles);
 		window.addEventListener('onair:collapse-toc', onCollapseToc);
 
-		const edgeFiles = edgeFilesRef.current;
-		const edgeToc = edgeTocRef.current;
+		// Find elements directly — refs may not survive Preact re-renders
+		const edgeFiles = document.querySelector<HTMLElement>('#edgeHandles [data-panel="files"]');
+		const edgeToc = document.querySelector<HTMLElement>('#edgeHandles [data-panel="toc"]');
 		const onExpandFiles = () => expandFilesRef.current();
 		const onExpandToc = () => expandTocRef.current();
 		edgeFiles?.addEventListener('click', onExpandFiles);
