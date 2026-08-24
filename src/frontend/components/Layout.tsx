@@ -87,15 +87,26 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 		if (edgeTocRef.current) edgeTocRef.current.style.display = tc ? '' : 'none';
 	}, [fc, tc]);
 
-	// Bind collapse buttons (x in panel header) and edge handle click handlers
+	// Bind collapse buttons (x in panel header) and edge handle click handlers.
+	// Use refs for callbacks so the listener effect runs only once (avoids
+	// remove/add churn on every state change).
+	const toggleFilesRef = useRef(toggleFiles);
+	const toggleTocRef = useRef(toggleToc);
+	const expandFilesRef = useRef(expandFiles);
+	const expandTocRef = useRef(expandToc);
+	toggleFilesRef.current = toggleFiles;
+	toggleTocRef.current = toggleToc;
+	expandFilesRef.current = expandFiles;
+	expandTocRef.current = expandToc;
+
 	useEffect(() => {
 		function onCollapseFiles() {
 			if (filesResizerRef.current?.getAttribute('data-dragging')) return;
-			toggleFiles();
+			toggleFilesRef.current();
 		}
 		function onCollapseToc() {
 			if (tocResizerRef.current?.getAttribute('data-dragging')) return;
-			toggleToc();
+			toggleTocRef.current();
 		}
 
 		window.addEventListener('onair:collapse-files', onCollapseFiles);
@@ -103,15 +114,17 @@ export function Layout({ children }: { children: preact.ComponentChildren }) {
 
 		const edgeFiles = edgeFilesRef.current;
 		const edgeToc = edgeTocRef.current;
-		edgeFiles?.addEventListener('click', expandFiles);
-		edgeToc?.addEventListener('click', expandToc);
+		const onExpandFiles = () => expandFilesRef.current();
+		const onExpandToc = () => expandTocRef.current();
+		edgeFiles?.addEventListener('click', onExpandFiles);
+		edgeToc?.addEventListener('click', onExpandToc);
 		return () => {
 			window.removeEventListener('onair:collapse-files', onCollapseFiles);
 			window.removeEventListener('onair:collapse-toc', onCollapseToc);
-			edgeFiles?.removeEventListener('click', expandFiles);
-			edgeToc?.removeEventListener('click', expandToc);
+			edgeFiles?.removeEventListener('click', onExpandFiles);
+			edgeToc?.removeEventListener('click', onExpandToc);
 		};
-	}, [toggleFiles, toggleToc, expandFiles, expandToc]);
+	}, []);
 
 	// Hydrate CSS variables from initial DOM widths
 	useEffect(() => {
