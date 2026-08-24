@@ -190,8 +190,10 @@ export function Annotations({ contentEl, contentVersion }: { contentEl: HTMLElem
 		const handle = document.getElementById('annotToggle');
 		function setAnnotCollapsed(c: boolean) {
 			side!.classList.toggle('collapsed', c);
-			handle!.textContent = c ? '<' : '>';
-			handle!.title = c ? 'Show annotations' : 'Hide annotations';
+			if (handle) {
+				handle.textContent = c ? '<' : '>';
+				handle.title = c ? 'Show annotations' : 'Hide annotations';
+			}
 			if (cardRegistry.current.length && resizer) resizer.style.display = c ? 'none' : '';
 			localStorage.setItem(LS_KEYS.ANNOT_COLLAPSED, c ? '1' : '0');
 			if (!c) layoutCards();
