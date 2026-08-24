@@ -36,15 +36,32 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand('onAir.generateUrl', async () => {
-			const editor = vscode.window.activeTextEditor;
-			const kind = editor ? docKind(editor.document) : null;
+			// Try activeTextEditor first (markdown/html/image opened as text)
+			let editor = vscode.window.activeTextEditor;
+			let kind = editor ? docKind(editor.document) : null;
+			let doc = editor?.document;
+
+			// For binary files (PDF, images opened in custom editors), the
+			// activeTextEditor is undefined. Fall back to the active tab.
 			if (!editor || !kind) {
-				vscode.window.showWarningMessage('Please open a Markdown, HTML, or image file first to generate a preview link');
+				const tab = vscode.window.tabGroups.activeTabGroup?.activeTab;
+				const input = tab?.input as { uri?: vscode.Uri } | undefined;
+				if (input?.uri) {
+					const ext = input.uri.path.split('.').pop()?.toLowerCase() || '';
+					if (ext === 'pdf') {
+						kind = 'pdf';
+						// Create a virtual document from the file URI
+						doc = await vscode.workspace.openTextDocument(input.uri);
+					}
+				}
+			}
+
+			if (!kind || !doc) {
+				vscode.window.showWarningMessage('Please open a Markdown, HTML, PDF, or image file first to generate a preview link');
 				return;
 			}
 			if (!server) { return; }
 
-		const doc = editor.document;
 		const uriKey = doc.uri.toString();
 		console.log('[on-air] generateUrl: uriKey=', uriKey);
 		const rawWsFolder = vscode.workspace.getWorkspaceFolder(doc.uri);
