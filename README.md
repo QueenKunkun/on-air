@@ -7,6 +7,7 @@ Turn the currently open Markdown, HTML, or image file into a **live local previe
 ## Features
 
 - **Markdown, HTML & images** — generate a link from the Command Palette, right-click menu, or title bar icon, then **open in browser** or **copy the link**; image files (png/jpg/gif/webp/svg/bmp/ico) open as a live preview
+- **PDF preview** — open PDF files with continuous scroll rendering powered by pdf.js
 - **Stable links** — the same file always gets the same address; multiple files can preview at once
 - **Live sync** — edits refresh automatically (no save needed); Markdown updates in place, HTML reloads
 - **Math formulas** — `$..$` and `$$..$$` LaTeX rendered with KaTeX; hover a formula to preview and copy its source
