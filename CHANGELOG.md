@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.21.0] - 2026-08-27
+
+- feat: derive preview port from project directory so links survive restarts
+
+
 ## [0.20.0] - 2026-08-24
 
 - feat: add PDF preview with continuous scroll powered by pdf.js
