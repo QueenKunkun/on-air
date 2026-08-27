@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { PreviewServer, DocKind } from './server';
+import { PreviewServer, computeProjectPort, DocKind } from './server';
 import { debug, setDebugEnabled } from './common/debug';
 import { DEFAULT_PORT } from './common/constants';
 import { IMAGE_EXTS } from './common/extensions';
@@ -26,10 +26,18 @@ function docKind(doc: vscode.TextDocument): DocKind | null {
 
 export async function activate(context: vscode.ExtensionContext) {
 	setDebugEnabled(!!process.env.ONAIR_DEBUG);
+	const logChannel = vscode.window.createOutputChannel("我的扩展日志");
+	context.subscriptions.push(logChannel); // 顺便注册销毁，防止内存泄漏
 	server = new PreviewServer();
 		try {
-			await server.start(DEFAULT_PORT);
-			console.log('[on-air] server started on port', server.port);
+			// Bind to a stable port derived from the project directory so that
+			// preview URLs stay valid across restarts. With no open workspace
+			// (single file), fall back to the default port.
+			const wsFolders = vscode.workspace.workspaceFolders;
+			const projectDir = wsFolders && wsFolders.length > 0 ? wsFolders[0].uri.fsPath : '';
+			const preferredPort = projectDir ? computeProjectPort(projectDir) : DEFAULT_PORT;
+			await server.start(preferredPort);
+			console.log('[on-air] server started on port', server.port, projectDir ? `(project: ${projectDir})` : '(no workspace)');
 		} catch (err) {
 		vscode.window.showErrorMessage('OnAir: Failed to start local server - ' + (err as Error).message);
 	}
@@ -116,6 +124,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 
 		vscode.workspace.onDidCloseTextDocument((doc) => {
+			console.log(`on did close ---------`)
+			debug(`on did close ---------`)
+			logChannel.appendLine(`on did close ---------`)
+			
 			const kind = docKind(doc);
 			if (!kind || kind === 'pdf') { return; }
 			server?.closeDocument(doc.uri.toString());

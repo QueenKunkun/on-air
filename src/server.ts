@@ -49,6 +49,17 @@ const katexFontsDir = (() => {
 // Re-export DocKind for extension.ts compatibility
 export type { DocKind } from './routes/types';
 
+/**
+ * Derive a stable 5-digit port (10000–65535) from a project directory. The same
+ * directory always maps to the same port, so preview URLs survive server
+ * restarts. Collisions with other services are handled by the caller's
+ * EADDRINUSE fallback (port + 1).
+ */
+export function computeProjectPort(projectDir: string): number {
+	const hash = crypto.createHash('sha256').update(projectDir).digest();
+	return 10000 + (hash.readUInt32BE(0) % (65535 - 10000 + 1));
+}
+
 // Extension version, shown in the preview corner.
 declare const __ONAIR_VERSION__: string;
 const EXT_VERSION = (() => {
