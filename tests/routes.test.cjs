@@ -337,3 +337,100 @@ test('handlePreview returns 404 for unknown document id', async () => {
   const res = await httpGet(`${baseUrl}/preview/nonexistent`);
   assert.equal(res.status, 404);
 });
+
+// ─── handleSearch (content search) ───────────────────────────────────────────
+
+function makeSearchFixture() {
+  const dir = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'onair-search-'));
+  fs.writeFileSync(path.join(dir, 'alpha.md'), 'first line\nZOOKEEPER_UNIQUE_TOKEN_123 in middle\nlast line\n');
+  fs.writeFileSync(path.join(dir, 'beta.js'), 'const x = 1;\n// ZOOKEEPER_UNIQUE_TOKEN_123 comment\nfunction y() {}\n');
+  fs.mkdirSync(path.join(dir, 'node_modules', 'dep'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'node_modules', 'dep', 'skip.js'), 'ZOOKEEPER_UNIQUE_TOKEN_123 should be ignored\n');
+  return dir;
+}
+
+test('handleSearch finds matches across the project rootDir', async () => {
+  const dir = makeSearchFixture();
+  try {
+    const mdPath = path.join(dir, 'alpha.md');
+    const id = server.registerDocument(
+      'test://search-basic.md', 'Search', fs.readFileSync(mdPath, 'utf8'),
+      'markdown', dir, mdPath
+    );
+    const res = await httpGet(`${baseUrl}/api/search?id=${id}&q=${encodeURIComponent('ZOOKEEPER_UNIQUE_TOKEN_123')}`);
+    assert.equal(res.status, 200);
+    assert.ok(Array.isArray(res.body.results), 'results is an array');
+    assert.ok(res.body.results.length >= 2, `expected >=2 matches, got ${res.body.results.length}`);
+    const files = res.body.results.map(r => r.file);
+    assert.ok(files.includes('alpha.md'), 'alpha.md should match');
+    assert.ok(files.includes('beta.js'), 'beta.js should match');
+    // node_modules must be skipped
+    assert.ok(!res.body.results.some(r => r.file.includes('node_modules')), 'node_modules must be skipped');
+    // each result has line + text
+    const first = res.body.results[0];
+    assert.ok(typeof first.line === 'number' && first.line >= 1, 'result has 1-based line');
+    assert.ok(typeof first.text === 'string', 'result has text');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('handleSearch returns empty results for an empty query', async () => {
+  const dir = makeSearchFixture();
+  try {
+    const mdPath = path.join(dir, 'alpha.md');
+    const id = server.registerDocument(
+      'test://search-empty.md', 'Search', fs.readFileSync(mdPath, 'utf8'),
+      'markdown', dir, mdPath
+    );
+    const res = await httpGet(`${baseUrl}/api/search?id=${id}&q=`);
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body.results, []);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('handleSearch returns 404 for unknown document id', async () => {
+  const res = await httpGet(`${baseUrl}/api/search?id=unknown&q=anything`);
+  assert.equal(res.status, 404);
+});
+
+test('handleSearch truncates results at the max param', async () => {
+  const dir = makeSearchFixture();
+  try {
+    const mdPath = path.join(dir, 'alpha.md');
+    const id = server.registerDocument(
+      'test://search-max.md', 'Search', fs.readFileSync(mdPath, 'utf8'),
+      'markdown', dir, mdPath
+    );
+    // repeat the token many times in one file to exceed max
+    const big = Array.from({ length: 10 }, (_, i) => `line ${i} ZOOKEEPER_UNIQUE_TOKEN_123`).join('\n');
+    fs.writeFileSync(path.join(dir, 'big.md'), big);
+    const res = await httpGet(`${baseUrl}/api/search?id=${id}&q=${encodeURIComponent('ZOOKEEPER_UNIQUE_TOKEN_123')}&max=3`);
+    assert.equal(res.status, 200);
+    assert.ok(res.body.results.length <= 3, `results must be capped at max (got ${res.body.results.length})`);
+    assert.equal(res.body.truncated, true, 'truncated flag must be true when capped');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('handleSearch respects the file glob filter', async () => {
+  const dir = makeSearchFixture();
+  try {
+    const mdPath = path.join(dir, 'alpha.md');
+    const id = server.registerDocument(
+      'test://search-glob.md', 'Search', fs.readFileSync(mdPath, 'utf8'),
+      'markdown', dir, mdPath
+    );
+    const res = await httpGet(`${baseUrl}/api/search?id=${id}&q=${encodeURIComponent('ZOOKEEPER_UNIQUE_TOKEN_123')}&glob=${encodeURIComponent('*.md')}`);
+    assert.equal(res.status, 200);
+    const files = res.body.results.map(r => r.file);
+    assert.ok(files.includes('alpha.md'), 'alpha.md (*.md) should match');
+    assert.ok(!files.includes('beta.js'), 'beta.js should be excluded by *.md glob');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+

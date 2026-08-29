@@ -1,4 +1,5 @@
 import { h } from 'preact';
+import { useEffect, useRef } from 'preact/hooks';
 
 interface FilePreviewProps {
 	filePath: string;
@@ -51,14 +52,37 @@ export function FilePreviewBinary({ filePath, onBack }: { filePath: string; onBa
 	);
 }
 
-export function FilePreviewCode({ filePath, content, onBack }: { filePath: string; content: string; onBack: () => void }) {
+export function FilePreviewCode({ filePath, content, onBack, line }: { filePath: string; content: string; onBack: () => void; line?: number }) {
+	const rootRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (line == null) return;
+		const el = rootRef.current?.querySelector('.fl-hl');
+		if (el) {
+			el.scrollIntoView({ block: 'center' });
+		}
+	}, [line, content]);
+
+	const lines = content.split('\n');
+
 	return (
 		<div class="file-view">
 			<div class="file-view-header">
 				<button onClick={onBack}>{'← Back'}</button>
 				<span class="file-path">{filePath}</span>
 			</div>
-			<pre><code class="hljs">{content}</code></pre>
+			<div class="file-code" ref={rootRef}>
+				{lines.map((text, i) => {
+					const n = i + 1;
+					const isHit = line != null && n === line;
+					return (
+						<div class={'fl-line' + (isHit ? ' fl-hl' : '')}>
+							<span class="fl-num">{n}</span>
+							<span class="fl-text">{text}</span>
+						</div>
+					);
+				})}
+			</div>
 		</div>
 	);
 }

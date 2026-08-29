@@ -16,6 +16,7 @@ import { handleFileIndex } from './routes/fileIndex';
 import { handleStatic } from './routes/static';
 import { handlePreview } from './routes/preview';
 import { handleXref } from './routes/xref';
+import { handleSearch } from './routes/search';
 import { toPosix, mimeType } from './routes/utils';
 
 import pageCss from './templates/page.css';
@@ -383,6 +384,7 @@ export class PreviewServer {
 			if (pageMatch)                     return handlePreview(typedReq, res, this.docs, (a, b, c, d, e, f) => this.registerDocument(a, b, c, d as DocKind, e, f));
 		}
 		if (/^\/xref\b/.test(rawUrl))         return handleXref(typedReq, res, this.docs, this.uriToId);
+		if (pathname === '/api/search')        return handleSearch(typedReq, res, this.docs);
 		if (pathname.startsWith('/__onair__/katex/fonts/')) return this.handleKatexFont(pathname, res);
 
 		// Fallback: ID-less /preview/ path — try to resolve from Referer

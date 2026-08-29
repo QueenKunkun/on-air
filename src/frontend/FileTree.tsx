@@ -1,9 +1,10 @@
-import { h, render } from 'preact';
+import { h, Fragment, render } from 'preact';
 import { useState, useCallback, useEffect, useRef } from 'preact/hooks';
 import type { TreeEntry } from './types';
-import { FilePreview, FilePreviewError, FilePreviewBinary, FilePreviewCode } from './components/FilePreview';
-import { MARKDOWN_EXTS, isMarkdownExt, markdownExtFilter } from '../common/extensions';
+import { MARKDOWN_EXTS, markdownExtFilter } from '../common/extensions';
 import { LS_KEYS } from '../common/localStorageKeys';
+import { openFile } from './fileOpen';
+import { FileSearch } from './FileSearch';
 
 interface Props {
   id: string;
@@ -25,16 +26,6 @@ function makeFilterParams(id: string, dir: string, f: Filters): string {
   if (f.mdOnly) p.set('ext', markdownExtFilter());
   if (f.hideBinary) p.set('hideBinary', '1');
   return p.toString();
-}
-
-function isTextFile(p: string): boolean {
-  const ext = p.toLowerCase().split('.').pop() || '';
-  return isMarkdownExt('.' + ext) || ext === 'html' || ext === 'htm';
-}
-
-function isImageFile(p: string): boolean {
-  const l = p.toLowerCase();
-  return /\.(png|jpe?g|gif|webp|avif|bmp|ico|svg)$/.test(l);
 }
 
 function globToRegex(glob: string): RegExp {
@@ -90,6 +81,7 @@ export function FileTree({ id }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [currentPath, setCurrentPath] = useState<string>(readCurrentPath);
   const [searchQuery, setSearchQuery] = useState('');
+  const [mode, setMode] = useState<'tree' | 'search'>('tree');
   const [fileIndex, setFileIndex] = useState<FileIndexEntry[]>([]);
   const cacheRef = useRef<Record<string, TreeEntry[]>>({});
   const expandedRef = useRef<Record<string, boolean>>({});
@@ -324,30 +316,6 @@ export function FileTree({ id }: Props) {
     };
   }, [expandToCurrentFile, fetchDir, id]);
 
-  function openFile(filePath: string) {
-    const contentEl = document.getElementById('content');
-    if (!contentEl) return;
-    const goBack = () => { document.getElementById('tabTree')?.click(); };
-    if (isTextFile(filePath) || isImageFile(filePath)) {
-      location.href = '/preview/' + id + '/' + encodeURIComponent(filePath);
-    } else {
-      const params = 'id=' + encodeURIComponent(id) + '&path=' + encodeURIComponent(filePath);
-      fetch('/api/file?' + params).then(r => r.json()).then(data => {
-        if (data.error) {
-          render(h(FilePreviewError, { error: data.error, onBack: goBack }), contentEl);
-          return;
-        }
-        if (data.isBinary) {
-          render(h(FilePreviewBinary, { filePath, onBack: goBack }), contentEl);
-        } else {
-          render(h(FilePreviewCode, { filePath, content: data.content, onBack: goBack }), contentEl);
-        }
-      }).catch(() => {
-        render(h(FilePreviewError, { error: 'Error loading file', onBack: goBack }), contentEl);
-      });
-    }
-  }
-
   function renderDir(dirPath: string): h.JSX.Element[] {
     const entries = cacheRef.current[dirPath];
     if (!entries) return [];
@@ -392,7 +360,7 @@ export function FileTree({ id }: Props) {
       const isCurrent = e.path === currentPath;
       const href = '/preview/' + id + '/' + encodeURIComponent(e.path);
       return (
-        <a class={'ft-item ft-file' + (isCurrent ? ' ft-current' : '')} data-path={e.path} href={href} onClick={(ev: h.JSX.TargetedMouseEvent<HTMLAnchorElement>) => { ev.stopPropagation(); if (!ev.metaKey && !ev.ctrlKey) { ev.preventDefault(); openFile(e.path); } }}>
+        <a class={'ft-item ft-file' + (isCurrent ? ' ft-current' : '')} data-path={e.path} href={href}         onClick={(ev: h.JSX.TargetedMouseEvent<HTMLAnchorElement>) => { ev.stopPropagation(); if (!ev.metaKey && !ev.ctrlKey) { ev.preventDefault(); openFile(id, e.path); } }}>
           <span class="ft-toggle ft-vis-hidden"></span>
           <span class="ft-name">{e.name}</span>
         </a>
@@ -402,28 +370,38 @@ export function FileTree({ id }: Props) {
 
   return (
     <div class="ft-root">
-      <div class="ft-filter">
-        <label><input type="checkbox" checked={filters.gitignore} onChange={() => handleFilterChange('gitignore')} /> .gitignore</label>
-        <label><input type="checkbox" checked={filters.mdOnly} onChange={() => handleFilterChange('mdOnly')} /> {MARKDOWN_EXTS.join('/')}</label>
-        <label><input type="checkbox" checked={filters.hideBinary} onChange={() => handleFilterChange('hideBinary')} /> Hide unsupported</label>
-        <span class="ft-filter-spacer"></span>
-        <input class="ft-search" type="text" placeholder="Filter: *.svg" value={searchQuery} onInput={(e: h.JSX.TargetedEvent<HTMLInputElement>) => setSearchQuery((e.target as HTMLInputElement).value)} onKeydown={(e: h.JSX.TargetedKeyboardEvent<HTMLInputElement>) => { if (e.key === 'Escape') setSearchQuery(''); }} />
-        <span class="ft-filter-actions">
-          <button class="ft-locate-btn" onClick={handleLocate} title="Scroll to current file">📍</button>
-          <button class="ft-x" onClick={() => window.dispatchEvent(new CustomEvent('onair:collapse-files'))} title="Hide file tree">×</button>
-        </span>
+      <div class="ft-tabs">
+        <button class={'ft-tab' + (mode === 'tree' ? ' ft-tab-active' : '')} onClick={() => setMode('tree')}>Files</button>
+        <button class={'ft-tab' + (mode === 'search' ? ' ft-tab-active' : '')} onClick={() => setMode('search')}>Search</button>
       </div>
-      <div class="ft-scroll">
-        {!loaded ? (
-          <div class="ft-loading">Loading…</div>
-        ) : cacheRef.current[''] && cacheRef.current[''].length === 0 ? (
-          <div class="ft-loading">No files</div>
-        ) : (
-          <ul class="ft-list">
-            {renderDir('')}
-          </ul>
-        )}
-      </div>
+      {mode === 'search' ? (
+        <FileSearch id={id} />
+      ) : (
+        <>
+          <div class="ft-filter">
+            <label><input type="checkbox" checked={filters.gitignore} onChange={() => handleFilterChange('gitignore')} /> .gitignore</label>
+            <label><input type="checkbox" checked={filters.mdOnly} onChange={() => handleFilterChange('mdOnly')} /> {MARKDOWN_EXTS.join('/')}</label>
+            <label><input type="checkbox" checked={filters.hideBinary} onChange={() => handleFilterChange('hideBinary')} /> Hide unsupported</label>
+            <span class="ft-filter-spacer"></span>
+            <input class="ft-search" type="text" placeholder="Filter: *.svg" value={searchQuery} onInput={(e: h.JSX.TargetedEvent<HTMLInputElement>) => setSearchQuery((e.target as HTMLInputElement).value)} onKeydown={(e: h.JSX.TargetedKeyboardEvent<HTMLInputElement>) => { if (e.key === 'Escape') setSearchQuery(''); }} />
+            <span class="ft-filter-actions">
+              <button class="ft-locate-btn" onClick={handleLocate} title="Scroll to current file">📍</button>
+              <button class="ft-x" onClick={() => window.dispatchEvent(new CustomEvent('onair:collapse-files'))} title="Hide file tree">×</button>
+            </span>
+          </div>
+          <div class="ft-scroll">
+            {!loaded ? (
+              <div class="ft-loading">Loading…</div>
+            ) : cacheRef.current[''] && cacheRef.current[''].length === 0 ? (
+              <div class="ft-loading">No files</div>
+            ) : (
+              <ul class="ft-list">
+                {renderDir('')}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

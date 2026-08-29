@@ -29,7 +29,10 @@ const extensionConfig = {
     // ws's two optional native acceleration deps - not installing them doesn't break anything,
     // they're excluded here purely to silence webpack's "module not found" warnings
     bufferutil: 'commonjs bufferutil',
-    'utf-8-validate': 'commonjs utf-8-validate'
+    'utf-8-validate': 'commonjs utf-8-validate',
+    // Optional search backend. Left as a runtime require so the build never breaks when the
+    // binary/download is missing; getRgPath() falls back to a Node grep when it's absent.
+    '@vscode/ripgrep': 'commonjs @vscode/ripgrep'
   },
   resolve: {
     extensions: ['.ts', '.js']

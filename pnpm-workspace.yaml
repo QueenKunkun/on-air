@@ -1,5 +1,8 @@
 allowBuilds:
   esbuild: true
+  # @vscode/ripgrep downloads its prebuilt `rg` binary in a postinstall script;
+  # pnpm v10/v11 blocks build scripts by default, so it must be allowed here.
+  '@vscode/ripgrep': true
 
 # Force @vscode/markdown-it-katex (declares katex ^0.16.4) to render with the
 # same katex version whose CSS/fonts we embed (0.18.4). Otherwise the plugin's

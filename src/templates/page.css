@@ -259,6 +259,48 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 .file-image img { max-width: 100%; max-height: calc(100vh - 120px); border-radius: 4px; }
 .file-view pre { margin: 0; }
 
+/* ---- file tree tabs (Files / Search) ---- */
+.ft-tabs { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+.ft-tab { flex: 1; font: inherit; font-size: 12px; padding: 7px 8px; background: transparent; color: var(--quote-c); border: none; border-bottom: 2px solid transparent; cursor: pointer; user-select: none; transition: color .15s, border-color .15s; }
+.ft-tab:hover { color: var(--text); }
+.ft-tab-active { color: var(--link-c); border-bottom-color: var(--link-c); font-weight: 600; }
+
+/* ---- content search panel ---- */
+.fs-root { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.fs-input-row { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.fs-input { flex: 1; min-width: 0; padding: 4px 8px; font: inherit; font-size: 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); outline: none; }
+.fs-input:focus { border-color: var(--link-c); }
+.fs-search-btn { flex-shrink: 0; padding: 2px 8px; font: inherit; border: 1px solid var(--btn-border); border-radius: 4px; background: transparent; color: var(--btn-c); cursor: pointer; }
+.fs-search-btn:hover { background: var(--btn-hover-bg); }
+.fs-options { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-bottom: 1px solid var(--border); flex-shrink: 0; font-size: 11px; color: var(--quote-c); }
+.fs-options label { display: flex; align-items: center; gap: 3px; cursor: pointer; user-select: none; white-space: nowrap; }
+.fs-options input[type="checkbox"] { margin: 0; accent-color: var(--link-c); }
+.fs-glob { width: 72px; padding: 2px 6px; font: inherit; font-size: 11px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); outline: none; }
+.fs-glob:focus { border-color: var(--link-c); }
+.fs-status { padding: 4px 8px; font-size: 11px; color: var(--quote-c); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.fs-error { color: var(--h-keyword); }
+.fs-scroll { flex: 1; height: 0; min-height: 0; overflow-y: auto; padding: 4px 0 24px 0; }
+.fs-group { margin-bottom: 2px; }
+.fs-file { display: flex; align-items: baseline; gap: 6px; padding: 3px 8px; cursor: pointer; border-radius: 4px; }
+.fs-file:hover { background: var(--pre-bg); }
+.fs-file-name { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fs-file-path { flex: 1; min-width: 0; color: var(--quote-c); font-family: ui-monospace, monospace; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fs-file-count { flex-shrink: 0; color: var(--quote-c); font-size: 10px; background: var(--pre-bg); border-radius: 8px; padding: 0 6px; }
+.fs-match { display: flex; gap: 8px; padding: 1px 8px 1px 18px; cursor: pointer; border-radius: 4px; white-space: nowrap; overflow: hidden; }
+.fs-match:hover { background: var(--pre-bg); }
+.fs-line { flex-shrink: 0; width: 38px; text-align: right; color: var(--quote-c); font-family: ui-monospace, monospace; font-size: 11px; user-select: none; }
+.fs-text { font-family: ui-monospace, monospace; font-size: 11px; color: var(--text); overflow: hidden; text-overflow: ellipsis; }
+.fs-text mark { background: var(--hl-mark-bg, rgba(255, 212, 0, .35)); color: inherit; border-radius: 2px; padding: 0 1px; }
+.fs-empty { padding: 12px 16px; color: var(--quote-c); font-size: 12px; }
+
+/* ---- raw file code view with line numbers ---- */
+.file-code { font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.55; overflow: auto; max-height: calc(100vh - 80px); }
+.fl-line { display: flex; gap: 10px; padding: 0 2px; border-radius: 3px; }
+.fl-line:hover { background: var(--pre-bg); }
+.fl-hl { background: var(--hl-mark-bg, rgba(255, 212, 0, .25)); }
+.fl-num { flex-shrink: 0; width: 42px; text-align: right; color: var(--quote-c); user-select: none; }
+.fl-text { white-space: pre; }
+
 /* Unknown HTML tag collapsible blocks */
 .onair-unknown-html { margin: 8px 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .onair-unknown-html summary { padding: 8px 12px; background: var(--pre-bg); color: var(--quote-c); font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; transition: background .15s, color .15s; }
