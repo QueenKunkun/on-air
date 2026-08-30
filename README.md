@@ -2,7 +2,13 @@
 
 Turn the currently open Markdown, HTML, or image file into a **live local preview link**: open it in a browser, or copy the link and share it with a colleague or another device. The browser content refreshes automatically as you edit — no need to manually refresh, and no need to save the file first.
 
-![screenshot](images/screenshot.png)
+The following markdown:
+
+![screenshot of original markdown](images/screenshot-original.png)
+
+will be rendered like this:
+
+![screenshot of rendered](images/screenshot.png)
 
 ## Features
 
