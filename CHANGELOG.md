@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.22.0] - 2026-08-30
+
+- feat: Add Find in Files content search to the preview panel
+
+
 ## [0.21.0] - 2026-08-27
 
 - feat: derive preview port from project directory so links survive restarts
