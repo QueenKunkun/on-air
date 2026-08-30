@@ -193,7 +193,7 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 .ft-root { display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; }
 
 /* Filter row */
-.ft-filter { display: flex; align-items: center; gap: 6px; padding: 6px 8px; padding-right: 64px; flex-shrink: 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.ft-filter { position: relative; display: flex; align-items: center; gap: 6px; padding: 6px 8px; padding-right: 64px; flex-shrink: 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
 .ft-filter label { display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--quote-c); cursor: pointer; user-select: none; white-space: nowrap; }
 .ft-filter input[type="checkbox"] { margin: 0; accent-color: var(--link-c); }
 .ft-filter-spacer { flex: 1; }
