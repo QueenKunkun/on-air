@@ -300,6 +300,10 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 .fl-hl { background: var(--hl-mark-bg, rgba(255, 212, 0, .25)); }
 .fl-num { flex-shrink: 0; width: 42px; text-align: right; color: var(--quote-c); user-select: none; }
 .fl-text { white-space: pre; }
+.hl-key { color: var(--hl-key-c, #881391); }
+.hl-str { color: var(--hl-str-c, #0b7c2e); }
+.hl-num { color: var(--hl-num-c, #1a01a5); }
+.hl-bool { color: var(--hl-bool-c, #e8340a); }
 
 /* Unknown HTML tag collapsible blocks */
 .onair-unknown-html { margin: 8px 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }

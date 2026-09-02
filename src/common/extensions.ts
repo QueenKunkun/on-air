@@ -21,6 +21,9 @@ export const IMAGE_EXTS = [
 	'.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.ico',
 ] as const;
 
+/** Code file extensions (rendered as syntax-highlighted text) */
+export const CODE_EXTS = ['.json', '.js', '.ts', '.tsx', '.jsx', '.css', '.txt', '.log'] as const;
+
 /** PDF extensions */
 export const PDF_EXTS = ['.pdf'] as const;
 
@@ -52,6 +55,11 @@ export function isDocumentExt(ext: string): boolean {
 /** Check if extension is a PDF */
 export function isPdfExt(ext: string): boolean {
 	return (PDF_EXTS as readonly string[]).includes(ext);
+}
+
+/** Check if extension is a code file */
+export function isCodeExt(ext: string): boolean {
+	return (CODE_EXTS as readonly string[]).includes(ext);
 }
 
 /** Get markdown ext filter string for /api/query (comma-separated) */
