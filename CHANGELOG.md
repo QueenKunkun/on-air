@@ -1,8 +1,8 @@
 # Change Log
 
-## [0.22.0] - 2026-08-30
+## [0.21.1] - 2026-09-02
 
-- feat: Add Find in Files content search to the preview panel
+- fix: stop syncing file tree collapse state across browser tabs
 
 
 ## [0.21.0] - 2026-08-27
