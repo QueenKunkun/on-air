@@ -28,17 +28,18 @@ export function openFile(id: string, filePath: string, line?: number): void {
 	const contentEl = document.getElementById('content');
 	if (!contentEl) return;
 	const goBack = () => { document.getElementById('tabTree')?.click(); };
+	const renderInto = (node: h.JSX.Element) => { contentEl.innerHTML = ''; render(node, contentEl); };
 
 	if (line != null) {
 		const params = 'id=' + encodeURIComponent(id) + '&path=' + encodeURIComponent(filePath) + '&line=' + encodeURIComponent(String(line));
 		fetch('/api/file?' + params)
 			.then(r => r.json())
 			.then(data => {
-				if (data.error) { render(h(FilePreviewError, { error: data.error, onBack: goBack }), contentEl); return; }
-				if (data.isBinary) { render(h(FilePreviewBinary, { filePath, onBack: goBack }), contentEl); return; }
-				render(h(FilePreviewCode, { filePath, content: data.content, onBack: goBack, line }), contentEl);
+				if (data.error) { renderInto(h(FilePreviewError, { error: data.error, onBack: goBack })); return; }
+				if (data.isBinary) { renderInto(h(FilePreviewBinary, { filePath, onBack: goBack })); return; }
+				renderInto(h(FilePreviewCode, { filePath, content: data.content, onBack: goBack, line }));
 			})
-			.catch(() => render(h(FilePreviewError, { error: 'Error loading file', onBack: goBack }), contentEl));
+			.catch(() => renderInto(h(FilePreviewError, { error: 'Error loading file', onBack: goBack })));
 		return;
 	}
 
@@ -51,22 +52,22 @@ export function openFile(id: string, filePath: string, line?: number): void {
 		fetch('/api/file?' + params)
 			.then(r => r.json())
 			.then(data => {
-				if (data.error) { render(h(FilePreviewError, { error: data.error, onBack: goBack }), contentEl); return; }
-				if (data.isBinary) { render(h(FilePreviewBinary, { filePath, onBack: goBack }), contentEl); return; }
-				render(h(FilePreviewCode, { filePath, content: data.content, onBack: goBack }), contentEl);
+				if (data.error) { renderInto(h(FilePreviewError, { error: data.error, onBack: goBack })); return; }
+				if (data.isBinary) { renderInto(h(FilePreviewBinary, { filePath, onBack: goBack })); return; }
+				renderInto(h(FilePreviewCode, { filePath, content: data.content, onBack: goBack }));
 			})
-			.catch(() => render(h(FilePreviewError, { error: 'Error loading file', onBack: goBack }), contentEl));
+			.catch(() => renderInto(h(FilePreviewError, { error: 'Error loading file', onBack: goBack })));
 		return;
 	}
 	const params = 'id=' + encodeURIComponent(id) + '&path=' + encodeURIComponent(filePath);
 	fetch('/api/file?' + params)
 		.then(r => r.json())
 		.then(data => {
-			if (data.error) { render(h(FilePreviewError, { error: data.error, onBack: goBack }), contentEl); return; }
-			if (data.isBinary) { render(h(FilePreviewBinary, { filePath, onBack: goBack }), contentEl); return; }
-			render(h(FilePreviewCode, { filePath, content: data.content, onBack: goBack }), contentEl);
+			if (data.error) { renderInto(h(FilePreviewError, { error: data.error, onBack: goBack })); return; }
+			if (data.isBinary) { renderInto(h(FilePreviewBinary, { filePath, onBack: goBack })); return; }
+			renderInto(h(FilePreviewCode, { filePath, content: data.content, onBack: goBack }));
 		})
-		.catch(() => render(h(FilePreviewError, { error: 'Error loading file', onBack: goBack }), contentEl));
+		.catch(() => renderInto(h(FilePreviewError, { error: 'Error loading file', onBack: goBack })));
 }
 
 export { FilePreview };
