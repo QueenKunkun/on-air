@@ -3,7 +3,7 @@ import * as path from 'path';
 import ignore from 'ignore';
 import { debugWarn } from '../common/debug';
 import { SUPPORTED_EXTS, IMAGE_EXTS } from '../common/extensions';
-import { isDangerousRootDir, toPosix, shouldSkipDir, isHidden, isSupportedExt, isImageExt, isBinaryFile } from './utils';
+import { isDangerousRootDir, toPosix, shouldSkipDir, isSupportedExt, isImageExt, isBinaryFile } from './utils';
 import type { DocEntry } from './types';
 
 export function handleTree(
@@ -59,7 +59,6 @@ export function handleTree(
 
 	const result: Array<{ name: string; type: string; path: string; ext: string; size?: number }> = [];
 	for (const e of dirents) {
-		if (isHidden(e.name)) { continue; }
 		const full = path.join(targetDir, e.name);
 		const relPath = toPosix(path.relative(rootDirResolved, full));
 
@@ -70,7 +69,6 @@ export function handleTree(
 			try {
 				const subEntries = fs.readdirSync(full, { withFileTypes: true });
 				const hasVisible = subEntries.some(se => {
-					if (isHidden(se.name)) return false;
 					if (se.isDirectory()) {
 						if (shouldSkipDir(se.name)) return false;
 						if (ig && ig.ignores(relPath + '/' + se.name + '/')) return false;
