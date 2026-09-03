@@ -37,9 +37,24 @@ export function sanitizeUnknownHtml(source: string): string {
 	const lines = source.split('\n');
 	const result: string[] = [];
 
+	let inCodeBlock = false;
 	let i = 0;
 	while (i < lines.length) {
 		const line = lines[i];
+
+		// Track fenced code blocks — skip everything inside them
+		const fenceMatch = line.match(/^(`{3,}|~{3,})/);
+		if (fenceMatch) {
+			inCodeBlock = !inCodeBlock;
+			result.push(line);
+			i++;
+			continue;
+		}
+		if (inCodeBlock) {
+			result.push(line);
+			i++;
+			continue;
+		}
 
 		// Check for self-closing unknown tags (e.g., <tag ... />)
 		const selfCloseMatch = line.match(/^<([a-zA-Z][a-zA-Z0-9_]*)[^>]*\/>$/);
