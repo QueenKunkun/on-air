@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.23.1] - 2026-09-03
+
+- fix: preview route now matches file path in URL, fixing wrong content when clicking files in tree
+
+
 ## [0.23.0] - 2026-09-03
 
 - feat: add JSON/JS/TS/CSS file preview with syntax highlighting

@@ -17,34 +17,36 @@ export function handlePreview(
 	if (!match) return;
 
 	const [, id, encodedPath] = match;
-	const filePath = encodedPath ? decodeURIComponent(encodedPath) : null;
+	const relPath = encodedPath ? decodeURIComponent(encodedPath) : null;
 
 	// If a file path is provided, try to find or register that specific file
-	if (filePath) {
-		// Search docs for an entry whose fullPath matches
-		for (const [, entry] of docs) {
-			const rel = path.relative(entry.rootDir, entry.fullPath);
-			if (rel === filePath || entry.fullPath.endsWith(filePath)) {
-				res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-				res.end(entry.page);
-				return;
-			}
-		}
+	if (relPath) {
+		// Use the id to find rootDir, then resolve the relative path
+		const anchor = docs.get(id);
+		if (anchor) {
+			const absPath = path.resolve(anchor.rootDir, relPath);
 
-		// Not registered yet — try lazy registration
-		const absPath = path.isAbsolute(filePath) ? filePath : null;
-		if (absPath && fs.existsSync(absPath)) {
-			const data = fs.readFileSync(absPath, 'utf8');
-			const kind = kindFromPath(absPath);
-			if (kind) {
-				const ws = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(absPath));
-				const rootDir = ws ? ws.uri.fsPath : path.dirname(absPath);
-				const newId = registerDocument(vscode.Uri.file(absPath).toString(), path.basename(absPath), data, kind, rootDir, absPath);
-				const newEntry = docs.get(newId);
-				if (newEntry) {
+			// Search docs for an entry whose fullPath matches
+			for (const [, entry] of docs) {
+				if (entry.fullPath === absPath) {
 					res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-					res.end(newEntry.page);
+					res.end(entry.page);
 					return;
+				}
+			}
+
+			// Not registered yet — lazy registration
+			if (fs.existsSync(absPath)) {
+				const data = fs.readFileSync(absPath, 'utf8');
+				const kind = kindFromPath(absPath);
+				if (kind) {
+					const newId = registerDocument(vscode.Uri.file(absPath).toString(), path.basename(absPath), data, kind, anchor.rootDir, absPath);
+					const newEntry = docs.get(newId);
+					if (newEntry) {
+						res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+						res.end(newEntry.page);
+						return;
+					}
 				}
 			}
 		}
