@@ -15,11 +15,31 @@ export function isImageFile(p: string): boolean {
 	return /\.(png|jpe?g|gif|webp|avif|bmp|ico|svg)$/.test(l);
 }
 
-function showCodeView(contentEl: HTMLElement, filePath: string, content: string, line?: number) {
+function escHtml(s: string): string {
+	return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function highlightJsonLine(line: string): string {
+	return line
+		.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+		.replace(/("(?:[^"\\]|\\.)*")\s*:/g, '<span class="hl-key">$1</span>:')
+		.replace(/:(\s*)("(?:[^"\\]|\\.)*")/g, ':<span class="hl-str">$1$2</span>')
+		.replace(/:\s*(-?\d+\.?\d*(?:[eE][+-]?\d+)?)/g, ': <span class="hl-num">$1</span>')
+		.replace(/:\s*\b(true|false|null)\b/g, ': <span class="hl-bool">$1</span>');
+}
+
+/**
+ * Render a code file view into #content using plain DOM.
+ * Also updates file tree highlight and hides TOC (code files have no headings).
+ */
+function renderCodeFile(filePath: string, content: string, line?: number): void {
+	const contentEl = document.getElementById('content');
+	if (!contentEl) return;
+
 	const lines = content.split('\n');
 	const isJson = /\.json$/i.test(filePath);
 	const back = '<button onclick="document.getElementById(\'tabTree\')?.click()">← Back</button>';
-	const header = `<div class="file-view-header">${back}<span class="file-path">${filePath}</span></div>`;
+	const header = `<div class="file-view-header">${back}<span class="file-path">${escHtml(filePath)}</span></div>`;
 
 	const rows = lines.map((text, i) => {
 		const n = i + 1;
@@ -37,73 +57,72 @@ function showCodeView(contentEl: HTMLElement, filePath: string, content: string,
 		ftRoot.setAttribute('data-fullpath', rootDir + filePath);
 	}
 
-	// Notify App that content changed (triggers TOC re-read)
-	window.dispatchEvent(new CustomEvent('onair:content-change', { detail: { filePath } }));
+	// Hide TOC — code files have no headings
+	const tocCol = document.getElementById('tocCol');
+	if (tocCol) tocCol.style.display = 'none';
 
+	// Scroll to highlighted line
 	if (line != null) {
 		const hit = contentEl.querySelector('.fl-hl');
 		if (hit) hit.scrollIntoView({ block: 'center' });
 	}
 }
 
-function showError(contentEl: HTMLElement, msg: string) {
+function renderError(msg: string): void {
+	const contentEl = document.getElementById('content');
+	if (!contentEl) return;
 	const back = '<button onclick="document.getElementById(\'tabTree\')?.click()">← Back</button>';
 	contentEl.innerHTML = `<div class="file-view"><div class="file-view-header">${back}<span class="file-path">Error: ${escHtml(msg)}</span></div></div>`;
 }
 
-function showBinary(contentEl: HTMLElement, filePath: string) {
+function renderBinary(filePath: string): void {
+	const contentEl = document.getElementById('content');
+	if (!contentEl) return;
 	const back = '<button onclick="document.getElementById(\'tabTree\')?.click()">← Back</button>';
 	contentEl.innerHTML = `<div class="file-view"><div class="file-view-header">${back}<span class="file-path">${escHtml(filePath)}</span></div><div class="file-binary">Binary file, cannot preview</div></div>`;
 }
 
-function escHtml(s: string): string {
-	return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function highlightJsonLine(line: string): string {
-	return line
-		.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-		.replace(/("(?:[^"\\]|\\.)*")\s*:/g, '<span class="hl-key">$1</span>:')
-		.replace(/:(\s*)("(?:[^"\\]|\\.)*")/g, ':<span class="hl-str">$1$2</span>')
-		.replace(/:\s*(-?\d+\.?\d*(?:[eE][+-]?\d+)?)/g, ': <span class="hl-num">$1</span>')
-		.replace(/:\s*\b(true|false|null)\b/g, ': <span class="hl-bool">$1</span>');
-}
-
 /**
  * Open a file in the preview pane.
- * - With `line` (search results): always show the raw code view with the matched
- *   line highlighted and scrolled into view — works for any text file.
- * - Without `line` (file-tree click): markdown/html/images navigate to the rendered
- *   preview; other text/binary files use the code/binary preview.
+ * - Markdown/html/images: full page navigation to /preview/<id>/<path>
+ * - Code files (json/js/ts/css/txt/log): inline code view with syntax highlighting
+ * - Search results (with line): always show code view with matched line highlighted
  */
 export function openFile(id: string, filePath: string, line?: number): void {
 	const contentEl = document.getElementById('content');
 	if (!contentEl) return;
 
+	// Search result — always show code view with line highlight
 	if (line != null) {
 		const params = 'id=' + encodeURIComponent(id) + '&path=' + encodeURIComponent(filePath) + '&line=' + encodeURIComponent(String(line));
 		fetch('/api/file?' + params)
 			.then(r => r.json())
 			.then(data => {
-				if (data.error) { showError(contentEl, data.error); return; }
-				if (data.isBinary) { showBinary(contentEl, filePath); return; }
-				showCodeView(contentEl, filePath, data.content, line);
+				if (data.error) { renderError(data.error); return; }
+				if (data.isBinary) { renderBinary(filePath); return; }
+				renderCodeFile(filePath, data.content, line);
 			})
-			.catch(() => showError(contentEl, 'Error loading file'));
+			.catch(() => renderError('Error loading file'));
 		return;
 	}
 
+	// Markdown/html → full page navigation
 	if (isTextFile(filePath) || isImageFile(filePath)) {
+		// Restore TOC visibility before navigating (next page will set it correctly)
+		const tocCol = document.getElementById('tocCol');
+		if (tocCol) tocCol.style.display = '';
 		location.href = '/preview/' + id + '/' + encodeURIComponent(filePath);
 		return;
 	}
+
+	// Code files → inline code view
 	const params = 'id=' + encodeURIComponent(id) + '&path=' + encodeURIComponent(filePath);
 	fetch('/api/file?' + params)
 		.then(r => r.json())
 		.then(data => {
-			if (data.error) { showError(contentEl, data.error); return; }
-			if (data.isBinary) { showBinary(contentEl, filePath); return; }
-			showCodeView(contentEl, filePath, data.content);
+			if (data.error) { renderError(data.error); return; }
+			if (data.isBinary) { renderBinary(filePath); return; }
+			renderCodeFile(filePath, data.content);
 		})
-		.catch(() => showError(contentEl, 'Error loading file'));
+		.catch(() => renderError('Error loading file'));
 }
