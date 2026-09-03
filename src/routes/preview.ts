@@ -13,12 +13,46 @@ export function handlePreview(
 	const u = new URL(req.url || '', 'http://localhost');
 	const pathname = u.pathname;
 	const sp = u.searchParams;
-	const match = pathname.match(/^\/preview\/([a-f0-9]+)\/?$/);
+	const match = pathname.match(/^\/preview\/([a-f0-9]+)(?:\/(.+))?\/?$/);
 	if (!match) return;
 
-	const entry = docs.get(match[1]);
+	const [, id, encodedPath] = match;
+	const filePath = encodedPath ? decodeURIComponent(encodedPath) : null;
+
+	// If a file path is provided, try to find or register that specific file
+	if (filePath) {
+		// Search docs for an entry whose fullPath matches
+		for (const [, entry] of docs) {
+			const rel = path.relative(entry.rootDir, entry.fullPath);
+			if (rel === filePath || entry.fullPath.endsWith(filePath)) {
+				res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+				res.end(entry.page);
+				return;
+			}
+		}
+
+		// Not registered yet — try lazy registration
+		const absPath = path.isAbsolute(filePath) ? filePath : null;
+		if (absPath && fs.existsSync(absPath)) {
+			const data = fs.readFileSync(absPath, 'utf8');
+			const kind = kindFromPath(absPath);
+			if (kind) {
+				const ws = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(absPath));
+				const rootDir = ws ? ws.uri.fsPath : path.dirname(absPath);
+				const newId = registerDocument(vscode.Uri.file(absPath).toString(), path.basename(absPath), data, kind, rootDir, absPath);
+				const newEntry = docs.get(newId);
+				if (newEntry) {
+					res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+					res.end(newEntry.page);
+					return;
+				}
+			}
+		}
+	}
+
+	const entry = docs.get(id);
 	if (!entry) {
-		console.log('[on-air] handlePreview: doc not found, id=', match[1], 'docs.size=', docs.size);
+		console.log('[on-air] handlePreview: doc not found, id=', id, 'docs.size=', docs.size);
 		// Lazy registration: an xref link may point at a file that was
 		// found on disk but never opened as a preview.
 		const file = sp.get('file');
