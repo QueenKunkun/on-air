@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.23.0] - 2026-09-03
+
+- feat: add JSON/JS/TS/CSS file preview with syntax highlighting
+- fix: show dotfiles like .claude in file tree
+- fix: sanitize unknown HTML via markdown-it core rule instead of string preprocessing
+
+
 ## [0.22.0] - 2026-08-30
 
 - feat: Add Find in Files content search to the preview panel
