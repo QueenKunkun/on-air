@@ -1,6 +1,13 @@
 # Change Log
 
-## [0.21.1] - 2026-09-02
+## [0.23.0] - 2026-09-03
+
+- feat: add JSON/JS/TS/CSS file preview with syntax highlighting
+- fix: show dotfiles like .claude in file tree
+- fix: sanitize unknown HTML via markdown-it core rule instead of string preprocessing
+
+
+## [0.22.0] - 2026-08-30
 
 - fix: stop syncing file tree collapse state across browser tabs
 
