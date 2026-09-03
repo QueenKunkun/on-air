@@ -30,6 +30,16 @@ function showCodeView(contentEl: HTMLElement, filePath: string, content: string,
 
 	contentEl.innerHTML = `<div class="file-view">${header}<div class="file-code">${rows}</div></div>`;
 
+	// Update file tree highlight
+	const ftRoot = document.getElementById('ft-preact-root');
+	if (ftRoot) {
+		const rootDir = ftRoot.getAttribute('data-rootdir') || '';
+		ftRoot.setAttribute('data-fullpath', rootDir + filePath);
+	}
+
+	// Notify App that content changed (triggers TOC re-read)
+	window.dispatchEvent(new CustomEvent('onair:content-change', { detail: { filePath } }));
+
 	if (line != null) {
 		const hit = contentEl.querySelector('.fl-hl');
 		if (hit) hit.scrollIntoView({ block: 'center' });
