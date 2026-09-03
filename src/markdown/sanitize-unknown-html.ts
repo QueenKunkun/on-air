@@ -2,172 +2,140 @@ import type MarkdownIt from 'markdown-it';
 
 /**
  * Whitelist of HTML tags that markdown-it should render as-is.
- * Everything else gets escaped in preprocessing.
+ * Everything else gets wrapped in a collapsible <details> block.
  */
 const ALLOWED_TAGS = new Set([
-	// Standard HTML block elements
 	'div', 'p', 'span', 'a', 'img', 'strong', 'em', 'b', 'i', 'u', 's', 'del', 'ins',
 	'code', 'pre', 'blockquote', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
 	'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
 	'hr', 'br', 'figure', 'figcaption', 'video', 'audio', 'source', 'iframe', 'embed', 'object',
 	'svg', 'math', 'canvas', 'template',
-	// Semantic elements
 	'section', 'article', 'aside', 'header', 'footer', 'nav', 'main', 'details', 'summary',
-	// Markdown-it common
 	'mark', 'sup', 'sub', 'small', 'abbr', 'cite', 'dfn', 'kbd', 'samp', 'var',
 ]);
+
+function isAllowed(tag: string): boolean {
+	return ALLOWED_TAGS.has(tag.toLowerCase());
+}
 
 function escapeHtml(s: string): string {
 	return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-/**
- * Check if a tag is allowed (should be rendered as-is).
- */
-function isAllowed(tag: string): boolean {
-	return ALLOWED_TAGS.has(tag.toLowerCase());
+function getTagName(content: string): string | null {
+	const m = content.match(/^<\/?([a-zA-Z][a-zA-Z0-9_]*)/);
+	return m ? m[1] : null;
+}
+
+function makeDetails(label: string, body: string): string {
+	return `<details class="onair-unknown-html"><summary>${escapeHtml(label)}</summary>\n\n` +
+		`<pre><code>${escapeHtml(body)}</code></pre>\n\n</details>`;
+}
+
+function makeDetailsEmpty(label: string): string {
+	return `<details class="onair-unknown-html"><summary>${escapeHtml(label)}</summary>\n\n</details>`;
 }
 
 /**
- * Preprocess markdown source to sanitize unknown HTML tags.
- * Unknown tags are wrapped in collapsible <details> blocks.
+ * Core rule: wrap non-standard HTML in collapsible <details>.
+ * Runs after text_join — code_inline tokens are already separated,
+ * so tags inside backticks are never touched.
  */
-export function sanitizeUnknownHtml(source: string): string {
-	// Process line by line to handle multi-line tags
-	const lines = source.split('\n');
-	const result: string[] = [];
+function sanitizeCore(state: { tokens: Array<{ type: string; content: string; children?: Array<{ type: string; content: string }> | null }> }): void {
+	const tokens = state.tokens;
 
-	let inCodeBlock = false;
-	let i = 0;
-	while (i < lines.length) {
-		const line = lines[i];
-
-		// Track fenced code blocks — skip everything inside them
-		const fenceMatch = line.match(/^(`{3,}|~{3,})/);
-		if (fenceMatch) {
-			inCodeBlock = !inCodeBlock;
-			result.push(line);
-			i++;
-			continue;
-		}
-		if (inCodeBlock) {
-			result.push(line);
-			i++;
-			continue;
-		}
-
-		// Check for self-closing unknown tags (e.g., <tag ... />)
-		const selfCloseMatch = line.match(/^<([a-zA-Z][a-zA-Z0-9_]*)[^>]*\/>$/);
-		if (selfCloseMatch && !isAllowed(selfCloseMatch[1])) {
-			const label = `<${selfCloseMatch[0]}>`;
-			result.push('');
-			result.push(`<details class="onair-unknown-html"><summary>${escapeHtml(label)}</summary>`);
-			result.push('');
-			result.push('</details>');
-			result.push('');
-			i++;
-			continue;
-		}
-
-		// Check for opening tags of unknown elements (e.g., <tag ...>)
-		// But first check if it's actually an opening tag by looking for a closing tag
-		const openMatch = line.match(/^<([a-zA-Z][a-zA-Z0-9_]*)[^>]*>$/);
-		if (openMatch && !isAllowed(openMatch[1])) {
-			const tagName = openMatch[1];
-
-			// Look ahead to find closing tag (search up to 500 lines)
-			let foundClose = false;
-			let contentLines: string[] = [];
-			for (let j = i + 1; j < Math.min(i + 500, lines.length); j++) {
-				const closeMatch = lines[j].match(new RegExp(`^</${tagName}\\s*>$`, 'i'));
-				if (closeMatch) {
-					// Found closing tag
-					contentLines = lines.slice(i + 1, j);
-					foundClose = true;
-					i = j + 1; // Skip past closing tag
-					break;
-				}
-			}
-
-			if (foundClose) {
-				// Has closing tag - wrap in details block
-				const label = `<${tagName}>`;
-				const escapedContent = escapeHtml(contentLines.join('\n').trim());
-				result.push('');
-				result.push(`<details class="onair-unknown-html"><summary>${escapeHtml(label)}</summary>`);
-				result.push('');
-				result.push(`<pre><code>${escapedContent}</code></pre>`);
-				result.push('');
-				result.push('</details>');
-				result.push('');
-			} else {
-				// No closing tag found - treat as self-closing
-				const label = `<${tagName}>`;
-				result.push('');
-				result.push(`<details class="onair-unknown-html"><summary>${escapeHtml(label)}</summary>`);
-				result.push('');
-				result.push('</details>');
-				result.push('');
-				i++;
+	for (let j = 0; j < tokens.length; j++) {
+		// ── html_block ────────────────────────────────────────────────
+		if (tokens[j].type === 'html_block') {
+			const tag = getTagName(tokens[j].content);
+			if (tag && !isAllowed(tag)) {
+				tokens[j].content = makeDetails('<' + tag + '>', tokens[j].content);
 			}
 			continue;
 		}
 
-		// Check for inline unknown tags
-		const inlineTagRe = /<([a-zA-Z][a-zA-Z0-9_]*)[^>]*>/g;
-		let match;
-		let hasUnknownTag = false;
-		while ((match = inlineTagRe.exec(line)) !== null) {
-			if (!isAllowed(match[1])) {
-				hasUnknownTag = true;
-				break;
+		// ── inline children ───────────────────────────────────────────
+		if (tokens[j].type !== 'inline') continue;
+		const children = tokens[j].children;
+		if (!children) continue;
+
+		for (let i = 0; i < children.length; i++) {
+			if (children[i].type !== 'html_inline') continue;
+
+			const content = children[i].content;
+			const tag = getTagName(content);
+			if (!tag || isAllowed(tag)) continue;
+
+			const isClosing = content.startsWith('</');
+			const isSelfClose = content.endsWith('/>');
+
+			// ── self-closing: <Component /> ────────────────────────────
+			if (isSelfClose) {
+				// Modify in place — just change the content
+				children[i].content = makeDetailsEmpty('<' + tag + '/>');
+				continue;
+			}
+
+			// ── closing tag: skip (handled with its opening) ─────────
+			if (isClosing) continue;
+
+			// ── opening tag: look for matching closing tag ────────────
+			let depth = 1;
+			let endIdx = -1;
+			for (let k = i + 1; k < children.length; k++) {
+				if (children[k].type !== 'html_inline') continue;
+				const c = children[k].content;
+				const cn = getTagName(c);
+				if (cn !== tag) continue;
+				if (c.startsWith('</')) {
+					depth--;
+					if (depth === 0) { endIdx = k; break; }
+				} else if (!c.endsWith('/>')) {
+					depth++;
+				}
+			}
+
+			if (endIdx === -1) {
+				// No matching close — wrap just the opening tag
+				children[i].content = makeDetailsEmpty('<' + tag + '>');
+				continue;
+			}
+
+			// Found matching close — collect all inner content as raw HTML
+			const innerParts: string[] = [];
+			for (let k = i + 1; k < endIdx; k++) {
+				const ch = children[k];
+				if (ch.type === 'text' || ch.type === 'html_inline') {
+					innerParts.push(ch.content);
+				} else if (ch.type === 'code_inline') {
+					innerParts.push('`' + ch.content + '`');
+				} else {
+					innerParts.push(ch.content || '');
+				}
+			}
+
+			const openTag = children[i].content;
+			const closeTag = children[endIdx].content;
+			const inner = innerParts.join('').trim();
+
+			// Replace opening tag with the full details block
+			children[i].content = makeDetails(
+				'<' + tag + '>',
+				openTag + '\n' + inner + '\n' + closeTag
+			);
+
+			// Remove inner tokens and closing tag (they're now inside the details)
+			if (endIdx > i + 1) {
+				children.splice(i + 1, endIdx - i);
 			}
 		}
-
-		if (hasUnknownTag) {
-			// Process the line to replace unknown tags
-			const processed = line.replace(/<([a-zA-Z][a-zA-Z0-9_]*)[^>]*>([\s\S]*?)<\/\1\s*>/g, (m, tagName, inner) => {
-				if (isAllowed(tagName)) {
-					return m;
-				}
-				const label = `<${tagName}>`;
-				return `<details class="onair-unknown-html"><summary>${escapeHtml(label)}</summary>\n\n${escapeHtml(inner.trim())}\n\n</details>`;
-			});
-
-			// Also handle self-closing tags
-			const finalProcessed = processed.replace(/<([a-zA-Z][a-zA-Z0-9_]*)[^>]*\/>/g, (m, tagName) => {
-				if (isAllowed(tagName)) {
-					return m;
-				}
-				const label = `<${tagName}/>`;
-				return `<details class="onair-unknown-html"><summary>${escapeHtml(label)}</summary>\n\n</details>`;
-			});
-
-			result.push(finalProcessed);
-			i++;
-			continue;
-		}
-
-		// No unknown tags, keep line as-is
-		result.push(line);
-		i++;
 	}
-
-	return result.join('\n');
 }
 
 /**
- * markdown-it plugin that wraps non-standard HTML tags in collapsible <details> blocks.
+ * markdown-it plugin: wraps non-standard HTML tags in collapsible <details> blocks.
+ * Uses a core rule on the token stream — no string preprocessing needed.
  */
-function sanitizeUnknownHtmlPlugin(md: MarkdownIt): void {
-	// Store original render method
-	const originalRender = md.render.bind(md);
-
-	// Override render to preprocess source
-	md.render = (src: string, env?: Record<string, unknown>): string => {
-		const sanitized = sanitizeUnknownHtml(src);
-		return originalRender(sanitized, env);
-	};
+export default function sanitizeUnknownHtmlPlugin(md: MarkdownIt): void {
+	md.core.ruler.after('text_join', 'sanitize_unknown_html', sanitizeCore);
 }
-
-export default sanitizeUnknownHtmlPlugin;
