@@ -24,20 +24,14 @@ export function TOC({ contentEl, fullPath, relPath, contentVersion }: TOCProps) 
 	useEffect(() => {
 		if (!contentEl) return;
 
-		function readHeadings() {
-			const hs = contentEl!.querySelectorAll('h1,h2,h3,h4,h5,h6');
-			setHasHeadings(hs.length >= 2);
-			setTocEntries(buildTocData(Array.from(hs)));
-			setRelatedItems(findRelatedLinks(contentEl!, contentEl!));
-			const toc = document.getElementById('toc');
-			if (toc) toc.classList.toggle('no-tree', hs.length < 2);
-		}
+		const hs = contentEl.querySelectorAll('h1,h2,h3,h4,h5,h6');
+		setHasHeadings(hs.length >= 2);
+		setTocEntries(buildTocData(Array.from(hs)));
+		setRelatedItems(findRelatedLinks(contentEl, contentEl));
 
-		readHeadings();
-
-		// Re-read when code files are opened (content changes without page reload)
-		window.addEventListener('onair:content-change', readHeadings);
-		return () => window.removeEventListener('onair:content-change', readHeadings);
+		// Toggle no-tree class
+		const toc = document.getElementById('toc');
+		if (toc) toc.classList.toggle('no-tree', hs.length < 2);
 	}, [contentEl, contentVersion]);
 
 	const title = useMemo(() => document.title.replace(/ \u00b7 OnAir$/, ''), []);
