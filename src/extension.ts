@@ -130,10 +130,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			
 			const kind = docKind(doc);
 			if (!kind || kind === 'pdf') { return; }
-			const closeWithDoc = vscode.workspace.getConfiguration('onAir').get<boolean>('closeWithDocument', true);
-			if (closeWithDoc) {
-				server?.closeDocument(doc.uri.toString());
-			}
+			server?.closeDocument(doc.uri.toString());
 		}),
 
 		// File system events — refresh file tree in all open preview tabs

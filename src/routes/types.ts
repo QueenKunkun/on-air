@@ -14,5 +14,6 @@ export interface DocEntry {
 	rootDir: string;
 	content?: string;
 	citeStyle?: CiteStyle;
+	keepAlive?: boolean;
 	clients: Set<WebSocket>;
 }

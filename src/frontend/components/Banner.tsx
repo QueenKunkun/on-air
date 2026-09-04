@@ -8,9 +8,10 @@ import type { ConnectionStatus as ConnectionStatusType } from '../hooks/useWebSo
 
 interface BannerProps {
 	connStatus?: ConnectionStatusType;
+	wsSend?: (msg: object) => void;
 }
 
-export function Banner({ connStatus }: BannerProps) {
+export function Banner({ connStatus, wsSend }: BannerProps) {
 	const [theme, setTheme] = useLocalStorage(LS_KEYS.THEME, 'auto');
 	const [fs, setFs] = useLocalStorage(LS_KEYS.FONT_SIZE, '16');
 	const [sbw, setSbw] = useLocalStorage(LS_KEYS.SCROLLBAR_WIDTH, '16');
@@ -92,6 +93,18 @@ export function Banner({ connStatus }: BannerProps) {
 		return () => ro.disconnect();
 	}, []);
 
+	const [keepAlive, setKeepAlive] = useState(() => {
+		try { return localStorage.getItem('onair-keep-alive') === 'true'; } catch { return false; }
+	});
+
+	useEffect(() => {
+		try { localStorage.setItem('onair-keep-alive', String(keepAlive)); } catch { /* ignore */ }
+	}, [keepAlive]);
+
+	useEffect(() => {
+		if (wsSend) wsSend({ type: 'keep-alive', value: keepAlive });
+	}, [keepAlive, wsSend]);
+
 	const [copied, setCopied] = useState(false);
 
 	const handleVerClick = useCallback(() => {
@@ -119,6 +132,10 @@ export function Banner({ connStatus }: BannerProps) {
 			<button class={`wp-btn${sbProp ? ' on' : ''}`} id="sbPropBtn" title="Toggle proportional scrollbar thumb"
 				onClick={() => setSbProp(v => !v)}>
 				∷
+			</button>
+			<button class={`wp-btn${keepAlive ? ' on' : ''}`} id="keepAliveBtn" title="Keep preview alive when file is closed in VS Code"
+				onClick={() => setKeepAlive(v => !v)}>
+				🔗
 			</button>
 				<span class="bp-group"><span class="bp-label" title="Font size">A</span>
 					<button class="bp-btn" id="fsDec" title="Decrease font size"
