@@ -199,20 +199,21 @@ export function Banner({ connStatus, wsSend, fullPath }: BannerProps) {
 								<ThemeSelect themes={themes} value={theme} onChange={setTheme} />
 							</div>
 							<div class="settings-section">
-								<label class="settings-label">Server close behavior
+								<label class="settings-label">Server close when:</label>
+								<span class="settings-select-wrap">
+									<select class="settings-select" value={keepAlive}
+										onChange={(e) => setKeepAlive((e.target as HTMLSelectElement).value)}>
+										<option value="follow-vscode">all tracked files closed</option>
+										<option value="keep-alive">vscode closed</option>
+									</select>
 									<span class="settings-hint"
 										onMouseEnter={(e) => {
 											const r = (e.target as HTMLElement).getBoundingClientRect();
-											setTooltip({ text: 'When all previewed files are closed, the preview server shuts down and links expire. When kept alive, links stay valid even after closing all files.', x: r.left + r.width / 2, y: r.top - 8 });
+											setTooltip({ text: '"all tracked files closed": server shuts down when you close all previewed files. "vscode closed": server stays alive until VS Code quits.', x: r.left + r.width / 2, y: r.top - 8 });
 										}}
 										onMouseLeave={() => setTooltip(null)}
 									>?</span>
-								</label>
-								<select class="settings-select" value={keepAlive}
-									onChange={(e) => setKeepAlive((e.target as HTMLSelectElement).value)}>
-									<option value="follow-vscode">Close with files</option>
-									<option value="keep-alive">Keep alive</option>
-								</select>
+								</span>
 							</div>
 							<div class="settings-section">
 								<label class="settings-label">Word wrap</label>
