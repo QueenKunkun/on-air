@@ -200,8 +200,8 @@ export function Banner({ connStatus, wsSend, fullPath }: BannerProps) {
 								<label class="settings-label">File close behavior</label>
 								<select class="settings-select" value={keepAlive}
 									onChange={(e) => setKeepAlive((e.target as HTMLSelectElement).value)}>
-									<option value="follow-vscode">跟随 VS Code</option>
-									<option value="keep-alive">保持运行</option>
+									<option value="follow-vscode">Follow VS Code</option>
+									<option value="keep-alive">Keep alive</option>
 								</select>
 							</div>
 							<div class="settings-section">
