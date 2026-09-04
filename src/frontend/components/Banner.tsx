@@ -23,6 +23,7 @@ export function Banner({ connStatus, wsSend, fullPath }: BannerProps) {
 	});
 	const [keepAlive, setKeepAlive] = useLocalStorage('onair-keep-alive', 'follow-vscode');
 	const [settingsOpen, setSettingsOpen] = useState(false);
+	const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
 	const rootRef = useRef<HTMLDivElement>(null);
 	const contentRef = useRef<HTMLElement | null>(null);
 	const modalRef = useRef<HTMLDivElement>(null);
@@ -186,6 +187,7 @@ export function Banner({ connStatus, wsSend, fullPath }: BannerProps) {
 
 			{settingsOpen && (
 				<div class="settings-overlay">
+					{tooltip && <div class="settings-tooltip" style={{ left: tooltip.x, top: tooltip.y, transform: 'translateX(-50%) translateY(-100%)' }}>{tooltip.text}</div>}
 					<div class="settings-modal" ref={modalRef}>
 						<div class="settings-modal-header">
 							<span class="settings-modal-title">Settings</span>
@@ -197,10 +199,18 @@ export function Banner({ connStatus, wsSend, fullPath }: BannerProps) {
 								<ThemeSelect themes={themes} value={theme} onChange={setTheme} />
 							</div>
 							<div class="settings-section">
-								<label class="settings-label">File close behavior</label>
+								<label class="settings-label">Server close behavior
+									<span class="settings-hint"
+										onMouseEnter={(e) => {
+											const r = (e.target as HTMLElement).getBoundingClientRect();
+											setTooltip({ text: 'When all previewed files are closed, the preview server shuts down and links expire. When kept alive, links stay valid even after closing all files.', x: r.left + r.width / 2, y: r.top - 8 });
+										}}
+										onMouseLeave={() => setTooltip(null)}
+									>?</span>
+								</label>
 								<select class="settings-select" value={keepAlive}
 									onChange={(e) => setKeepAlive((e.target as HTMLSelectElement).value)}>
-									<option value="follow-vscode">Follow VS Code</option>
+									<option value="follow-vscode">Close with files</option>
 									<option value="keep-alive">Keep alive</option>
 								</select>
 							</div>
