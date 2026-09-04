@@ -133,14 +133,52 @@ export function Banner({ connStatus, wsSend, fullPath }: BannerProps) {
 
 	const themes = window.__ONAIR__?.themes || [];
 	const displayPath = fullPath || window.__ONAIR__?.fullPath || '';
+	const rootDir = window.__ONAIR__?.rootDir || '';
+
+	// Split path into three parts: project root, relative dir, filename
+	let rootName = '';
+	let relDir = '';
+	let fileName = displayPath;
+	if (rootDir && displayPath.startsWith(rootDir)) {
+		const rel = displayPath.slice(rootDir.length).replace(/^\//, '');
+		const parts = rel.split('/');
+		fileName = parts.pop() || rel;
+		relDir = parts.join('/');
+		rootName = rootDir.split('/').pop() || rootDir;
+	} else {
+		// Fallback: use second-to-last dir as root hint
+		const parts = displayPath.split('/');
+		fileName = parts.pop() || displayPath;
+		const dirParts = parts.join('/').split('/');
+		if (dirParts.length >= 2) {
+			rootName = dirParts[dirParts.length - 1];
+			relDir = dirParts.slice(0, -1).join('/');
+		} else {
+			relDir = parts.join('/');
+		}
+	}
 
 	return (
 		<div ref={rootRef} style={{ display: 'contents' }}>
 			{connStatus && <ConnectionStatus icon={connStatus.icon} message={connStatus.message} offline={connStatus.offline} />}
 			<div class="tb-center">
-				<span class="tb-filepath" title={displayPath}>{displayPath}</span>
-				<button class="wp-btn tb-settings-btn" title="Settings" onClick={() => setSettingsOpen(true)}>⚙</button>
+				<span class="tb-filepath" title={displayPath}>
+					{rootName && <span class="tb-filepath-root">{rootName}</span>}
+					{relDir && <span class="tb-filepath-sep">/</span>}
+					{relDir && <span class="tb-filepath-dir">{relDir}</span>}
+					<span class="tb-filepath-sep">/</span>
+					<span class="tb-filepath-name">{fileName}</span>
+				</span>
 			</div>
+			<button class="tb-settings-btn" title="Settings" onClick={() => setSettingsOpen(true)}>
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
+					<line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" />
+					<line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" />
+					<line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" />
+					<line x1="17" y1="16" x2="23" y2="16" />
+				</svg>
+			</button>
 			<div class="ver-badge" id="verBadge" title="Click to copy version"
 				onClick={handleVerClick}>
 				{copied ? 'Copied!' : `v${window.__ONAIR__?.version || 'dev'}`}
