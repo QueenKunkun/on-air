@@ -303,6 +303,7 @@ export class PreviewServer {
 		if (!id) { return; }
 		const entry = this.docs.get(id);
 		if (entry) {
+			if (entry.keepAlive) { return; }
 			const payload = JSON.stringify({ type: 'closed' });
 			for (const client of entry.clients) {
 				if (client.readyState === client.OPEN) { client.send(payload); }
@@ -469,9 +470,16 @@ export class PreviewServer {
 			}
 			entry.clients.add(ws);
 			ws.on('message', (data) => {
-				let msg: { type?: string; style?: string } | null = null;
+				let msg: { type?: string; style?: string; value?: boolean } | null = null;
 				try { msg = JSON.parse(data.toString()); } catch { /* ignore malformed */ }
-				if (!msg || msg.type !== 'set-cite-style' || (msg.style !== 'link' && msg.style !== 'footnotes')) {
+				if (!msg) { return; }
+
+				if (msg.type === 'keep-alive') {
+					entry.keepAlive = msg.value === true;
+					return;
+				}
+
+				if (msg.type !== 'set-cite-style' || (msg.style !== 'link' && msg.style !== 'footnotes')) {
 					return;
 				}
 				if (entry.citeStyle === msg.style) { return; }
