@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.24.0] - 2026-09-04
+
+- feat: Add keep-alive toggle to keep preview running after closing file
+
+
 ## [0.23.1] - 2026-09-03
 
 - fix: preview route now matches file path in URL, fixing wrong content when clicking files in tree
