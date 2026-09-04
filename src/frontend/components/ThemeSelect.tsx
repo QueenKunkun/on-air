@@ -19,7 +19,18 @@ function iconOf(label: string): string {
 export function ThemeSelect({ themes, value, onChange }: ThemeSelectProps) {
 	const [open, setOpen] = useState(false);
 	const wrapRef = useRef<HTMLDivElement>(null);
+	const menuRef = useRef<HTMLUListElement>(null);
 	const current = themes.find(t => t.id === value);
+
+	// Position fixed menu relative to button
+	useEffect(() => {
+		if (!open || !menuRef.current || !wrapRef.current) return;
+		const btn = wrapRef.current.querySelector('button');
+		if (!btn) return;
+		const rect = btn.getBoundingClientRect();
+		menuRef.current.style.left = rect.left + 'px';
+		menuRef.current.style.top = (rect.bottom + 4) + 'px';
+	}, [open]);
 
 	// Close on outside click or Escape
 	useEffect(() => {
@@ -46,7 +57,7 @@ export function ThemeSelect({ themes, value, onChange }: ThemeSelectProps) {
 				{iconOf(current?.label || 'Theme')}
 			</button>
 			{open && (
-				<ul class="theme-menu" role="listbox">
+				<ul ref={menuRef} class="theme-menu" role="listbox">
 					{themes.map(t => (
 						<li key={t.id} role="option" aria-selected={t.id === value}
 							class={t.id === value ? 'active' : ''}
