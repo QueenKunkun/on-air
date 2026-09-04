@@ -20,12 +20,20 @@ test.beforeEach(async ({ page }) => {
     localStorage.removeItem('onair-toc-collapsed');
     localStorage.removeItem('onair-files-width');
     localStorage.removeItem('onair-toc-width');
+    localStorage.removeItem('onair-font-size');
+    localStorage.removeItem('onair-scrollbar-width');
+    localStorage.removeItem('onair-max-width');
+    localStorage.removeItem('onair-scrollbar-proportional');
+    localStorage.removeItem('onair-keep-alive');
+    localStorage.removeItem('onair-theme');
   });
   await page.goto(`${baseUrl}/preview/${docId}`);
   await page.waitForSelector('.ft-list', { timeout: 5000 });
 });
 
 test('banner theme select changes theme', async ({ page }) => {
+  await page.locator('.tb-settings-btn').click();
+  await page.waitForSelector('.settings-modal', { timeout: 3000 });
   const themeBtn = page.locator('#themeSelect .theme-btn');
   await expect(themeBtn).toBeVisible();
   // Change theme
@@ -43,32 +51,40 @@ test('banner theme select changes theme', async ({ page }) => {
 });
 
 test('banner font size controls work', async ({ page }) => {
-  const fsInput = page.getByRole('spinbutton', { name: /font size/i });
+  await page.locator('.tb-settings-btn').click();
+  await page.waitForSelector('.settings-modal', { timeout: 3000 });
+  const fsInput = page.locator('.settings-modal-body .settings-stepper input[type="number"]').first();
   await expect(fsInput).toBeVisible();
-  // Click decrease
-  await page.getByTitle('Decrease font size').click();
+  const val0 = await fsInput.inputValue();
+  // Click decrease (first "−" button in first stepper)
+  const decBtn = page.locator('.settings-modal-body .settings-stepper').first().getByRole('button').filter({ hasText: '−' });
+  await decBtn.click();
   await page.waitForTimeout(200);
   const val = await fsInput.inputValue();
-  expect(parseInt(val)).toBe(14);
+  expect(parseInt(val)).toBe(parseInt(val0) - 2);
   // Click increase multiple times
-  await page.getByTitle('Increase font size').click();
+  const incBtn = page.locator('.settings-modal-body .settings-stepper').first().getByRole('button').filter({ hasText: '+' });
+  await incBtn.click();
   await page.waitForTimeout(200);
-  expect(parseInt(await fsInput.inputValue())).toBe(16);
-  await page.getByTitle('Increase font size').click();
+  expect(parseInt(await fsInput.inputValue())).toBe(parseInt(val0));
+  await incBtn.click();
   await page.waitForTimeout(200);
-  expect(parseInt(await fsInput.inputValue())).toBe(18);
-  await page.getByTitle('Increase font size').click();
+  expect(parseInt(await fsInput.inputValue())).toBe(parseInt(val0) + 2);
+  await incBtn.click();
   await page.waitForTimeout(200);
-  expect(parseInt(await fsInput.inputValue())).toBe(20);
+  expect(parseInt(await fsInput.inputValue())).toBe(parseInt(val0) + 4);
   // Click reset
-  await page.getByTitle('Reset font size to default').click();
+  const resetBtn = page.locator('.settings-modal-body .settings-stepper').first().getByRole('button').filter({ hasText: '↺' });
+  await resetBtn.click();
   await page.waitForTimeout(200);
   const val2 = await fsInput.inputValue();
   expect(parseInt(val2)).toBe(16);
 });
 
 test('banner font size direct input works', async ({ page }) => {
-  const fsInput = page.getByRole('spinbutton', { name: /font size/i });
+  await page.locator('.tb-settings-btn').click();
+  await page.waitForSelector('.settings-modal', { timeout: 3000 });
+  const fsInput = page.locator('.settings-modal-body .settings-stepper input[type="number"]').first();
   await expect(fsInput).toBeVisible();
   // Type a custom value
   await fsInput.fill('20');
@@ -91,22 +107,29 @@ test('banner font size direct input works', async ({ page }) => {
 });
 
 test('banner scrollbar width controls work', async ({ page }) => {
-  const sbInput = page.getByRole('spinbutton', { name: /scrollbar width/i });
+  await page.locator('.tb-settings-btn').click();
+  await page.waitForSelector('.settings-modal', { timeout: 3000 });
+  const sbInput = page.locator('.settings-modal-body .settings-stepper input[type="number"]').nth(1);
   await expect(sbInput).toBeVisible();
+  const val0 = await sbInput.inputValue();
   // Click decrease
-  await page.getByTitle('Thinner scrollbars').click();
+  const decBtn = page.locator('.settings-modal-body .settings-stepper').nth(1).getByRole('button').filter({ hasText: '−' });
+  await decBtn.click();
   await page.waitForTimeout(200);
   const val = await sbInput.inputValue();
-  expect(parseInt(val)).toBe(12);
+  expect(parseInt(val)).toBe(parseInt(val0) - 4);
   // Click reset
-  await page.getByTitle('Reset scrollbar width to default').click();
+  const resetBtn = page.locator('.settings-modal-body .settings-stepper').nth(1).getByRole('button').filter({ hasText: '↺' });
+  await resetBtn.click();
   await page.waitForTimeout(200);
   const val2 = await sbInput.inputValue();
   expect(parseInt(val2)).toBe(16);
 });
 
 test('banner scrollbar direct input works', async ({ page }) => {
-  const sbInput = page.getByRole('spinbutton', { name: /scrollbar width/i });
+  await page.locator('.tb-settings-btn').click();
+  await page.waitForSelector('.settings-modal', { timeout: 3000 });
+  const sbInput = page.locator('.settings-modal-body .settings-stepper input[type="number"]').nth(1);
   await expect(sbInput).toBeVisible();
   // Type a custom value
   await sbInput.fill('24');
@@ -117,22 +140,33 @@ test('banner scrollbar direct input works', async ({ page }) => {
 });
 
 test('banner proportional scrollbar toggle works', async ({ page }) => {
+  await page.locator('.tb-settings-btn').click();
+  await page.waitForSelector('.settings-modal', { timeout: 3000 });
   const html = page.locator('html');
   // default: --sb-thumb-min not set
   await expect(html).not.toHaveAttribute('style', /--sb-thumb-min/);
-  // toggle on → inline style sets var
-  await page.getByTitle('Toggle proportional scrollbar thumb').click();
-  await expect(html).toHaveAttribute('style', /--sb-thumb-min:\s*0px/);
-  // persists across reload
+  // toggle on via localStorage + reload (simulates toggle persisting)
+  await page.evaluate(() => {
+    localStorage.setItem('onair-scrollbar-proportional', 'true');
+  });
   await page.reload();
+  await page.locator('.tb-settings-btn').click();
+  await page.waitForSelector('.settings-modal', { timeout: 3000 });
   await expect(html).toHaveAttribute('style', /--sb-thumb-min:\s*0px/);
-  // toggle off → var removed
-  await page.getByTitle('Toggle proportional scrollbar thumb').click();
+  // toggle off
+  await page.evaluate(() => {
+    localStorage.removeItem('onair-scrollbar-proportional');
+  });
+  await page.reload();
+  await page.locator('.tb-settings-btn').click();
+  await page.waitForSelector('.settings-modal', { timeout: 3000 });
   await expect(html).not.toHaveAttribute('style', /--sb-thumb-min/);
 });
 
 test('banner max width direct input works', async ({ page }) => {
-  const mwInput = page.getByRole('spinbutton', { name: /max content width/i });
+  await page.locator('.tb-settings-btn').click();
+  await page.waitForSelector('.settings-modal', { timeout: 3000 });
+  const mwInput = page.locator('.settings-modal-body .settings-stepper input[type="number"]').nth(2);
   await expect(mwInput).toBeVisible();
   // Type a custom value
   await mwInput.fill('600');

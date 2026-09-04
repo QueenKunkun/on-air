@@ -9,9 +9,10 @@ import type { ConnectionStatus as ConnectionStatusType } from '../hooks/useWebSo
 interface BannerProps {
 	connStatus?: ConnectionStatusType;
 	wsSend?: (msg: object) => void;
+	fullPath?: string;
 }
 
-export function Banner({ connStatus, wsSend }: BannerProps) {
+export function Banner({ connStatus, wsSend, fullPath }: BannerProps) {
 	const [theme, setTheme] = useLocalStorage(LS_KEYS.THEME, 'auto');
 	const [fs, setFs] = useLocalStorage(LS_KEYS.FONT_SIZE, '16');
 	const [sbw, setSbw] = useLocalStorage(LS_KEYS.SCROLLBAR_WIDTH, '16');
@@ -20,8 +21,11 @@ export function Banner({ connStatus, wsSend }: BannerProps) {
 	const [sbProp, setSbProp] = useState(() => {
 		try { return localStorage.getItem(LS_KEYS.SCROLLBAR_PROPORTIONAL) === 'true'; } catch { return false; }
 	});
+	const [keepAlive, setKeepAlive] = useLocalStorage('onair-keep-alive', 'follow-vscode');
+	const [settingsOpen, setSettingsOpen] = useState(false);
 	const rootRef = useRef<HTMLDivElement>(null);
 	const contentRef = useRef<HTMLElement | null>(null);
+	const modalRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
 		try { localStorage.setItem(LS_KEYS.SCROLLBAR_PROPORTIONAL, String(sbProp)); } catch { /* ignore */ }
@@ -64,6 +68,11 @@ export function Banner({ connStatus, wsSend }: BannerProps) {
 		contentRef.current?.classList.toggle('wp', wpOn);
 	}, [wpOn]);
 
+	// Keep-alive sync to server
+	useEffect(() => {
+		if (wsSend) wsSend({ type: 'keep-alive', value: keepAlive === 'keep-alive' });
+	}, [keepAlive, wsSend]);
+
 	// Portal-like: append rendered content to #banner
 	useEffect(() => {
 		const banner = document.getElementById('banner');
@@ -93,17 +102,24 @@ export function Banner({ connStatus, wsSend }: BannerProps) {
 		return () => ro.disconnect();
 	}, []);
 
-	const [keepAlive, setKeepAlive] = useState(() => {
-		try { return localStorage.getItem('onair-keep-alive') === 'true'; } catch { return false; }
-	});
-
+	// Close modal on Escape or outside click
 	useEffect(() => {
-		try { localStorage.setItem('onair-keep-alive', String(keepAlive)); } catch { /* ignore */ }
-	}, [keepAlive]);
-
-	useEffect(() => {
-		if (wsSend) wsSend({ type: 'keep-alive', value: keepAlive });
-	}, [keepAlive, wsSend]);
+		if (!settingsOpen) return;
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') setSettingsOpen(false);
+		};
+		const onClickOutside = (e: MouseEvent) => {
+			if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+				setSettingsOpen(false);
+			}
+		};
+		document.addEventListener('keydown', onKeyDown);
+		document.addEventListener('mousedown', onClickOutside);
+		return () => {
+			document.removeEventListener('keydown', onKeyDown);
+			document.removeEventListener('mousedown', onClickOutside);
+		};
+	}, [settingsOpen]);
 
 	const [copied, setCopied] = useState(false);
 
@@ -116,68 +132,97 @@ export function Banner({ connStatus, wsSend }: BannerProps) {
 	}, []);
 
 	const themes = window.__ONAIR__?.themes || [];
+	const displayPath = fullPath || window.__ONAIR__?.fullPath || '';
 
 	return (
 		<div ref={rootRef} style={{ display: 'contents' }}>
 			{connStatus && <ConnectionStatus icon={connStatus.icon} message={connStatus.message} offline={connStatus.offline} />}
 			<div class="tb-center">
-				<ThemeSelect themes={themes} value={theme} onChange={setTheme} />
-			<button class={`wp-btn${wpOn ? ' on' : ''}`} id="wpBtn" title="Toggle word wrapping for code blocks"
-				onClick={() => setWpOn(!wpOn)}>
-				↵
-			</button>
-			<button class="wp-btn" id="hoverBtn" title="Toggle hover preview for footnote/annotation notes">
-				💬
-			</button>
-			<button class={`wp-btn${sbProp ? ' on' : ''}`} id="sbPropBtn" title="Toggle proportional scrollbar thumb"
-				onClick={() => setSbProp(v => !v)}>
-				∷
-			</button>
-			<button class={`wp-btn${keepAlive ? ' on' : ''}`} id="keepAliveBtn" title="Keep preview alive when file is closed in VS Code"
-				onClick={() => setKeepAlive(v => !v)}>
-				🔗
-			</button>
-				<span class="bp-group"><span class="bp-label" title="Font size">A</span>
-					<button class="bp-btn" id="fsDec" title="Decrease font size"
-						onClick={() => setFs(String(Math.max(12, Math.min(28, parseInt(fs) - 2))))}>−</button>
-					<input class="fs-input" id="fsInput" type="number" min="12" max="28" value={fs} title="Font size (12-28)"
-						onChange={(e) => {
-							const v = parseInt((e.target as HTMLInputElement).value);
-							if (!isNaN(v)) setFs(String(Math.max(12, Math.min(28, v))));
-						}} />
-					<button class="bp-btn" id="fsReset" title="Reset font size to default"
-						onClick={() => setFs('16')}>↺</button>
-					<button class="bp-btn" id="fsInc" title="Increase font size"
-						onClick={() => setFs(String(Math.max(12, Math.min(28, parseInt(fs) + 2))))}>+</button></span>
-				<span class="bp-group"><span class="bp-label" title="Scrollbar width">‖</span>
-					<button class="bp-btn" id="sbDec" title="Thinner scrollbars"
-						onClick={() => setSbw(String(Math.max(0, parseInt(sbw) - 4)))}>−</button>
-					<input class="fs-input" id="sbInput" type="number" min="0" step="4" value={sbw} title="Scrollbar width"
-						onChange={(e) => {
-							const v = parseInt((e.target as HTMLInputElement).value);
-							if (!isNaN(v)) setSbw(String(Math.max(0, v)));
-						}} />
-					<button class="bp-btn" id="sbReset" title="Reset scrollbar width to default"
-						onClick={() => setSbw('16')}>↺</button>
-					<button class="bp-btn" id="sbInc" title="Thicker scrollbars"
-						onClick={() => setSbw(String(Math.max(0, parseInt(sbw) + 4)))}>+</button></span>
-				<span class="bp-group"><span class="bp-label" title="Max content width (0 = no limit)">W</span>
-					<button class="bp-btn" id="mwDec" title="Narrower content"
-						onClick={() => setMw(String(Math.max(0, parseInt(mw) - 20)))}>−</button>
-					<input class="fs-input" id="mwInput" type="number" min="0" step="20" value={mw} title="Max content width in px (0 = no limit)"
-						onChange={(e) => {
-							const v = parseInt((e.target as HTMLInputElement).value);
-							if (!isNaN(v) && v >= 0) setMw(String(v));
-						}} />
-					<button class="bp-btn" id="mwReset" title="Reset max width to default"
-						onClick={() => setMw('920')}>↺</button>
-					<button class="bp-btn" id="mwInc" title="Wider content"
-						onClick={() => setMw(String(Math.max(0, parseInt(mw) + 20)))}>+</button></span>
+				<span class="tb-filepath" title={displayPath}>{displayPath}</span>
+				<button class="wp-btn tb-settings-btn" title="Settings" onClick={() => setSettingsOpen(true)}>⚙</button>
 			</div>
 			<div class="ver-badge" id="verBadge" title="Click to copy version"
 				onClick={handleVerClick}>
 				{copied ? 'Copied!' : `v${window.__ONAIR__?.version || 'dev'}`}
 			</div>
+
+			{settingsOpen && (
+				<div class="settings-overlay">
+					<div class="settings-modal" ref={modalRef}>
+						<div class="settings-modal-header">
+							<span class="settings-modal-title">Settings</span>
+							<button class="settings-modal-close" onClick={() => setSettingsOpen(false)}>×</button>
+						</div>
+						<div class="settings-modal-body">
+							<div class="settings-section">
+								<label class="settings-label">Theme</label>
+								<ThemeSelect themes={themes} value={theme} onChange={setTheme} />
+							</div>
+							<div class="settings-section">
+								<label class="settings-label">File close behavior</label>
+								<select class="settings-select" value={keepAlive}
+									onChange={(e) => setKeepAlive((e.target as HTMLSelectElement).value)}>
+									<option value="follow-vscode">跟随 VS Code</option>
+									<option value="keep-alive">保持运行</option>
+								</select>
+							</div>
+							<div class="settings-section">
+								<label class="settings-label">Word wrap</label>
+								<label class="settings-toggle">
+									<input type="checkbox" checked={wpOn} onChange={() => setWpOn(v => !v)} />
+									<span class="settings-toggle-slider"></span>
+								</label>
+							</div>
+							<div class="settings-section">
+								<label class="settings-label">Proportional scrollbar</label>
+								<label class="settings-toggle">
+									<input type="checkbox" checked={sbProp} onChange={() => setSbProp(v => !v)} />
+									<span class="settings-toggle-slider"></span>
+								</label>
+							</div>
+							<div class="settings-section">
+								<label class="settings-label">Font size</label>
+								<div class="settings-stepper">
+									<button onClick={() => setFs(String(Math.max(12, Math.min(28, parseInt(fs) - 2))))}>−</button>
+									<input type="number" min="12" max="28" value={fs}
+										onChange={(e) => {
+											const v = parseInt((e.target as HTMLInputElement).value);
+											if (!isNaN(v)) setFs(String(Math.max(12, Math.min(28, v))));
+										}} />
+									<button onClick={() => setFs(String(Math.max(12, Math.min(28, parseInt(fs) + 2))))}>+</button>
+									<button class="settings-reset" onClick={() => setFs('16')}>↺</button>
+								</div>
+							</div>
+							<div class="settings-section">
+								<label class="settings-label">Scrollbar width</label>
+								<div class="settings-stepper">
+									<button onClick={() => setSbw(String(Math.max(0, parseInt(sbw) - 4)))}>−</button>
+									<input type="number" min="0" step="4" value={sbw}
+										onChange={(e) => {
+											const v = parseInt((e.target as HTMLInputElement).value);
+											if (!isNaN(v)) setSbw(String(Math.max(0, v)));
+										}} />
+									<button onClick={() => setSbw(String(Math.max(0, parseInt(sbw) + 4)))}>+</button>
+									<button class="settings-reset" onClick={() => setSbw('16')}>↺</button>
+								</div>
+							</div>
+							<div class="settings-section">
+								<label class="settings-label">Max content width</label>
+								<div class="settings-stepper">
+									<button onClick={() => setMw(String(Math.max(0, parseInt(mw) - 20)))}>−</button>
+									<input type="number" min="0" step="20" value={mw}
+										onChange={(e) => {
+											const v = parseInt((e.target as HTMLInputElement).value);
+											if (!isNaN(v) && v >= 0) setMw(String(v));
+										}} />
+									<button onClick={() => setMw(String(Math.max(0, parseInt(mw) + 20)))}>+</button>
+									<button class="settings-reset" onClick={() => setMw('920')}>↺</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
