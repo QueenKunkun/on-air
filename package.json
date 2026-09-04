@@ -25,6 +25,16 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "OnAir",
+      "properties": {
+        "onAir.closeWithDocument": {
+          "type": "boolean",
+          "default": true,
+          "description": "Close the preview when the markdown file is closed in VS Code. Set to false to keep the preview running after the file is closed."
+        }
+      }
+    },
     "commands": [
       {
         "command": "onAir.generateUrl",
