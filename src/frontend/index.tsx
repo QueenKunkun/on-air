@@ -63,7 +63,7 @@ function App() {
 	}
 
 	return h(Layout, null,
-		h(Banner, { connStatus, wsSend }),
+		h(Banner, { connStatus, wsSend, fullPath }),
 		h(TOC, { contentEl, fullPath, relPath, contentVersion }),
 		h(FootnotesBlock, { contentEl, contentVersion }),
 		h(Annotations, { contentEl, contentVersion }),
