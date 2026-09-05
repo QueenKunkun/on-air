@@ -23,7 +23,7 @@ export function Banner({ connStatus, wsSend, fullPath }: BannerProps) {
 	});
 	const [keepAlive, setKeepAlive] = useLocalStorage('onair-keep-alive', 'follow-vscode');
 	const [settingsOpen, setSettingsOpen] = useState(false);
-	const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+	const [tooltip, setTooltip] = useState<{ content: preact.ComponentChildren; x: number; y: number } | null>(null);
 	const rootRef = useRef<HTMLDivElement>(null);
 	const contentRef = useRef<HTMLElement | null>(null);
 	const modalRef = useRef<HTMLDivElement>(null);
@@ -187,7 +187,7 @@ export function Banner({ connStatus, wsSend, fullPath }: BannerProps) {
 
 			{settingsOpen && (
 				<div class="settings-overlay">
-					{tooltip && <div class="settings-tooltip" style={{ left: tooltip.x, top: tooltip.y, transform: 'translateX(-50%) translateY(-100%)' }}>{tooltip.text}</div>}
+					{tooltip && <div class="settings-tooltip" style={{ left: tooltip.x, top: tooltip.y, transform: 'translateX(-50%) translateY(-100%)' }}>{tooltip.content}</div>}
 					<div class="settings-modal" ref={modalRef}>
 						<div class="settings-modal-header">
 							<span class="settings-modal-title">Settings</span>
@@ -199,21 +199,23 @@ export function Banner({ connStatus, wsSend, fullPath }: BannerProps) {
 								<ThemeSelect themes={themes} value={theme} onChange={setTheme} />
 							</div>
 							<div class="settings-section">
-								<label class="settings-label">Server close when:</label>
-								<span class="settings-select-wrap">
-									<select class="settings-select" value={keepAlive}
-										onChange={(e) => setKeepAlive((e.target as HTMLSelectElement).value)}>
-										<option value="follow-vscode">all tracked files closed</option>
-										<option value="keep-alive">vscode closed</option>
-									</select>
+								<label class="settings-label">Server close when:
 									<span class="settings-hint"
 										onMouseEnter={(e) => {
 											const r = (e.target as HTMLElement).getBoundingClientRect();
-											setTooltip({ text: '"all tracked files closed": server shuts down when you close all previewed files. "vscode closed": server stays alive until VS Code quits.', x: r.left + r.width / 2, y: r.top - 8 });
+											setTooltip({ content: h('ul', { style: { margin: 0, padding: '0 0 0 16px', listStyle: 'disc' } },
+											h('li', null, 'all tracked files closed — server shuts down when you close all previewed files'),
+											h('li', null, 'vscode closed — server stays alive until VS Code quits'),
+										), x: r.left + r.width / 2, y: r.top - 8 });
 										}}
 										onMouseLeave={() => setTooltip(null)}
 									>?</span>
-								</span>
+								</label>
+								<select class="settings-select" value={keepAlive}
+									onChange={(e) => setKeepAlive((e.target as HTMLSelectElement).value)}>
+									<option value="follow-vscode">all tracked files closed</option>
+									<option value="keep-alive">vscode closed</option>
+								</select>
 							</div>
 							<div class="settings-section">
 								<label class="settings-label">Word wrap</label>
