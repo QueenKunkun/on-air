@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.24.1] - 2026-09-05
+
+- fix: improve settings modal UI (server close options, tooltip, theme menu clipping)
+
+
 ## [0.24.0] - 2026-09-04
 
 - feat: Add keep-alive toggle to keep preview running after closing file
