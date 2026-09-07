@@ -94,6 +94,43 @@ md.use(markdownItKatex, { throwOnError: false });
 // IEEE numeric citations: [3], [2, 7], [8-10] → links to the reference entries.
 md.use(citationsPlugin);
 
+// Fix: markdown-it's delimiter scanner rejects ** when preceded by punctuation
+// (e.g. "：**") and followed by CJK. Re-scan text tokens for missed **bold**.
+md.core.ruler.after('inline', 'onair_fix_bold', (state) => {
+	const tokens = state.tokens;
+	for (const block of tokens) {
+		if (block.type !== 'inline' || !block.children) { continue; }
+		const children = block.children;
+		let i = 0;
+		while (i < children.length) {
+			const tok = children[i];
+			if (tok.type !== 'text' || !tok.content.includes('**')) { i++; continue; }
+			const text = tok.content;
+			const parts: typeof children = [];
+			let rest = text;
+			while (rest.length > 0) {
+				const open = rest.indexOf('**');
+				if (open === -1) { parts.push(Object.assign(new state.Token('text', '', 0), { content: rest })); break; }
+				if (open > 0) { parts.push(Object.assign(new state.Token('text', '', 0), { content: rest.slice(0, open) })); }
+				const afterOpen = rest.slice(open + 2);
+				const close = afterOpen.indexOf('**');
+				if (close === -1) { parts.push(Object.assign(new state.Token('text', '', 0), { content: '**' + afterOpen })); break; }
+				const boldContent = afterOpen.slice(0, close);
+				if (boldContent.length > 0) {
+					const openTok = new state.Token('strong_open', 'strong', 1);
+					const inner = new state.Token('text', '', 0);
+					inner.content = boldContent;
+					const closeTok = new state.Token('strong_close', 'strong', -1);
+					parts.push(openTok, inner, closeTok);
+				}
+				rest = afterOpen.slice(close + 2);
+			}
+			children.splice(i, 1, ...parts);
+			i += parts.length;
+		}
+	}
+});
+
 const slugify = (text: string): string =>
 	text.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w\u4e00-\u9fff\-]/g, '');
 
