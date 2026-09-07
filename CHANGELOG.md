@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.25.0] - 2026-09-07
+
+- feat: Re-read file on browser refresh to pick up external changes
+
+
 ## [0.24.1] - 2026-09-05
 
 - fix: improve settings modal UI (server close options, tooltip, theme menu clipping)
