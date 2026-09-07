@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.25.1] - 2026-09-07
+
+- fix: bold (**text**) now works when preceded by CJK punctuation
+
+
 ## [0.25.0] - 2026-09-07
 
 - feat: Re-read file on browser refresh to pick up external changes
