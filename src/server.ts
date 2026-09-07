@@ -469,6 +469,24 @@ export class PreviewServer {
 				return;
 			}
 			entry.clients.add(ws);
+
+			// Re-read file on reconnect (browser refresh) to pick up external changes
+			if (entry.fullPath && entry.kind !== 'image' && entry.kind !== 'pdf') {
+				try {
+					const fresh = fs.readFileSync(entry.fullPath, 'utf-8');
+					if (fresh !== entry.content) {
+						entry.content = fresh;
+						const rendered = this.renderPage(entry.kind, entry.id, entry.title, fresh, entry.fullPath, entry.rootDir, entry.citeStyle);
+						entry.page = rendered.page;
+						entry.bodyHtml = rendered.bodyHtml;
+						const payload = JSON.stringify({ type: 'update', title: entry.title, html: entry.bodyHtml, fullPath: entry.fullPath, relPath: computeDisplayPath(entry.fullPath) });
+						for (const client of entry.clients) {
+							if (client.readyState === client.OPEN) { client.send(payload); }
+						}
+						debug('reconnect: file changed on disk, updated preview', entry.fullPath);
+					}
+				} catch { /* file may not exist anymore */ }
+			}
 			ws.on('message', (data) => {
 				let msg: { type?: string; style?: string; value?: boolean } | null = null;
 				try { msg = JSON.parse(data.toString()); } catch { /* ignore malformed */ }
