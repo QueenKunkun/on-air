@@ -386,6 +386,7 @@ export function FileTree({ id }: Props) {
             <input class="ft-search" type="text" placeholder="Filter: *.svg" value={searchQuery} onInput={(e: h.JSX.TargetedEvent<HTMLInputElement>) => setSearchQuery((e.target as HTMLInputElement).value)} onKeydown={(e: h.JSX.TargetedKeyboardEvent<HTMLInputElement>) => { if (e.key === 'Escape') setSearchQuery(''); }} />
             <span class="ft-filter-actions">
               <button class="ft-locate-btn" onClick={handleLocate} title="Scroll to current file">📍</button>
+              <button class="ft-locate-btn" onClick={() => window.dispatchEvent(new CustomEvent('onair:tree-refresh'))} title="Refresh file tree">↻</button>
               <button class="ft-x" onClick={() => window.dispatchEvent(new CustomEvent('onair:collapse-files'))} title="Hide file tree">×</button>
             </span>
           </div>
