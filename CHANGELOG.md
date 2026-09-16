@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.25.2] - 2026-09-16
+
+- feat: Add refresh button to file tree toolbar
+
+
 ## [0.25.1] - 2026-09-07
 
 - fix: bold (**text**) now works when preceded by CJK punctuation
