@@ -188,6 +188,7 @@ export class PreviewServer {
 	private wss: WebSocketServer;
 	private docs = new Map<string, DocEntry>();
 	private uriToId = new Map<string, string>();
+	private globalKeepAlive = false;
 	public port = 0;
 
 	constructor() {
@@ -303,7 +304,7 @@ export class PreviewServer {
 		if (!id) { return; }
 		const entry = this.docs.get(id);
 		if (entry) {
-			if (entry.keepAlive) { return; }
+			if (this.globalKeepAlive) { return; }
 			const payload = JSON.stringify({ type: 'closed' });
 			for (const client of entry.clients) {
 				if (client.readyState === client.OPEN) { client.send(payload); }
@@ -469,6 +470,7 @@ export class PreviewServer {
 				return;
 			}
 			entry.clients.add(ws);
+			entry.keepAlive = this.globalKeepAlive;
 
 			// Re-read file on reconnect (browser refresh) to pick up external changes
 			if (entry.fullPath && entry.kind !== 'image' && entry.kind !== 'pdf') {
@@ -493,7 +495,8 @@ export class PreviewServer {
 				if (!msg) { return; }
 
 				if (msg.type === 'keep-alive') {
-					entry.keepAlive = msg.value === true;
+					this.globalKeepAlive = msg.value === true;
+					for (const e of this.docs.values()) { e.keepAlive = this.globalKeepAlive; }
 					return;
 				}
 
