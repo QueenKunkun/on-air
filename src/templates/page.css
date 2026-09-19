@@ -205,6 +205,8 @@ body.xref-open { overflow: hidden; padding-right: var(--scrollbar-width, 0px); }
 /* Locate button */
 .ft-locate-btn { font-size: 14px; line-height: 1; cursor: pointer; background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; color: var(--quote-c); user-select: none; transition: background .15s; }
 .ft-locate-btn:hover { background: var(--pre-bg); color: var(--link-c); }
+.ft-refresh-btn { font-size: 14px; line-height: 1; cursor: pointer; background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; color: var(--quote-c); user-select: none; transition: background .15s; }
+.ft-refresh-btn:hover { background: var(--pre-bg); color: var(--link-c); }
 
 /* Close button */
 .ft-x { font-size: 14px; line-height: 1; cursor: pointer; background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; color: var(--quote-c); user-select: none; transition: background .15s; }
