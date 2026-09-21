@@ -132,9 +132,36 @@ export function Banner({ connStatus, wsSend, fullPath }: BannerProps) {
 		}).catch(() => {});
 	}, []);
 
-	const themes = window.__ONAIR__?.themes || [];
+	// Copy path split button
+	const [copyMode, setCopyMode] = useLocalStorage<string>(LS_KEYS.COPY_MODE, 'full');
+	const [copyMenuOpen, setCopyMenuOpen] = useState(false);
+	const copyMenuRef = useRef<HTMLDivElement>(null);
 	const displayPath = fullPath || window.__ONAIR__?.fullPath || '';
 	const rootDir = window.__ONAIR__?.rootDir || '';
+	const relPath = (rootDir && displayPath.startsWith(rootDir))
+		? displayPath.slice(rootDir.length).replace(/^\//, '')
+		: displayPath;
+
+	useEffect(() => {
+		if (!copyMenuOpen) return;
+		const close = (e: MouseEvent) => {
+			if (copyMenuRef.current && !copyMenuRef.current.contains(e.target as Node)) {
+				setCopyMenuOpen(false);
+			}
+		};
+		document.addEventListener('mousedown', close);
+		return () => document.removeEventListener('mousedown', close);
+	}, [copyMenuOpen]);
+
+	const handleCopyPath = useCallback(() => {
+		const text = copyMode === 'relative' ? relPath : displayPath;
+		navigator.clipboard?.writeText(text).then(() => {
+			setCopied(true);
+			setTimeout(() => setCopied(false), 1500);
+		}).catch(() => {});
+	}, [copyMode, relPath, displayPath]);
+
+	const themes = window.__ONAIR__?.themes || [];
 
 	// Split path into three parts: project root, relative dir, filename
 	let rootName = '';
@@ -170,6 +197,26 @@ export function Banner({ connStatus, wsSend, fullPath }: BannerProps) {
 					<span class="tb-filepath-sep">/</span>
 					<span class="tb-filepath-name">{fileName}</span>
 				</span>
+				<div class="tb-copy-wrap" ref={copyMenuRef}>
+					<button class="tb-copy-btn" title={copyMode === 'relative' ? 'Copy relative path' : 'Copy full path'} onClick={handleCopyPath}>
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+						</svg>
+					</button>
+					<button class="tb-copy-caret" onClick={() => setCopyMenuOpen(!copyMenuOpen)}>
+						<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3.5L5 6.5L8 3.5Z" /></svg>
+					</button>
+					{copyMenuOpen && (
+						<div class="tb-copy-menu">
+							<button class={'tb-copy-menu-item' + (copyMode === 'full' ? ' tb-copy-menu-active' : '')} onClick={() => { setCopyMode('full'); setCopyMenuOpen(false); }}>
+								Copy full path
+							</button>
+							<button class={'tb-copy-menu-item' + (copyMode === 'relative' ? ' tb-copy-menu-active' : '')} onClick={() => { setCopyMode('relative'); setCopyMenuOpen(false); }}>
+								Copy relative path
+							</button>
+						</div>
+					)}
+				</div>
 			</div>
 			<button class="tb-settings-btn" title="Settings" onClick={() => setSettingsOpen(true)}>
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
