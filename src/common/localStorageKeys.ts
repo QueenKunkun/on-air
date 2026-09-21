@@ -29,4 +29,7 @@ export const LS_KEYS = {
 
 	/** Related links */
 	RELATED_HEIGHT: 'onair-related-height',
+
+	/** Copy button mode: 'full' or 'relative' */
+	COPY_MODE: 'onair-copy-mode',
 } as const;
