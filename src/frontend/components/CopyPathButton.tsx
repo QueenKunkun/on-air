@@ -50,7 +50,7 @@ export function CopyPathButton({ fullPath }: CopyPathButtonProps) {
 					</svg>
 				)}
 			</button>
-			<button class="tb-copy-caret" onClick={() => setMenuOpen(!menuOpen)}>
+			<button class="tb-copy-caret" onMouseDown={(e) => { e.preventDefault(); setMenuOpen(!menuOpen); }}>
 				<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3.5L5 6.5L8 3.5Z" /></svg>
 			</button>
 			{menuOpen && (
