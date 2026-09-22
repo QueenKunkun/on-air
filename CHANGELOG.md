@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.25.4] - 2026-09-22
+
+- fix: Rewrite copy-path dropdown using native <details> for reliable toggle
+
+
 ## [0.25.2] - 2026-09-16
 
 - feat: Add refresh button to file tree toolbar

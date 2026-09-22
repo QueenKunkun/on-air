@@ -360,14 +360,14 @@ span.onair-unknown-html { display: inline; background: var(--pre-bg); padding: 2
 .tb-settings-btn { background: none; border: none; color: var(--bnr-c); opacity: .6; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 25px; height: 25px; border-radius: 4px; transition: opacity .15s, background .15s; padding: 0; flex-shrink: 0; margin-left: 4px; }
 .tb-settings-btn:hover { opacity: 1; background: rgba(128,128,128,.15); }
 .tb-copy-wrap { display: inline-flex; align-items: center; margin-left: 6px; flex-shrink: 0; position: relative; }
-.tb-copy-btn { background: none; border: none; color: var(--bnr-c); opacity: .5; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 4px 0 0 4px; transition: opacity .15s, background .15s; padding: 0; }
-.tb-copy-btn:hover { opacity: 1; background: rgba(128,128,128,.15); }
-.tb-copy-caret { background: none; border: none; border-left: 1px solid var(--border); color: var(--bnr-c); opacity: .5; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 22px; border-radius: 0 4px 4px 0; transition: opacity .15s, background .15s; padding: 0; }
-.tb-copy-caret:hover { opacity: 1; background: rgba(128,128,128,.15); }
-.tb-copy-caret svg { pointer-events: none; }
-.tb-copy-menu { position: fixed; z-index: 200; background: var(--dropdown-bg, var(--banner-bg)); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.2); padding: 4px 0; min-width: 160px; top: 100%; left: 0; margin-top: 4px; }
-.tb-copy-menu-item { display: block; width: 100%; text-align: left; background: none; border: none; color: var(--bnr-c); font-size: 12px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
-.tb-copy-menu-item:hover { background: rgba(128,128,128,.15); }
+.tb-copy-summary { list-style: none; display: inline-flex; align-items: center; gap: 0; cursor: pointer; margin: 0; padding: 0; background: none; border: none; color: var(--bnr-c); }
+.tb-copy-summary::-webkit-details-marker { display: none; }
+.tb-copy-summary::marker { display: none; content: ''; }
+.tb-copy-summary::after { content: ''; display: inline-block; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid currentColor; opacity: .5; margin-left: 4px; vertical-align: middle; }
+.tb-copy-summary:hover::after { opacity: 1; }
+.tb-copy-menu { position: fixed; z-index: 200; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.2); padding: 4px 0; min-width: 160px; margin-left: -100px; margin-top: 4px; }
+.tb-copy-menu-item { display: block; width: 100%; text-align: left; background: none; border: none; color: var(--text); font-size: 12px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.tb-copy-menu-item:hover { background: var(--pre-bg); color: var(--link-c); }
 .tb-copy-menu-active { color: var(--link-c); font-weight: 600; }
 
 /* Print styles - hide UI elements */
