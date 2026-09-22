@@ -11,7 +11,9 @@ export function CopyPathButton({ fullPath }: CopyPathButtonProps) {
 	const [copyMode, setCopyMode] = useLocalStorage<string>(LS_KEYS.COPY_MODE, 'full');
 	const [copied, setCopied] = useState(false);
 	const [menuOpen, setMenuOpen] = useState(false);
+	const [menuPos, setMenuPos] = useState<{ bottom: number; right: number }>({ bottom: 0, right: 0 });
 	const wrapRef = useRef<HTMLDivElement>(null);
+	const caretRef = useRef<HTMLButtonElement>(null);
 
 	const rootDir = window.__ONAIR__?.rootDir || '';
 	const relPath = (rootDir && fullPath.startsWith(rootDir))
@@ -72,11 +74,17 @@ export function CopyPathButton({ fullPath }: CopyPathButtonProps) {
 					</svg>
 				)}
 			</button>
-			<button class="tb-copy-caret" title="Copy options" onClick={() => setMenuOpen(!menuOpen)}>
+			<button class="tb-copy-caret" ref={caretRef} title="Copy options" onClick={() => {
+				if (!menuOpen && caretRef.current) {
+					const r = caretRef.current.getBoundingClientRect();
+					setMenuPos({ bottom: window.innerHeight - r.top + 4, right: window.innerWidth - r.right });
+				}
+				setMenuOpen(!menuOpen);
+			}}>
 				<svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style="pointer-events:none"><path d="M2 3.5L5 6.5L8 3.5Z" /></svg>
 			</button>
 			{menuOpen && (
-				<div class="tb-copy-menu">
+				<div class="tb-copy-menu" style={{ bottom: menuPos.bottom, right: menuPos.right }}>
 					<button class={'tb-copy-menu-item' + (copyMode === 'full' ? ' tb-copy-menu-active' : '')} onMouseDown={(e) => { e.preventDefault(); handleMenuSelect('full'); }}>
 						Copy full path
 					</button>
