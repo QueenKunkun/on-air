@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.25.6] - 2026-09-22
+
+- fix: Copy path dropdown menu positioning and event handling
+- fix: Relative path icon visually distinct from full path icon
+
+
 ## [0.25.4] - 2026-09-22
 
 - fix: Rewrite copy-path dropdown using native <details> for reliable toggle
