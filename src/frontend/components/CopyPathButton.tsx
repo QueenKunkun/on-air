@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { useState, useCallback, useRef, useEffect } from 'preact/hooks';
+import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { LS_KEYS } from '../../common/localStorageKeys';
 
@@ -11,25 +11,39 @@ export function CopyPathButton({ fullPath }: CopyPathButtonProps) {
 	const [copyMode, setCopyMode] = useLocalStorage<string>(LS_KEYS.COPY_MODE, 'full');
 	const [copied, setCopied] = useState(false);
 	const [menuOpen, setMenuOpen] = useState(false);
-	const [menuPos, setMenuPos] = useState<{ bottom: number; right: number }>({ bottom: 0, right: 0 });
 	const wrapRef = useRef<HTMLDivElement>(null);
-	const caretRef = useRef<HTMLButtonElement>(null);
+	const menuRef = useRef<HTMLDivElement>(null);
 
 	const rootDir = window.__ONAIR__?.rootDir || '';
 	const relPath = (rootDir && fullPath.startsWith(rootDir))
 		? fullPath.slice(rootDir.length).replace(/^\//, '')
 		: fullPath;
 
-	// Close menu on outside click (delayed one tick to avoid racing with caret click)
+	// Position fixed menu relative to caret button (same as ThemeSelect)
+	useEffect(() => {
+		if (!menuOpen || !menuRef.current || !wrapRef.current) return;
+		const caret = wrapRef.current.querySelector('.tb-copy-caret');
+		if (!caret) return;
+		const rect = caret.getBoundingClientRect();
+		menuRef.current.style.left = rect.left + 'px';
+		menuRef.current.style.top = (rect.bottom + 4) + 'px';
+	}, [menuOpen]);
+
+	// Close on outside click or Escape (same as ThemeSelect)
 	useEffect(() => {
 		if (!menuOpen) return;
-		const close = (e: MouseEvent) => {
-			if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-				setMenuOpen(false);
-			}
+		const onDown = (e: MouseEvent) => {
+			if (!wrapRef.current?.contains(e.target as Node)) setMenuOpen(false);
 		};
-		const timer = setTimeout(() => document.addEventListener('mousedown', close), 0);
-		return () => { clearTimeout(timer); document.removeEventListener('mousedown', close); };
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') setMenuOpen(false);
+		};
+		document.addEventListener('mousedown', onDown);
+		document.addEventListener('keydown', onKey);
+		return () => {
+			document.removeEventListener('mousedown', onDown);
+			document.removeEventListener('keydown', onKey);
+		};
 	}, [menuOpen]);
 
 	const doCopy = useCallback((mode: string) => {
@@ -40,9 +54,7 @@ export function CopyPathButton({ fullPath }: CopyPathButtonProps) {
 		}).catch(() => {});
 	}, [relPath, fullPath]);
 
-	const handleCopy = useCallback(() => {
-		doCopy(copyMode);
-	}, [copyMode, doCopy]);
+	const handleCopy = useCallback(() => doCopy(copyMode), [copyMode, doCopy]);
 
 	const handleMenuSelect = useCallback((mode: string) => {
 		setCopyMode(mode);
@@ -52,11 +64,7 @@ export function CopyPathButton({ fullPath }: CopyPathButtonProps) {
 
 	return (
 		<div class={'tb-copy-wrap' + (copied ? ' tb-copy-flash' : '')} ref={wrapRef}>
-			<button
-				class="tb-copy-btn"
-				title={copied ? 'Copied!' : (copyMode === 'relative' ? 'Copy relative path' : 'Copy full path')}
-				onClick={handleCopy}
-			>
+			<button class="tb-copy-btn" title={copied ? 'Copied!' : (copyMode === 'relative' ? 'Copy relative path' : 'Copy full path')} onClick={handleCopy}>
 				{copied ? (
 					<svg class="tb-copy-icon tb-copy-icon--check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
 						<polyline points="20 6 9 17 4 12" />
@@ -74,21 +82,15 @@ export function CopyPathButton({ fullPath }: CopyPathButtonProps) {
 					</svg>
 				)}
 			</button>
-			<button class="tb-copy-caret" ref={caretRef} title="Copy options" onClick={() => {
-				if (!menuOpen && caretRef.current) {
-					const r = caretRef.current.getBoundingClientRect();
-					setMenuPos({ bottom: window.innerHeight - r.top + 4, right: window.innerWidth - r.right });
-				}
-				setMenuOpen(!menuOpen);
-			}}>
+			<button class="tb-copy-caret" title="Copy options" onClick={() => setMenuOpen(o => !o)}>
 				<svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style="pointer-events:none"><path d="M2 3.5L5 6.5L8 3.5Z" /></svg>
 			</button>
 			{menuOpen && (
-				<div class="tb-copy-menu" style={{ bottom: menuPos.bottom, right: menuPos.right }}>
-					<button class={'tb-copy-menu-item' + (copyMode === 'full' ? ' tb-copy-menu-active' : '')} onMouseDown={(e) => { e.preventDefault(); handleMenuSelect('full'); }}>
+				<div ref={menuRef} class="tb-copy-menu">
+					<button class={'tb-copy-menu-item' + (copyMode === 'full' ? ' tb-copy-menu-active' : '')} onClick={() => handleMenuSelect('full')}>
 						Copy full path
 					</button>
-					<button class={'tb-copy-menu-item' + (copyMode === 'relative' ? ' tb-copy-menu-active' : '')} onMouseDown={(e) => { e.preventDefault(); handleMenuSelect('relative'); }}>
+					<button class={'tb-copy-menu-item' + (copyMode === 'relative' ? ' tb-copy-menu-active' : '')} onClick={() => handleMenuSelect('relative')}>
 						Copy relative path
 					</button>
 				</div>
