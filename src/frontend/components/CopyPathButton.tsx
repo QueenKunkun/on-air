@@ -73,7 +73,8 @@ export function CopyPathButton({ fullPath }: CopyPathButtonProps) {
 					<svg class="tb-copy-icon tb-copy-icon--rel" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
 						<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-						<text x="3" y="13" font-size="7" font-weight="700" fill="currentColor" stroke="none" font-family="monospace">./</text>
+						<circle cx="5" cy="5" r="3" fill="var(--link-c)" stroke="none" />
+						<text x="5" y="6.5" font-size="4" font-weight="700" fill="#fff" stroke="none" text-anchor="middle" font-family="monospace">~</text>
 					</svg>
 				) : (
 					<svg class="tb-copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
