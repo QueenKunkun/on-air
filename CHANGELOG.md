@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.25.7] - 2026-09-26
+
+- fix: Publish script reads VSCE_PAT from .env
+
+
 ## [0.25.6] - 2026-09-22
 
 - fix: Copy path dropdown menu positioning and event handling
