@@ -21,7 +21,7 @@ will be rendered like this:
 - **Table of contents** — nested navigation, scroll tracking, resizable, collapsible; shows the file's relative path; plus a **Related documents** list, and relative links to other docs open as previews
 - **File tree** — project file tree with search (`*.svg`), filter (`.md`, `.gitignore`, unsupported files), expand-to-current-file, and state persistence
 - **Filename search** — a "Search" tab in the Files panel filters files by name with match highlighting
-- **Git diff highlight** — toggle colored highlights for changed lines; compare workspace vs HEAD, HEAD vs HEAD~1, or any two commits
+- **Git diff highlight** — toggle colored highlights for changed lines; compare any two commits or workspace with inline from/to selectors and a swap button
 - **Scroll progress bar** — a thin bar at the top of the viewport tracks reading progress
 - **Code file preview** — JSON/JS/TS/CSS/TXT/LOG files open inline with JSON syntax highlighting
 - **Multi-theme** — 16 preset themes

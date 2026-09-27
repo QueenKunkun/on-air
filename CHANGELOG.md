@@ -1,8 +1,8 @@
 # Change Log
 
-## [0.26.0] - 2026-09-27
+## [0.28.0] - 2026-09-27
 
-- feat: Add git diff highlight — show changed lines in color with a toolbar toggle; compare workspace vs HEAD, HEAD vs HEAD~1, or any two commits
+- feat: Add git diff highlight — toggle colored highlights for changed lines; compare any two commits or workspace with inline from/to selectors and a swap button
 - feat: Add scroll progress bar at the top of the preview
 - feat: Replace content search with filename search in the Search tab
 

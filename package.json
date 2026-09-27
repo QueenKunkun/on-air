@@ -1,126 +1,126 @@
 {
-	"name": "on-air",
-	"displayName": "OnAir",
-	"license": "MIT",
-	"publisher": "KristinZhang",
-	"description": "Turn the currently open Markdown or HTML file into a live local preview link you can open in a browser or copy and share, refreshing instantly as you edit.",
-	"icon": "images/icon.png",
-	"repository": {
-		"url": "https://github.com/QueenKunkun/on-air"
-	},
-	"bugs": {
-		"url": "https://github.com/QueenKunkun/on-air/issues",
-		"email": "742711819@qq.com"
-	},
-	"version": "0.27.9",
-	"engines": {
-		"vscode": "^1.85.0"
-	},
-	"categories": [
-		"Other"
-	],
-	"activationEvents": [
-		"onCommand:onAir.generateUrl",
-		"onCommand:onAir.exportPreviewHtml"
-	],
-	"main": "./dist/extension.js",
-	"contributes": {
-		"commands": [
-			{
-				"command": "onAir.generateUrl",
-				"title": "OnAir: Generate Live Preview Link",
-				"icon": "$(globe)"
-			},
-			{
-				"command": "onAir.exportPreviewHtml",
-				"title": "OnAir: Export Preview HTML (debug)"
-			}
-		],
-		"menus": {
-			"editor/title": [
-				{
-					"command": "onAir.generateUrl",
-					"when": "editorLangId == markdown || editorLangId == html || resourceExtname =~ /\\.(png|jpe?g|gif|webp|avif|bmp|ico|svg|pdf)$/i",
-					"group": "navigation"
-				}
-			],
-			"editor/context": [
-				{
-					"command": "onAir.generateUrl",
-					"when": "editorLangId == markdown || editorLangId == html || resourceExtname =~ /\\.(png|jpe?g|gif|webp|avif|bmp|ico|svg|pdf)$/i",
-					"group": "9_markdown"
-				}
-			],
-			"commandPalette": [
-				{
-					"command": "onAir.generateUrl",
-					"when": "editorLangId == markdown || editorLangId == html || resourceExtname =~ /\\.(png|jpe?g|gif|webp|avif|bmp|ico|svg|pdf)$/i"
-				}
-			]
-		}
-	},
-	"scripts": {
-		"vscode:prepublish": "pnpm run build:frontend && pnpm run package",
-		"build:frontend": "esbuild src/frontend/index.tsx --bundle --minify --outfile=dist/preview.js --jsx-factory=h --jsx-fragment=Fragment --format=iife",
-		"watch:frontend": "esbuild src/frontend/index.tsx --bundle --minify --outfile=dist/preview.js --jsx-factory=h --jsx-fragment=Fragment --format=iife --watch",
-		"compile": "node scripts/copy-katex-fonts.mjs && node scripts/copy-ripgrep.mjs && webpack",
-		"watch": "pnpm run build:frontend && concurrently -n fe,ext -c cyan,green 'pnpm:watch:frontend' 'webpack --watch'",
-		"package": "node scripts/copy-katex-fonts.mjs && node scripts/copy-ripgrep.mjs && webpack --mode production --devtool hidden-source-map",
-		"compile-tests": "tsc -p . --outDir out",
-		"watch-tests": "tsc -p . -w --outDir out",
-		"pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
-		"lint": "eslint src",
-		"test": "vscode-test",
-		"test:all": "pnpm test:unit && pnpm test:e2e",
-		"test:unit": "node scripts/copy-katex-fonts.mjs && node scripts/copy-ripgrep.mjs && npx tsx --test",
-		"test:e2e": "npx playwright test",
-		"publish-all": "node scripts/check-size.mjs && pnpm publish-vsce && pnpm publish-ovsx",
-		"package-vsix": "npx @vscode/vsce package --no-dependencies",
-		"install-local": "bash scripts/install-local.sh",
-		"publish-vsce": "bash -c 'source .env && VSCE_PAT=$VSCE_PAT npx @vscode/vsce publish --packagePath on-air.vsix --no-dependencies'",
-		"publish-ovsx": "bash -c 'source .env && npx ovsx publish on-air.vsix -p $vsx_token --no-dependencies'"
-	},
-	"devDependencies": {
-		"@playwright/test": "^1.61.1",
-		"@types/markdown-it": "^14.1.2",
-		"@types/node": "22.x",
-		"@types/vscode": "^1.85.0",
-		"@types/ws": "^8.5.10",
-		"@typescript-eslint/eslint-plugin": "^8.42.0",
-		"@typescript-eslint/parser": "^8.42.0",
-		"concurrently": "^10.0.3",
-		"esbuild": "^0.28.1",
-		"eslint": "^9.34.0",
-		"ts-loader": "^9.5.4",
-		"tsx": "^4.23.1",
-		"typescript": "^5.9.2",
-		"webpack": "^5.101.3",
-		"webpack-cli": "^6.0.1"
-	},
-	"dependencies": {
-		"@vscode/ripgrep": "^1.18.0",
-		"@vscode/markdown-it-katex": "^1.1.2",
-		"highlight.js": "^11.11.1",
-		"htm": "^3.1.1",
-		"ignore": "^7.0.6",
-		"katex": "^0.18.4",
-		"markdown-it": "^14.1.0",
-		"markdown-it-footnote": "^4.0.0",
-		"markdown-it-mark": "^4.0.0",
-		"preact": "^10.29.7",
-		"ws": "^8.16.0"
-	},
-	"keywords": [
-		"markdown",
-		"html",
-		"preview",
-		"live reload",
-		"share link"
-	],
-	"pnpm": {
-		"onlyBuiltDependencies": [
-			"esbuild"
-		]
-	},
-	"packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621"
+  "name": "on-air",
+  "displayName": "OnAir",
+  "license": "MIT",
+  "publisher": "KristinZhang",
+  "description": "Turn the currently open Markdown or HTML file into a live local preview link you can open in a browser or copy and share, refreshing instantly as you edit.",
+  "icon": "images/icon.png",
+  "repository": {
+    "url": "https://github.com/QueenKunkun/on-air"
+  },
+  "bugs": {
+    "url": "https://github.com/QueenKunkun/on-air/issues",
+    "email": "742711819@qq.com"
+  },
+  "version": "0.28.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:onAir.generateUrl",
+    "onCommand:onAir.exportPreviewHtml"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "onAir.generateUrl",
+        "title": "OnAir: Generate Live Preview Link",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "onAir.exportPreviewHtml",
+        "title": "OnAir: Export Preview HTML (debug)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "onAir.generateUrl",
+          "when": "editorLangId == markdown || editorLangId == html || resourceExtname =~ /\\.(png|jpe?g|gif|webp|avif|bmp|ico|svg|pdf)$/i",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "onAir.generateUrl",
+          "when": "editorLangId == markdown || editorLangId == html || resourceExtname =~ /\\.(png|jpe?g|gif|webp|avif|bmp|ico|svg|pdf)$/i",
+          "group": "9_markdown"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "onAir.generateUrl",
+          "when": "editorLangId == markdown || editorLangId == html || resourceExtname =~ /\\.(png|jpe?g|gif|webp|avif|bmp|ico|svg|pdf)$/i"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run build:frontend && pnpm run package",
+    "build:frontend": "esbuild src/frontend/index.tsx --bundle --minify --outfile=dist/preview.js --jsx-factory=h --jsx-fragment=Fragment --format=iife",
+    "watch:frontend": "esbuild src/frontend/index.tsx --bundle --minify --outfile=dist/preview.js --jsx-factory=h --jsx-fragment=Fragment --format=iife --watch",
+    "compile": "node scripts/copy-katex-fonts.mjs && node scripts/copy-ripgrep.mjs && webpack",
+    "watch": "pnpm run build:frontend && concurrently -n fe,ext -c cyan,green 'pnpm:watch:frontend' 'webpack --watch'",
+    "package": "node scripts/copy-katex-fonts.mjs && node scripts/copy-ripgrep.mjs && webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test",
+    "test:all": "pnpm test:unit && pnpm test:e2e",
+    "test:unit": "node scripts/copy-katex-fonts.mjs && node scripts/copy-ripgrep.mjs && npx tsx --test",
+    "test:e2e": "npx playwright test",
+    "publish-all": "node scripts/check-size.mjs && pnpm publish-vsce && pnpm publish-ovsx",
+    "package-vsix": "npx @vscode/vsce package --no-dependencies",
+    "install-local": "bash scripts/install-local.sh",
+    "publish-vsce": "bash -c 'source .env && VSCE_PAT=$VSCE_PAT npx @vscode/vsce publish --packagePath on-air.vsix --no-dependencies'",
+    "publish-ovsx": "bash -c 'source .env && npx ovsx publish on-air.vsix -p $vsx_token --no-dependencies'"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.85.0",
+    "@types/ws": "^8.5.10",
+    "@typescript-eslint/eslint-plugin": "^8.42.0",
+    "@typescript-eslint/parser": "^8.42.0",
+    "concurrently": "^10.0.3",
+    "esbuild": "^0.28.1",
+    "eslint": "^9.34.0",
+    "ts-loader": "^9.5.4",
+    "tsx": "^4.23.1",
+    "typescript": "^5.9.2",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "@vscode/ripgrep": "^1.18.0",
+    "@vscode/markdown-it-katex": "^1.1.2",
+    "highlight.js": "^11.11.1",
+    "htm": "^3.1.1",
+    "ignore": "^7.0.6",
+    "katex": "^0.18.4",
+    "markdown-it": "^14.1.0",
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-mark": "^4.0.0",
+    "preact": "^10.29.7",
+    "ws": "^8.16.0"
+  },
+  "keywords": [
+    "markdown",
+    "html",
+    "preview",
+    "live reload",
+    "share link"
+  ],
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621"
 }
