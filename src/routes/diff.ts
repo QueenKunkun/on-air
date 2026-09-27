@@ -29,7 +29,10 @@ function runGit(args: string[], cwd: string, timeoutMs = 5000): Promise<string> 
 		let err = '';
 		proc.stdout.on('data', (d) => { out += d; });
 		proc.stderr.on('data', (d) => { err += d; });
-		proc.on('close', (code) => { resolve(code === 0 ? out : err); });
+		proc.on('close', (code) => {
+			// git diff --no-index exits 1 when files differ; stdout has the diff
+			if (out || code === 0) resolve(out); else resolve(err);
+		});
 		proc.on('error', () => { resolve(''); });
 	});
 }
