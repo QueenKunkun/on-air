@@ -4,7 +4,7 @@ import type { TreeEntry } from './types';
 import { MARKDOWN_EXTS, markdownExtFilter } from '../common/extensions';
 import { LS_KEYS } from '../common/localStorageKeys';
 import { openFile } from './fileOpen';
-import { FileSearch } from './FileSearch';
+import { FilenameSearch } from './FilenameSearch';
 
 interface Props {
   id: string;
@@ -375,7 +375,7 @@ export function FileTree({ id }: Props) {
         <button class={'ft-tab' + (mode === 'search' ? ' ft-tab-active' : '')} onClick={() => setMode('search')}>Search</button>
       </div>
       {mode === 'search' ? (
-        <FileSearch id={id} />
+        <FilenameSearch id={id} entries={fileIndex} />
       ) : (
         <>
           <div class="ft-filter">
