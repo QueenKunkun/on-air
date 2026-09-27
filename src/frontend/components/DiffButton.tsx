@@ -1,4 +1,4 @@
-import { h } from 'preact';
+import { h, Fragment } from 'preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { LS_KEYS } from '../../common/localStorageKeys';
