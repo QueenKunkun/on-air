@@ -384,7 +384,7 @@ span.onair-unknown-html { display: inline; background: var(--pre-bg); padding: 2
 .tb-diff-caret svg { pointer-events: none; }
 .tb-diff-menu { position: fixed; z-index: 200; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.2); padding: 4px 0; min-width: 180px; max-height: 340px; display: flex; flex-direction: column; }
 .tb-diff-menu-label { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--bnr-c); opacity: .5; padding: 6px 12px 2px; flex-shrink: 0; }
-.tb-diff-menu-item { display: block; width: 100%; text-align: left; background: none; border: none; color: var(--text); font-size: 12px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.tb-diff-menu-item { display: block; width: 100%; text-align: left; background: none; border: none; color: var(--text); font-size: 12px; padding: 6px 12px; cursor: pointer; white-space: nowrap; user-select: none; -webkit-user-select: none; }
 .tb-diff-menu-item:hover { background: var(--pre-bg); color: var(--link-c); }
 .tb-diff-menu-active { color: var(--link-c); font-weight: 600; }
 .tb-diff-menu-item:disabled { opacity: .4; cursor: default; }
@@ -397,7 +397,7 @@ span.onair-unknown-html { display: inline; background: var(--pre-bg); padding: 2
 .tb-diff-menu-confirm:disabled { opacity: .4; }
 .tb-diff-label { font-size: 11px; color: var(--bnr-c); opacity: .7; margin-left: 4px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tb-diff-commit-list { overflow-y: auto; flex: 0 1 auto; min-height: 0; }
-.tb-diff-commit-item { display: flex; gap: 8px; align-items: baseline; width: 100%; text-align: left; background: none; border: none; color: var(--text); font-size: 12px; padding: 5px 12px; cursor: pointer; }
+.tb-diff-commit-item { display: flex; gap: 8px; align-items: baseline; width: 100%; text-align: left; background: none; border: none; color: var(--text); font-size: 12px; padding: 5px 12px; cursor: pointer; user-select: none; -webkit-user-select: none; }
 .tb-diff-commit-item:hover:not(:disabled) { background: var(--pre-bg); color: var(--link-c); }
 .tb-diff-commit-item:disabled { opacity: .3; cursor: default; }
 .tb-diff-commit-hash { font-family: monospace; color: var(--link-c); flex-shrink: 0; }
