@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import * as fs from 'fs';
 import * as path from 'path';
 import { debugWarn } from '../common/debug';
 import { isDangerousRootDir, toPosix } from './utils';
@@ -33,25 +34,30 @@ function runGit(args: string[], cwd: string, timeoutMs = 5000): Promise<string> 
 	});
 }
 
-function parseUnifiedDiff(diff: string): DiffRange[] {
+// Parse unified diff, returning ranges with line numbers from the requested side.
+// side 'new' = "+" line nums (right side), side 'old' = "-" line nums (left side).
+function parseUnifiedDiff(diff: string, side: 'old' | 'new' = 'new'): DiffRange[] {
 	const ranges: DiffRange[] = [];
 	const lines = diff.split('\n');
+	let oldLine = 0;
 	let newLine = 0;
+	const cur = () => side === 'old' ? oldLine : newLine;
 	for (const line of lines) {
-		const hunkMatch = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+		const hunkMatch = line.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
 		if (hunkMatch) {
-			newLine = parseInt(hunkMatch[1], 10);
+			oldLine = parseInt(hunkMatch[1], 10);
+			newLine = parseInt(hunkMatch[2], 10);
 			continue;
 		}
 		if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('diff ') || line.startsWith('index ')) continue;
 		if (line.startsWith('+')) {
-			ranges.push({ type: 'add', startLine: newLine, endLine: newLine });
+			ranges.push({ type: 'add', startLine: cur(), endLine: cur() });
 			newLine++;
 		} else if (line.startsWith('-')) {
-			// Deleted line: exists in "from" but not "to". Mark the position in
-			// the "to" file where it was removed (current newLine).
-			ranges.push({ type: 'del', startLine: newLine, endLine: newLine });
+			ranges.push({ type: 'del', startLine: cur(), endLine: cur() });
+			oldLine++;
 		} else if (line.startsWith(' ') || line === '') {
+			oldLine++;
 			newLine++;
 		}
 	}
@@ -120,16 +126,34 @@ export function handleDiff(
 	// Custom range: commit..commit, commit..workspace, or workspace..commit
 	if (range === 'commits' && from && to) {
 		const isToWorkspace = to === 'workspace';
-		let gitArgs: string[];
-		if (from === 'workspace') {
-			gitArgs = ['diff', to, '--', relFile];
-		} else if (isToWorkspace) {
-			gitArgs = ['diff', from, '--', relFile];
-		} else {
-			gitArgs = ['diff', `${from}..${to}`, '--', relFile];
-		}
+		const isFromWorkspace = from === 'workspace';
+
+		const buildDiff = (): Promise<string> => {
+			if (isFromWorkspace && isToWorkspace) return Promise.resolve('');
+			if (isFromWorkspace && !isToWorkspace) {
+				// Rendering "to" commit content. We need diff where the "to"
+				// content is on the RIGHT side (+) so line nums match what we
+				// render. git diff --no-index <old> <new>: +nums = <new>.
+				return runGit(['show', `${to}:${relFile}`], rootDir).then((toContent) => {
+					if (!toContent || toContent.startsWith('fatal')) return '';
+					const tmp = path.join(rootDir, '.onair-diff-tmp');
+					fs.writeFileSync(tmp, toContent);
+					// --no-index <workspace> <to-content>: +nums = to-content
+					return runGit(['diff', '--no-index', '--', entry.fullPath!, tmp], rootDir)
+						.then((d) => {
+							try { fs.unlinkSync(tmp); } catch {}
+							return d.replace(/b\/\.onair-diff-tmp/g, 'b/' + relFile);
+						});
+				});
+			}
+			if (!isFromWorkspace && isToWorkspace) {
+				return runGit(['diff', from, '--', relFile], rootDir);
+			}
+			return runGit(['diff', `${from}..${to}`, '--', relFile], rootDir);
+		};
+
 		Promise.all([
-			runGit(gitArgs, rootDir),
+			buildDiff(),
 			isToWorkspace ? Promise.resolve(null) : renderAtCommit(to),
 		]).then(([diff, toHtml]) => {
 			if (!diff.trim()) { send('none', [], toHtml); return; }
