@@ -32,7 +32,7 @@ export function DiffButton() {
 		menuRef.current.style.top = (rect.bottom + 4) + 'px';
 	}, [menuOpen, showCommitPicker]);
 
-	// Close on outside click / Escape
+	// Close on outside click / Escape (same as ThemeSelect / CopyPathButton)
 	useEffect(() => {
 		if (!menuOpen) return;
 		const onDown = (e: MouseEvent) => {
@@ -127,7 +127,7 @@ export function DiffButton() {
 					<path d="M12 5v14" /><path d="M5 12h14" />
 				</svg>
 			</button>
-			<button class="tb-diff-caret" title="Diff options" onMouseDown={(e) => { e.preventDefault(); setMenuOpen(o => !o); }}>
+			<button class="tb-diff-caret" title="Diff options" onClick={() => setMenuOpen(o => !o)}>
 				<svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style="pointer-events:none"><path d="M2 3.5L5 6.5L8 3.5Z" /></svg>
 			</button>
 			{menuOpen && (
