@@ -29,6 +29,7 @@
 </script>
 </head>
 <body>
+	<div id="scroll-progress"></div>
 	<div class="md-online-banner" id="banner"></div>
 	<div id="wrapper"><div id="filesSide"><div id="fileTree"><div id="ft-preact-root" data-id="{{ID}}" data-fullpath="{{FULL_PATH_ATTR}}" data-rootdir="{{ROOT_DIR_ATTR}}"></div></div></div><div class="files-resizer" id="filesResizer"></div><div id="tocCol"><nav id="toc" class="toc"></nav></div><div class="toc-resizer" id="tocResizer"></div><div id="edgeHandles"><div class="edge-handle" data-panel="files" title="Show file tree">Files</div><div class="edge-handle" data-panel="toc" title="Show table of contents">TOC</div></div><article class="markdown-body" id="content">{{BODY}}</article><div class="annot-resizer" id="annotResizer"></div><div id="annotSide"><div id="annots"></div><button id="annotToggle" class="annot-toggle" aria-label="Toggle annotations">&gt;</button></div></div>
 	<script>
@@ -60,5 +61,23 @@
 	};
 	</script>
 	<script>{{PREACT_JS}}</script>
+	<script>
+	(function () {
+		var bar = document.getElementById('scroll-progress');
+		if (!bar) return;
+		var ticking = false;
+		function update() {
+			var scrollTop = window.scrollY || document.documentElement.scrollTop;
+			var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+			var pct = docHeight > 0 ? Math.min(100, (scrollTop / docHeight) * 100) : 0;
+			bar.style.width = pct + '%';
+			ticking = false;
+		}
+		window.addEventListener('scroll', function () {
+			if (!ticking) { requestAnimationFrame(update); ticking = true; }
+		}, { passive: true });
+		update();
+	})();
+	</script>
 </body>
 </html>
