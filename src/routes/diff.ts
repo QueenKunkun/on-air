@@ -22,7 +22,7 @@ export interface DiffResponse {
 
 type Resp = { writeHead(code: number, headers?: Record<string, string>): void; end(body?: string | Buffer): void };
 
-function runGit(args: string[], cwd: string, timeoutMs = 5000): Promise<string> {
+export function runGit(args: string[], cwd: string, timeoutMs = 5000): Promise<string> {
 	return new Promise((resolve) => {
 		const proc = spawn('git', args, { cwd, timeout: timeoutMs });
 		let out = '';
@@ -39,7 +39,7 @@ function runGit(args: string[], cwd: string, timeoutMs = 5000): Promise<string> 
 
 // Parse unified diff, returning ranges with line numbers from the requested side.
 // side 'new' = "+" line nums (right side), side 'old' = "-" line nums (left side).
-function parseUnifiedDiff(diff: string, side: 'old' | 'new' = 'new'): DiffRange[] {
+export function parseUnifiedDiff(diff: string, side: 'old' | 'new' = 'new'): DiffRange[] {
 	const ranges: DiffRange[] = [];
 	const lines = diff.split('\n');
 	let oldLine = 0;
@@ -68,7 +68,7 @@ function parseUnifiedDiff(diff: string, side: 'old' | 'new' = 'new'): DiffRange[
 }
 
 // Merge consecutive ranges of same type
-function mergeRanges(ranges: DiffRange[]): DiffRange[] {
+export function mergeRanges(ranges: DiffRange[]): DiffRange[] {
 	if (ranges.length <= 1) return ranges;
 	const sorted = [...ranges].sort((a, b) => a.startLine - b.startLine || a.type.localeCompare(b.type));
 	const out: DiffRange[] = [];
@@ -84,6 +84,44 @@ function mergeRanges(ranges: DiffRange[]): DiffRange[] {
 	}
 	out.push(cur);
 	return out;
+}
+
+/**
+ * Build the git diff command output for a from..to range.
+ * Invariant: the rendered "to" side must be on the RIGHT side of the diff
+ * so that +line numbers always correspond to the rendered content.
+ */
+export async function buildDiff(
+	rootDir: string,
+	relFile: string,
+	fullPath: string,
+	from: string,
+	to: string,
+): Promise<string> {
+	const isFromWorkspace = from === 'workspace';
+	const isToWorkspace = to === 'workspace';
+
+	if (isFromWorkspace && isToWorkspace) return '';
+	if (isFromWorkspace && !isToWorkspace) {
+		// Rendering "to" commit. Write to-content to tmp, diff workspace..tmp
+		// so +nums = to-content line numbers.
+		const toContent = await runGit(['show', `${to}:${relFile}`], rootDir);
+		if (!toContent || toContent.startsWith('fatal')) return '';
+		const tmp = path.join(rootDir, '.onair-diff-tmp');
+		fs.writeFileSync(tmp, toContent);
+		try {
+			const d = await runGit(['diff', '--no-index', '--', fullPath, tmp], rootDir);
+			return d.replace(/b\/\.onair-diff-tmp/g, 'b/' + relFile);
+		} finally {
+			try { fs.unlinkSync(tmp); } catch {}
+		}
+	}
+	if (!isFromWorkspace && isToWorkspace) {
+		// Rendering workspace. git diff <from> -- file: +nums = workspace.
+		return runGit(['diff', from, '--', relFile], rootDir);
+	}
+	// Rendering "to" commit. git diff <from>..<to>: +nums = to.
+	return runGit(['diff', `${from}..${to}`, '--', relFile], rootDir);
 }
 
 export function handleDiff(
@@ -131,32 +169,8 @@ export function handleDiff(
 		const isToWorkspace = to === 'workspace';
 		const isFromWorkspace = from === 'workspace';
 
-		const buildDiff = (): Promise<string> => {
-			if (isFromWorkspace && isToWorkspace) return Promise.resolve('');
-			if (isFromWorkspace && !isToWorkspace) {
-				// Rendering "to" commit content. We need diff where the "to"
-				// content is on the RIGHT side (+) so line nums match what we
-				// render. git diff --no-index <old> <new>: +nums = <new>.
-				return runGit(['show', `${to}:${relFile}`], rootDir).then((toContent) => {
-					if (!toContent || toContent.startsWith('fatal')) return '';
-					const tmp = path.join(rootDir, '.onair-diff-tmp');
-					fs.writeFileSync(tmp, toContent);
-					// --no-index <workspace> <to-content>: +nums = to-content
-					return runGit(['diff', '--no-index', '--', entry.fullPath!, tmp], rootDir)
-						.then((d) => {
-							try { fs.unlinkSync(tmp); } catch {}
-							return d.replace(/b\/\.onair-diff-tmp/g, 'b/' + relFile);
-						});
-				});
-			}
-			if (!isFromWorkspace && isToWorkspace) {
-				return runGit(['diff', from, '--', relFile], rootDir);
-			}
-			return runGit(['diff', `${from}..${to}`, '--', relFile], rootDir);
-		};
-
 		Promise.all([
-			buildDiff(),
+			buildDiff(rootDir, relFile, entry.fullPath!, from, to),
 			isToWorkspace ? Promise.resolve(null) : renderAtCommit(to),
 		]).then(([diff, toHtml]) => {
 			if (!diff.trim()) { send('none', [], toHtml); return; }
