@@ -132,9 +132,21 @@ export function DiffButton() {
 					{!showCommitPicker ? (
 						<>
 							<div class="tb-diff-menu-label">Compare</div>
-							<button class={'tb-diff-menu-item' + (mode === 'auto' ? ' tb-diff-menu-active' : '')} onClick={() => handleModeSelect('auto')}>
-								Workspace vs last change
-							</button>
+							<div class="tb-diff-menu-row">
+								<button class={'tb-diff-menu-item' + (mode === 'auto' ? ' tb-diff-menu-active' : '')} onClick={() => handleModeSelect('auto')}>
+									Workspace vs last change
+								</button>
+								<button class="tb-diff-swap" title="Reverse comparison direction" onClick={() => {
+									if (mode === 'auto') setMode('HEAD~1');
+									else if (mode === 'HEAD~1') setMode('auto');
+									if (!enabled) setEnabled(true);
+								}}>
+									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M7 16V4m0 0L3 8m4-4l4 4" />
+										<path d="M17 8v12m0 0l4-4m-4 4l-4-4" />
+									</svg>
+								</button>
+							</div>
 							<button class={'tb-diff-menu-item' + (mode === 'workspace' ? ' tb-diff-menu-active' : '')} onClick={() => handleModeSelect('workspace')}>
 								Workspace vs HEAD
 							</button>
@@ -167,20 +179,6 @@ export function DiffButton() {
 										<span class="tb-diff-commit-msg">{c.message}</span>
 									</button>
 								))}
-							</div>
-							<div class="tb-diff-swap-row">
-								<button
-									class="tb-diff-swap"
-									title="Swap from/to"
-									disabled={!fromCommit && !toCommit}
-									onClick={() => { const f = fromCommit; setFromCommit(toCommit); setToCommit(f); }}
-								>
-									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<path d="M7 16V4m0 0L3 8m4-4l4 4" />
-										<path d="M17 8v12m0 0l4-4m-4 4l-4-4" />
-									</svg>
-									Swap
-								</button>
 							</div>
 							<div class="tb-diff-menu-label">To (newer)</div>
 							<div class="tb-diff-commit-list">

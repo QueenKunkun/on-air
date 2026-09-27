@@ -408,10 +408,10 @@ span.onair-unknown-html { display: inline; background: var(--pre-bg); padding: 2
 .diff-del { background: rgba(239,68,68,.10); border-left: 3px solid #ef4444; padding-left: 8px; margin-left: -11px; }
 
 /* Diff swap */
-.tb-diff-swap-row { display: flex; justify-content: center; padding: 2px 0; flex-shrink: 0; }
-.tb-diff-swap { display: inline-flex; align-items: center; gap: 4px; background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--bnr-c); font-size: 11px; padding: 3px 10px; cursor: pointer; opacity: .7; transition: opacity .15s; }
-.tb-diff-swap:hover:not(:disabled) { opacity: 1; background: var(--pre-bg); }
-.tb-diff-swap:disabled { opacity: .3; cursor: default; }
+.tb-diff-menu-row { display: flex; align-items: center; gap: 4px; }
+.tb-diff-menu-row .tb-diff-menu-item { flex: 1; }
+.tb-diff-swap { display: inline-flex; align-items: center; justify-content: center; background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--bnr-c); width: 26px; height: 24px; cursor: pointer; opacity: .6; transition: opacity .15s; flex-shrink: 0; padding: 0; }
+.tb-diff-swap:hover { opacity: 1; background: var(--pre-bg); }
 
 /* Print styles - hide UI elements */
 @media print {
