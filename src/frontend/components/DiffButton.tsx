@@ -12,6 +12,7 @@ export function DiffButton() {
 	const [fromRef, setFromRef] = useLocalStorage<string>(LS_KEYS.DIFF_FROM, 'workspace');
 	const [toRef, setToRef] = useLocalStorage<string>(LS_KEYS.DIFF_TO, 'HEAD');
 	const [commits, setCommits] = useState<Commit[]>([]);
+	const [diffStatus, setDiffStatus] = useState<'idle' | 'loading' | 'none' | 'has'>('idle');
 	const originalContentRef = useRef<string | null>(null);
 
 	const id = window.__ONAIR__?.id || '';
@@ -27,7 +28,8 @@ export function DiffButton() {
 
 	// Apply/remove diff highlighting
 	const applyDiff = useCallback(async () => {
-		if (!enabled || !id || !fromRef || !toRef || fromRef === toRef) return;
+		if (!enabled || !id || !fromRef || !toRef || fromRef === toRef) { setDiffStatus('idle'); return; }
+		setDiffStatus('loading');
 		const url = `/api/diff?id=${id}&range=commits&from=${fromRef}&to=${toRef}`;
 		try {
 			const res = await fetch(url);
@@ -48,12 +50,14 @@ export function DiffButton() {
 			document.querySelectorAll('.diff-add, .diff-del').forEach(el => {
 				el.classList.remove('diff-add', 'diff-del');
 			});
+			let count = 0;
 			for (const range of data.ranges) {
 				for (let line = range.startLine; line <= range.endLine; line++) {
 					const el = document.querySelector(`[data-src-line="${line}"]`);
-					if (el) el.classList.add(range.type === 'add' ? 'diff-add' : 'diff-del');
+					if (el) { el.classList.add(range.type === 'add' ? 'diff-add' : 'diff-del'); count++; }
 				}
 			}
+			setDiffStatus(count > 0 ? 'has' : 'none');
 		} catch {}
 	}, [enabled, id, fromRef, toRef]);
 
@@ -124,6 +128,15 @@ export function DiffButton() {
 			>
 				{renderOptions(toRef)}
 			</select>
+			{enabled && diffStatus === 'none' && (
+				<span class="tb-diff-status tb-diff-status--none">No changes</span>
+			)}
+			{enabled && diffStatus === 'has' && (
+				<span class="tb-diff-status tb-diff-status--has">Diff</span>
+			)}
+			{enabled && commits.length === 0 && (
+				<span class="tb-diff-status tb-diff-status--none" title="This file has no git history">No history</span>
+			)}
 		</div>
 	);
 }
