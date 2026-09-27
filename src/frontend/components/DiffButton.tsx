@@ -117,8 +117,15 @@ export function DiffButton() {
 						</>
 					) : (
 						<>
-							<div class="tb-diff-menu-label">From commit</div>
+							<div class="tb-diff-menu-label">From</div>
 							<div class="tb-diff-commit-list">
+								<button
+									class={'tb-diff-commit-item' + (fromCommit === 'workspace' ? ' tb-diff-menu-active' : '')}
+									onClick={() => setFromCommit('workspace')}
+								>
+									<span class="tb-diff-commit-hash">WORK</span>
+									<span class="tb-diff-commit-msg">Workspace</span>
+								</button>
 								{commits.map(c => (
 									<button
 										class={'tb-diff-commit-item' + (fromCommit === c.hash ? ' tb-diff-menu-active' : '')}
@@ -129,8 +136,15 @@ export function DiffButton() {
 									</button>
 								))}
 							</div>
-							<div class="tb-diff-menu-label">To commit</div>
+							<div class="tb-diff-menu-label">To</div>
 							<div class="tb-diff-commit-list">
+								<button
+									class={'tb-diff-commit-item' + (toCommit === 'workspace' ? ' tb-diff-menu-active' : '')}
+									onClick={() => setToCommit('workspace')}
+								>
+									<span class="tb-diff-commit-hash">WORK</span>
+									<span class="tb-diff-commit-msg">Workspace</span>
+								</button>
 								{commits.map(c => (
 									<button
 										class={'tb-diff-commit-item' + (toCommit === c.hash ? ' tb-diff-menu-active' : '')}
@@ -144,7 +158,7 @@ export function DiffButton() {
 							<div class="tb-diff-menu-sep" />
 							<button
 								class="tb-diff-menu-item tb-diff-menu-confirm"
-								disabled={!fromCommit || !toCommit}
+								disabled={!fromCommit || !toCommit || fromCommit === toCommit}
 								onClick={handleCommitConfirm}
 							>
 								Compare

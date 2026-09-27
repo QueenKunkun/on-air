@@ -104,9 +104,17 @@ export function handleDiff(
 		res.end(JSON.stringify({ ranges: mergeRanges(ranges), source }));
 	};
 
-	// Custom commit range
+	// Custom range: commit..commit, commit..workspace, or workspace..commit
 	if (range === 'commits' && from && to) {
-		runGit(['diff', `${from}..${to}`, '--', relFile], rootDir).then((diff) => {
+		let gitArgs: string[];
+		if (from === 'workspace') {
+			gitArgs = ['diff', to, '--', relFile]; // commit → workspace
+		} else if (to === 'workspace') {
+			gitArgs = ['diff', from, '--', relFile]; // commit → workspace
+		} else {
+			gitArgs = ['diff', `${from}..${to}`, '--', relFile];
+		}
+		runGit(gitArgs, rootDir).then((diff) => {
 			if (!diff.trim()) { send('none', []); return; }
 			send('commit', parseUnifiedDiff(diff));
 		});
