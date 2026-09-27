@@ -48,7 +48,9 @@ function parseUnifiedDiff(diff: string): DiffRange[] {
 			ranges.push({ type: 'add', startLine: newLine, endLine: newLine });
 			newLine++;
 		} else if (line.startsWith('-')) {
-			// deleted lines don't exist in current file — skip
+			// Deleted line: exists in "from" but not "to". Mark the position in
+			// the "to" file where it was removed (current newLine).
+			ranges.push({ type: 'del', startLine: newLine, endLine: newLine });
 		} else if (line.startsWith(' ') || line === '') {
 			newLine++;
 		}

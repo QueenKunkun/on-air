@@ -43,9 +43,11 @@ export function DiffButton() {
 		if (mode === 'workspace') url += '&range=workspace';
 		else if (mode === 'HEAD~1') url += '&range=HEAD~1';
 		else if (mode === 'commits' && fromCommit && toCommit) url += `&range=commits&from=${fromCommit}&to=${toCommit}`;
+		console.log('[diff] fetch:', url);
 		try {
 			const res = await fetch(url);
 			const data: DiffResponse = await res.json();
+			console.log('[diff] ranges:', data.ranges.length, 'toHtml:', data.toHtml ? data.toHtml.length + ' chars' : 'null');
 			const content = document.getElementById('content');
 			if (!content) return;
 
@@ -62,14 +64,13 @@ export function DiffButton() {
 			}
 
 			// Apply highlighting
-			document.querySelectorAll('.diff-add').forEach(el => {
-				el.classList.remove('diff-add');
+			document.querySelectorAll('.diff-add, .diff-del').forEach(el => {
+				el.classList.remove('diff-add', 'diff-del');
 			});
 			for (const range of data.ranges) {
-				if (range.type !== 'add') continue;
 				for (let line = range.startLine; line <= range.endLine; line++) {
 					const el = document.querySelector(`[data-src-line="${line}"]`);
-					if (el) el.classList.add('diff-add');
+					if (el) el.classList.add(range.type === 'add' ? 'diff-add' : 'diff-del');
 				}
 			}
 		} catch {}
@@ -80,8 +81,8 @@ export function DiffButton() {
 	// Clear and restore original on disable
 	useEffect(() => {
 		if (!enabled) {
-			document.querySelectorAll('.diff-add').forEach(el => {
-				el.classList.remove('diff-add');
+			document.querySelectorAll('.diff-add, .diff-del').forEach(el => {
+				el.classList.remove('diff-add', 'diff-del');
 			});
 			const content = document.getElementById('content');
 			if (content && originalContentRef.current !== null) {
@@ -166,6 +167,20 @@ export function DiffButton() {
 										<span class="tb-diff-commit-msg">{c.message}</span>
 									</button>
 								))}
+							</div>
+							<div class="tb-diff-swap-row">
+								<button
+									class="tb-diff-swap"
+									title="Swap from/to"
+									disabled={!fromCommit && !toCommit}
+									onClick={() => { const f = fromCommit; setFromCommit(toCommit); setToCommit(f); }}
+								>
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M7 16V4m0 0L3 8m4-4l4 4" />
+										<path d="M17 8v12m0 0l4-4m-4 4l-4-4" />
+									</svg>
+									Swap
+								</button>
 							</div>
 							<div class="tb-diff-menu-label">To (newer)</div>
 							<div class="tb-diff-commit-list">
