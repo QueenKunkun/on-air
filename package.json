@@ -76,6 +76,7 @@
 		"test:e2e": "npx playwright test",
 		"publish-all": "node scripts/check-size.mjs && pnpm publish-vsce && pnpm publish-ovsx",
 		"package-vsix": "npx @vscode/vsce package --no-dependencies",
+		"install-local": "bash scripts/install-local.sh",
 		"publish-vsce": "bash -c 'source .env && VSCE_PAT=$VSCE_PAT npx @vscode/vsce publish --packagePath on-air.vsix --no-dependencies'",
 		"publish-ovsx": "bash -c 'source .env && npx ovsx publish on-air.vsix -p $vsx_token --no-dependencies'"
 	},
