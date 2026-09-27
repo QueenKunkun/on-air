@@ -379,7 +379,7 @@ span.onair-unknown-html { display: inline; background: var(--pre-bg); padding: 2
 .tb-diff-btn { background: none; border: none; color: var(--bnr-c); opacity: .5; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 4px; transition: opacity .15s, background .15s; padding: 0; font-size: 14px; font-weight: 600; font-family: monospace; }
 .tb-diff-btn:hover { opacity: 1; background: rgba(128,128,128,.15); }
 .tb-diff-on .tb-diff-btn { opacity: 1; color: #fff; background: var(--link-c); }
-.tb-diff-select { background: var(--bnr-bg); color: var(--bnr-c); border: 1px solid var(--border); border-radius: 4px; font-size: 11px; padding: 2px 4px; max-width: 140px; height: 22px; cursor: pointer; outline: none; }
+.tb-diff-select { background: var(--bnr-bg); color: var(--bnr-c); border: 1px solid var(--border); border-radius: 4px; font-size: 11px; padding: 2px 4px; max-width: 100px; min-width: 60px; height: 22px; cursor: pointer; outline: none; }
 .tb-diff-select:disabled { opacity: .4; cursor: default; }
 .tb-diff-select:not(:disabled):hover { border-color: var(--link-c); }
 .tb-diff-swap-btn { background: none; border: none; color: var(--bnr-c); opacity: .5; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 4px; transition: opacity .15s, background .15s; padding: 0; }
