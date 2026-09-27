@@ -389,10 +389,17 @@ span.onair-unknown-html { display: inline; background: var(--pre-bg); padding: 2
 .tb-diff-menu-active { color: var(--link-c); font-weight: 600; }
 .tb-diff-menu-item:disabled { opacity: .4; cursor: default; }
 .tb-diff-menu-sep { height: 1px; background: var(--border); margin: 4px 0; flex-shrink: 0; }
-.tb-diff-menu-confirm { font-weight: 600; color: var(--link-c); flex-shrink: 0; position: sticky; bottom: 0; background: var(--bg); }
+.tb-diff-menu-confirm { font-weight: 600; color: var(--link-c); flex-shrink: 0; }
+.tb-diff-menu-actions { display: flex; gap: 4px; padding: 4px 8px; flex-shrink: 0; border-top: 1px solid var(--border); }
+.tb-diff-menu-actions .tb-diff-menu-item { flex: 1; text-align: center; border-radius: 4px; padding: 6px 8px; }
+.tb-diff-menu-cancel { color: var(--bnr-c); opacity: .7; }
+.tb-diff-menu-confirm { background: var(--link-c); color: #fff; border-radius: 4px; }
+.tb-diff-menu-confirm:disabled { opacity: .4; }
+.tb-diff-label { font-size: 11px; color: var(--bnr-c); opacity: .7; margin-left: 4px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tb-diff-commit-list { overflow-y: auto; flex: 0 1 auto; min-height: 0; }
 .tb-diff-commit-item { display: flex; gap: 8px; align-items: baseline; width: 100%; text-align: left; background: none; border: none; color: var(--text); font-size: 12px; padding: 5px 12px; cursor: pointer; }
-.tb-diff-commit-item:hover { background: var(--pre-bg); color: var(--link-c); }
+.tb-diff-commit-item:hover:not(:disabled) { background: var(--pre-bg); color: var(--link-c); }
+.tb-diff-commit-item:disabled { opacity: .3; cursor: default; }
 .tb-diff-commit-hash { font-family: monospace; color: var(--link-c); flex-shrink: 0; }
 .tb-diff-commit-msg { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .8; }
 

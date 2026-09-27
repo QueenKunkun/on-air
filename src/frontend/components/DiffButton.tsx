@@ -107,11 +107,17 @@ export function DiffButton() {
 		}
 	}, [fromCommit, toCommit, setMode, dd, enabled, setEnabled]);
 
+	const modeLabel = mode === 'workspace' ? 'Workspace vs HEAD'
+		: mode === 'HEAD~1' ? 'HEAD vs HEAD~1'
+		: mode === 'commits'
+			? `${fromCommit === 'workspace' ? 'Workspace' : fromCommit.slice(0, 7)} → ${toCommit === 'workspace' ? 'Workspace' : toCommit.slice(0, 7)}`
+			: 'Workspace vs last change';
+
 	return (
 		<div class={'tb-diff-wrap' + (enabled ? ' tb-diff-on' : '')} ref={dd.wrapRef}>
 			<button
 				class="tb-diff-btn"
-				title={enabled ? 'Hide diff highlights' : 'Show diff highlights'}
+				title={enabled ? `Hide diff (${modeLabel})` : `Show diff (${modeLabel})`}
 				onClick={() => setEnabled(!enabled)}
 			>
 				<span class="tb-diff-icon">±</span>
@@ -119,6 +125,7 @@ export function DiffButton() {
 			<button class="tb-diff-caret" title="Diff options" onClick={dd.toggle}>
 				<svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style="pointer-events:none"><path d="M2 3.5L5 6.5L8 3.5Z" /></svg>
 			</button>
+			{enabled && <span class="tb-diff-label" title={modeLabel}>{modeLabel}</span>}
 			{dd.open && (
 				<div ref={dd.menuRef} class="tb-diff-menu">
 					{!showCommitPicker ? (
@@ -140,11 +147,12 @@ export function DiffButton() {
 						</>
 					) : (
 						<>
-							<div class="tb-diff-menu-label">From</div>
+							<div class="tb-diff-menu-label">From (older)</div>
 							<div class="tb-diff-commit-list">
 								<button
-									class={'tb-diff-commit-item' + (fromCommit === 'workspace' ? ' tb-diff-menu-active' : '')}
-									onClick={() => setFromCommit('workspace')}
+									class="tb-diff-commit-item"
+									disabled
+									title="Workspace is always newest — cannot be the older side"
 								>
 									<span class="tb-diff-commit-hash">WORK</span>
 									<span class="tb-diff-commit-msg">Workspace</span>
@@ -159,7 +167,7 @@ export function DiffButton() {
 									</button>
 								))}
 							</div>
-							<div class="tb-diff-menu-label">To</div>
+							<div class="tb-diff-menu-label">To (newer)</div>
 							<div class="tb-diff-commit-list">
 								<button
 									class={'tb-diff-commit-item' + (toCommit === 'workspace' ? ' tb-diff-menu-active' : '')}
@@ -179,13 +187,21 @@ export function DiffButton() {
 								))}
 							</div>
 							<div class="tb-diff-menu-sep" />
-							<button
-								class="tb-diff-menu-item tb-diff-menu-confirm"
-								disabled={!fromCommit || !toCommit || fromCommit === toCommit}
-								onClick={handleCommitConfirm}
-							>
-								Compare
-							</button>
+							<div class="tb-diff-menu-actions">
+								<button
+									class="tb-diff-menu-item tb-diff-menu-cancel"
+									onClick={() => { setShowCommitPicker(false); }}
+								>
+									Cancel
+								</button>
+								<button
+									class="tb-diff-menu-item tb-diff-menu-confirm"
+									disabled={!fromCommit || !toCommit || fromCommit === toCommit}
+									onClick={handleCommitConfirm}
+								>
+									Compare
+								</button>
+							</div>
 						</>
 					)}
 				</div>
