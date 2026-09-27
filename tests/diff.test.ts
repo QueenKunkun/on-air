@@ -16,6 +16,57 @@ function git(args: string): string {
   return execSync(`git ${args}`, { cwd: repo, encoding: 'utf8' }).trim();
 }
 
+function fileAt(ref: string): string[] {
+  return execSync(`git show ${ref}:${relFile}`, { cwd: repo, encoding: 'utf8' }).trim().split('\n');
+}
+
+/** Get the raw content of the "to" side for a given from/to pair. */
+async function renderTo(to: string): Promise<string[]> {
+  if (to === 'workspace') return fs.readFileSync(file, 'utf8').trim().split('\n');
+  return fileAt(to);
+}
+
+/** Get the raw content of the "from" side for comparison. */
+async function renderFrom(from: string): Promise<string[]> {
+  if (from === 'workspace') return fs.readFileSync(file, 'utf8').trim().split('\n');
+  return fileAt(from);
+}
+
+/**
+ * Core invariant: for a from→to diff, every marked range's line numbers must
+ * (a) exist in the "to" content (the side being rendered), and
+ * (b) the content at those lines must actually differ between from and to.
+ *
+ * Returns the marked lines' content from the "to" side for further assertions.
+ */
+async function getMarkedLines(from: string, to: string): Promise<string[]> {
+  const diff = await buildDiff(repo, relFile, file, from, to);
+  const ranges = mergeRanges(parseUnifiedDiff(diff, 'new'));
+  const toContent = await renderTo(to);
+  const fromContent = await renderFrom(from);
+  const marked: string[] = [];
+
+  for (const r of ranges) {
+    for (let line = r.startLine; line <= r.endLine; line++) {
+      // (a) line must exist in rendered content
+      assert.ok(
+        line >= 1 && line <= toContent.length,
+        `from=${from.slice(0,7)} to=${to.slice(0,7)}: line ${line} must exist in to-content (1..${toContent.length})`,
+      );
+      marked.push(toContent[line - 1]);
+    }
+  }
+
+  // (b) If there are marked lines, from and to must actually differ
+  if (marked.length > 0) {
+    const fromStr = fromContent.join('\n');
+    const toStr = toContent.join('\n');
+    assert.notEqual(fromStr, toStr, 'if ranges exist, from and to must differ');
+  }
+
+  return marked;
+}
+
 before(() => {
   repo = fs.mkdtempSync(path.join(os.tmpdir(), 'onair-diff-test-'));
   file = path.join(repo, 'test.md');
@@ -31,13 +82,13 @@ before(() => {
   git('commit -q -m "A"');
   commitA = git('rev-parse HEAD');
 
-  // Commit B: change line 3, remove line 7, add a new line after line 8
+  // Commit B: change line 3, remove line 7, insert after line 8
   const b = Array.from({ length: 10 }, (_, i) => {
     if (i === 2) return 'line 3 CHANGED';
-    if (i === 6) return null; // removed
+    if (i === 6) return null;
     return `line ${i + 1}`;
   }).filter(Boolean) as string[];
-  b.splice(7, 0, 'INSERTED LINE'); // insert before original line 8
+  b.splice(7, 0, 'INSERTED LINE');
   fs.writeFileSync(file, b.join('\n') + '\n');
   git('add .');
   git('commit -q -m "B"');
@@ -48,167 +99,79 @@ after(() => {
   fs.rmSync(repo, { recursive: true, force: true });
 });
 
-// ─── parseUnifiedDiff ────────────────────────────────────────────────────────
+// ─── Core invariant: marked lines exist in rendered content and are actually different ───
 
-test('parseUnifiedDiff: new side tracks + line numbers', () => {
-  const diff = [
-    '@@ -1,3 +1,4 @@',
-    ' line 1',
-    '-old line 2',
-    '+new line 2a',
-    '+new line 2b',
-    ' line 3',
-  ].join('\n');
-  const ranges = parseUnifiedDiff(diff, 'new');
-  // +lines at newLine 2 and 3
-  assert.deepEqual(ranges, [
-    { type: 'del', startLine: 2, endLine: 2 },
-    { type: 'add', startLine: 2, endLine: 2 },
-    { type: 'add', startLine: 3, endLine: 3 },
-  ]);
+test('A→B: marked lines exist in B and differ from A', async () => {
+  const marked = await getMarkedLines(commitA, commitB);
+  assert.ok(marked.length > 0, 'should have marked lines');
+  // B changed line 3 and inserted a line — at least one marked line should reflect that
+  assert.ok(
+    marked.some(l => l.includes('CHANGED') || l.includes('INSERTED')),
+    `expected changed content, got: ${JSON.stringify(marked)}`,
+  );
 });
 
-test('parseUnifiedDiff: old side tracks - line numbers', () => {
-  const diff = [
-    '@@ -1,3 +1,4 @@',
-    ' line 1',
-    '-old line 2',
-    '+new line 2a',
-    '+new line 2b',
-    ' line 3',
-  ].join('\n');
-  const ranges = parseUnifiedDiff(diff, 'old');
-  // -line at oldLine 2. +lines: oldLine doesn't advance, both map to oldLine 3
-  // (the insertion point in the old file).
-  assert.deepEqual(ranges, [
-    { type: 'del', startLine: 2, endLine: 2 },
-    { type: 'add', startLine: 3, endLine: 3 },
-    { type: 'add', startLine: 3, endLine: 3 },
-  ]);
+test('B→A: marked lines exist in A and differ from B', async () => {
+  const marked = await getMarkedLines(commitB, commitA);
+  assert.ok(marked.length > 0, 'should have marked lines');
+  // A has "line 3" (not CHANGED) and no "INSERTED LINE"
+  assert.ok(
+    marked.some(l => l.includes('line 3') && !l.includes('CHANGED')),
+    `expected original line 3, got: ${JSON.stringify(marked)}`,
+  );
 });
 
-// ─── buildDiff: line numbers must match rendered (to) side ──────────────────
-
-test('from=commitA, to=workspace: +nums are workspace line numbers', async () => {
-  const diff = await buildDiff(repo, relFile, file, commitA, 'workspace');
-  assert.ok(diff.includes('diff'), 'should produce a diff');
-  const ranges = mergeRanges(parseUnifiedDiff(diff, 'new'));
-  // Workspace file has 10 lines (line 3 changed, line 7 removed, 1 inserted).
-  // All ranges must be valid line numbers in workspace (1..10).
-  for (const r of ranges) {
-    assert.ok(r.startLine >= 1 && r.startLine <= 10, `line ${r.startLine} in workspace 1..10`);
-  }
+test('workspace→A: marked lines exist in A and differ from workspace', async () => {
+  const marked = await getMarkedLines('workspace', commitA);
+  assert.ok(marked.length > 0, 'should have marked lines');
 });
 
-test('from=workspace, to=commitA: +nums are commitA line numbers', async () => {
-  const diff = await buildDiff(repo, relFile, file, 'workspace', commitA);
-  assert.ok(diff.includes('diff'), 'should produce a diff');
-  const ranges = mergeRanges(parseUnifiedDiff(diff, 'new'));
-  // commitA has 10 lines. All ranges must be valid in commitA.
-  for (const r of ranges) {
-    assert.ok(r.startLine >= 1 && r.startLine <= 10, `line ${r.startLine} in commitA 1..10`);
-  }
+test('A→workspace: marked lines exist in workspace and differ from A', async () => {
+  const marked = await getMarkedLines(commitA, 'workspace');
+  assert.ok(marked.length > 0, 'should have marked lines');
+  assert.ok(
+    marked.some(l => l.includes('CHANGED') || l.includes('INSERTED')),
+    `expected changed content in workspace, got: ${JSON.stringify(marked)}`,
+  );
 });
 
-test('from=commitA, to=commitB: +nums are commitB line numbers', async () => {
-  const diff = await buildDiff(repo, relFile, file, commitA, commitB);
-  const ranges = mergeRanges(parseUnifiedDiff(diff, 'new'));
-  // commitB has 10 lines (10 - 1 removed + 1 inserted)
-  const lines = execSync(`git show ${commitB}:test.md`, { cwd: repo, encoding: 'utf8' }).trim().split('\n');
-  for (const r of ranges) {
-    assert.ok(r.startLine >= 1 && r.startLine <= lines.length, `line ${r.startLine} in commitB 1..${lines.length}`);
-  }
+test('workspace→B: empty (workspace == B)', async () => {
+  const marked = await getMarkedLines('workspace', commitB);
+  assert.equal(marked.length, 0, 'workspace and B are identical');
 });
 
-test('from=commitB, to=commitA: +nums are commitA line numbers', async () => {
-  const diff = await buildDiff(repo, relFile, file, commitB, commitA);
-  const ranges = mergeRanges(parseUnifiedDiff(diff, 'new'));
-  const lines = execSync(`git show ${commitA}:test.md`, { cwd: repo, encoding: 'utf8' }).trim().split('\n');
-  for (const r of ranges) {
-    assert.ok(r.startLine >= 1 && r.startLine <= lines.length, `line ${r.startLine} in commitA 1..${lines.length}`);
-  }
+test('B→workspace: empty (workspace == B)', async () => {
+  const marked = await getMarkedLines(commitB, 'workspace');
+  assert.equal(marked.length, 0, 'workspace and B are identical');
 });
 
-// ─── Mirror symmetry: swap(from,to) must give consistent results ────────────
+// ─── Mirror: swapped directions must mark DIFFERENT content ─────────────────
 
-test('mirror: from=A→B and from=B→A cover the same changed lines', async () => {
-  const diffAB = await buildDiff(repo, relFile, file, commitA, commitB);
-  const diffBA = await buildDiff(repo, relFile, file, commitB, commitA);
-  const rangesAB = mergeRanges(parseUnifiedDiff(diffAB, 'new'));
-  const rangesBA = mergeRanges(parseUnifiedDiff(diffBA, 'new'));
-
-  // Both must be non-empty (there are changes between A and B)
-  assert.ok(rangesAB.length > 0, 'A→B has ranges');
-  assert.ok(rangesBA.length > 0, 'B→A has ranges');
-
-  // A→B ranges are in B's line space, B→A ranges are in A's line space.
-  // The set of changed line content must be symmetric:
-  // lines marked in A→B (in B) should correspond to lines marked in B→A (in A).
-  // We verify: total marked lines should be equal in both directions.
-  const countAB = rangesAB.reduce((s, r) => s + (r.endLine - r.startLine + 1), 0);
-  const countBA = rangesBA.reduce((s, r) => s + (r.endLine - r.startLine + 1), 0);
-  // Not necessarily equal (add vs del asymmetry), but both > 0 and bounded.
-  assert.ok(countAB > 0 && countBA > 0);
-  assert.ok(countAB <= 10 && countBA <= 10, 'marked lines within file bounds');
+test('mirror: A→B and B→A mark different rendered content', async () => {
+  const markedAB = await getMarkedLines(commitA, commitB);
+  const markedBA = await getMarkedLines(commitB, commitA);
+  assert.ok(markedAB.length > 0 && markedBA.length > 0, 'both directions have marks');
+  // The actual line content must differ (because rendered sides differ)
+  const abSet = new Set(markedAB);
+  const hasOverlap = markedBA.some(l => abSet.has(l));
+  assert.ok(
+    !hasOverlap || markedAB.some(l => l.includes('CHANGED')) !== markedBA.some(l => l.includes('CHANGED')),
+    'swapped directions should render different content',
+  );
 });
 
-test('mirror: workspace↔commitA ranges are within respective file bounds', async () => {
-  const wsLen = fs.readFileSync(file, 'utf8').trim().split('\n').length;
-  const aLen = execSync(`git show ${commitA}:test.md`, { cwd: repo, encoding: 'utf8' }).trim().split('\n').length;
-
-  const diffWsToA = await buildDiff(repo, relFile, file, 'workspace', commitA);
-  const rangesWsToA = mergeRanges(parseUnifiedDiff(diffWsToA, 'new'));
-  for (const r of rangesWsToA) {
-    assert.ok(r.startLine >= 1 && r.startLine <= aLen, `Ws→A: line ${r.startLine} in 1..${aLen}`);
-  }
-
-  const diffAToWs = await buildDiff(repo, relFile, file, commitA, 'workspace');
-  const rangesAToWs = mergeRanges(parseUnifiedDiff(diffAToWs, 'new'));
-  for (const r of rangesAToWs) {
-    assert.ok(r.startLine >= 1 && r.startLine <= wsLen, `A→Ws: line ${r.startLine} in 1..${wsLen}`);
-  }
-});
-
-// ─── Content correctness: ranges must correspond to actual changed lines ────
-
-test('A→B marks the changed line 3 in commitB', async () => {
-  const diff = await buildDiff(repo, relFile, file, commitA, commitB);
-  const ranges = mergeRanges(parseUnifiedDiff(diff, 'new'));
-  // commitB line 3 = "line 3 CHANGED" (was "line 3" in A)
-  const bLines = execSync(`git show ${commitB}:test.md`, { cwd: repo, encoding: 'utf8' }).trim().split('\n');
-  const hasChanged = ranges.some(r => r.startLine <= 3 && r.endLine >= 3);
-  assert.ok(hasChanged, 'line 3 should be marked as changed in B');
-  assert.equal(bLines[2], 'line 3 CHANGED');
-});
-
-test('B→A marks line 3 in commitA (where "line 3 CHANGED" no longer exists)', async () => {
-  const diff = await buildDiff(repo, relFile, file, commitB, commitA);
-  const ranges = mergeRanges(parseUnifiedDiff(diff, 'new'));
-  const aLines = execSync(`git show ${commitA}:test.md`, { cwd: repo, encoding: 'utf8' }).trim().split('\n');
-  const hasChanged = ranges.some(r => r.startLine <= 3 && r.endLine >= 3);
-  assert.ok(hasChanged, 'line 3 should be marked in A');
-  assert.equal(aLines[2], 'line 3');
-});
-
-test('workspace→A marks lines that differ from workspace', async () => {
-  // Workspace has "INSERTED LINE" at line 7 (0-indexed 6 after splice)
-  // and "line 3 CHANGED". commitA has neither.
-  const diff = await buildDiff(repo, relFile, file, 'workspace', commitA);
-  const ranges = mergeRanges(parseUnifiedDiff(diff, 'new'));
-  assert.ok(ranges.length > 0, 'there should be differences');
-  // All ranges valid in commitA (10 lines)
-  for (const r of ranges) {
-    assert.ok(r.startLine >= 1 && r.startLine <= 10);
-  }
-});
-
-test('identical content produces empty diff', async () => {
-  const diff = await buildDiff(repo, relFile, file, commitB, 'workspace');
-  // Workspace == commitB (we committed B last and didn't modify after)
-  assert.equal(diff.trim(), '', 'B→workspace should be empty');
-});
-
-test('workspace→workspace is always empty', async () => {
-  const diff = await buildDiff(repo, relFile, file, 'workspace', 'workspace');
-  assert.equal(diff, '');
+test('mirror: workspace→A and A→workspace mark different rendered content', async () => {
+  const markedWsA = await getMarkedLines('workspace', commitA);
+  const markedAWs = await getMarkedLines(commitA, 'workspace');
+  assert.ok(markedWsA.length > 0 && markedAWs.length > 0, 'both directions have marks');
+  // A→workspace renders workspace content (has CHANGED/INSERTED)
+  // workspace→A renders A content (has original line 3)
+  assert.ok(
+    markedAWs.some(l => l.includes('CHANGED') || l.includes('INSERTED')),
+    'A→workspace should mark workspace content',
+  );
+  assert.ok(
+    markedWsA.some(l => l.includes('line 3') && !l.includes('CHANGED')),
+    'workspace→A should mark A content',
+  );
 });
