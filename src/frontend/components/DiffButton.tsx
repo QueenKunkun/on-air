@@ -88,11 +88,7 @@ export function DiffButton() {
 				title={enabled ? 'Hide diff highlights' : 'Show diff highlights'}
 				onClick={() => setEnabled(!enabled)}
 			>
-				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M6 9l-3 3 3 3" />
-					<path d="M18 9l3 3-3 3" />
-					<path d="M14 5l-4 14" />
-				</svg>
+				<span class="tb-diff-icon">±</span>
 			</button>
 			<button class="tb-diff-caret" title="Diff options" onClick={dd.toggle}>
 				<svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style="pointer-events:none"><path d="M2 3.5L5 6.5L8 3.5Z" /></svg>
