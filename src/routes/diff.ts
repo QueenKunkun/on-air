@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 import * as path from 'path';
 import { debugWarn } from '../common/debug';
 import { isDangerousRootDir, toPosix } from './utils';
+import { renderMarkdown } from '../markdown/renderer';
 import type { DocEntry } from './types';
 
 export interface DiffRange {
@@ -13,6 +14,8 @@ export interface DiffRange {
 export interface DiffResponse {
 	ranges: DiffRange[];
 	source: 'workspace' | 'commit' | 'none';
+	/** Rendered HTML of the "to" side when it's a commit (null when workspace) */
+	toHtml?: string | null;
 	error?: string;
 }
 
@@ -99,24 +102,36 @@ export function handleDiff(
 
 	const relFile = toPosix(path.relative(rootDir, entry.fullPath));
 
-	const send = (source: DiffResponse['source'], ranges: DiffRange[]) => {
+	const send = (source: DiffResponse['source'], ranges: DiffRange[], toHtml?: string | null) => {
 		res.writeHead(200, { 'Content-Type': 'application/json' });
-		res.end(JSON.stringify({ ranges: mergeRanges(ranges), source }));
+		res.end(JSON.stringify({ ranges: mergeRanges(ranges), source, toHtml: toHtml ?? null }));
 	};
+
+	// Fetch file content at a commit and render it
+	const renderAtCommit = (commit: string): Promise<string | null> =>
+		runGit(['show', `${commit}:${relFile}`], rootDir).then((content) => {
+			if (!content || content.startsWith('fatal')) return null;
+			try { return renderMarkdown(content, path.dirname(entry.fullPath!), rootDir, id!); }
+			catch { return null; }
+		});
 
 	// Custom range: commit..commit, commit..workspace, or workspace..commit
 	if (range === 'commits' && from && to) {
+		const isToWorkspace = to === 'workspace';
 		let gitArgs: string[];
 		if (from === 'workspace') {
-			gitArgs = ['diff', to, '--', relFile]; // commit → workspace
-		} else if (to === 'workspace') {
-			gitArgs = ['diff', from, '--', relFile]; // commit → workspace
+			gitArgs = ['diff', to, '--', relFile];
+		} else if (isToWorkspace) {
+			gitArgs = ['diff', from, '--', relFile];
 		} else {
 			gitArgs = ['diff', `${from}..${to}`, '--', relFile];
 		}
-		runGit(gitArgs, rootDir).then((diff) => {
-			if (!diff.trim()) { send('none', []); return; }
-			send('commit', parseUnifiedDiff(diff));
+		Promise.all([
+			runGit(gitArgs, rootDir),
+			isToWorkspace ? Promise.resolve(null) : renderAtCommit(to),
+		]).then(([diff, toHtml]) => {
+			if (!diff.trim()) { send('none', [], toHtml); return; }
+			send('commit', parseUnifiedDiff(diff), toHtml);
 		});
 		return;
 	}

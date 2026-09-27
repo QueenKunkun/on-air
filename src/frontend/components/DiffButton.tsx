@@ -1,11 +1,11 @@
 import { h, Fragment } from 'preact';
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useDropdown } from '../hooks/useDropdown';
 import { LS_KEYS } from '../../common/localStorageKeys';
 
 interface DiffRange { type: 'add' | 'del'; startLine: number; endLine: number; }
-interface DiffResponse { ranges: DiffRange[]; source: string; error?: string; }
+interface DiffResponse { ranges: DiffRange[]; source: string; toHtml?: string | null; error?: string; }
 interface Commit { hash: string; shortHash: string; message: string; }
 
 type DiffMode = 'auto' | 'workspace' | 'HEAD~1' | 'commits';
@@ -33,6 +33,9 @@ export function DiffButton() {
 			.catch(() => {});
 	}, [showCommitPicker, id]);
 
+	// Save original content on mount, restore when diff disabled
+	const originalContentRef = useRef<string | null>(null);
+
 	// Apply/remove diff highlighting
 	const applyDiff = useCallback(async () => {
 		if (!enabled || !id) return;
@@ -43,6 +46,22 @@ export function DiffButton() {
 		try {
 			const res = await fetch(url);
 			const data: DiffResponse = await res.json();
+			const content = document.getElementById('content');
+			if (!content) return;
+
+			// Save original content once
+			if (originalContentRef.current === null) {
+				originalContentRef.current = content.innerHTML;
+			}
+
+			// Swap content if "to" side is a commit
+			if (data.toHtml) {
+				content.innerHTML = data.toHtml;
+			} else if (originalContentRef.current !== null) {
+				content.innerHTML = originalContentRef.current;
+			}
+
+			// Apply highlighting
 			document.querySelectorAll('.diff-add').forEach(el => {
 				el.classList.remove('diff-add');
 			});
@@ -58,12 +77,16 @@ export function DiffButton() {
 
 	useEffect(() => { applyDiff(); }, [applyDiff]);
 
-	// Clear on disable
+	// Clear and restore original on disable
 	useEffect(() => {
 		if (!enabled) {
 			document.querySelectorAll('.diff-add').forEach(el => {
 				el.classList.remove('diff-add');
 			});
+			const content = document.getElementById('content');
+			if (content && originalContentRef.current !== null) {
+				content.innerHTML = originalContentRef.current;
+			}
 		}
 	}, [enabled]);
 
