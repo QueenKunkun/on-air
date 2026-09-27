@@ -20,7 +20,9 @@ will be rendered like this:
 - **Math formulas** — `$..$` and `$$..$$` LaTeX rendered with KaTeX; hover a formula to preview and copy its source
 - **Table of contents** — nested navigation, scroll tracking, resizable, collapsible; shows the file's relative path; plus a **Related documents** list, and relative links to other docs open as previews
 - **File tree** — project file tree with search (`*.svg`), filter (`.md`, `.gitignore`, unsupported files), expand-to-current-file, and state persistence
-- **Content search** — a "Search" tab in the Files panel runs a VS Code–style Find in Files across the whole project (ripgrep), grouped by file with line numbers; click any match to jump to that line
+- **Filename search** — a "Search" tab in the Files panel filters files by name with match highlighting
+- **Git diff highlight** — toggle colored highlights for changed lines; compare workspace vs HEAD, HEAD vs HEAD~1, or any two commits
+- **Scroll progress bar** — a thin bar at the top of the viewport tracks reading progress
 - **Code file preview** — JSON/JS/TS/CSS/TXT/LOG files open inline with JSON syntax highlighting
 - **Multi-theme** — 16 preset themes
 - **Annotations & footnotes** — `==highlight==` with an adjacent note (`^[...]` or `[^id]`) shows as a **right-margin annotation card** anchored to the highlighted text; other footnotes render in a collapsible bottom block. Notes open on click (or on hover with the toggle on); both blocks are collapsible

@@ -43,13 +43,14 @@ export function DiffButton() {
 		try {
 			const res = await fetch(url);
 			const data: DiffResponse = await res.json();
-			document.querySelectorAll('.diff-add, .diff-del').forEach(el => {
-				el.classList.remove('diff-add', 'diff-del');
+			document.querySelectorAll('.diff-add').forEach(el => {
+				el.classList.remove('diff-add');
 			});
 			for (const range of data.ranges) {
+				if (range.type !== 'add') continue;
 				for (let line = range.startLine; line <= range.endLine; line++) {
 					const el = document.querySelector(`[data-src-line="${line}"]`);
-					if (el) el.classList.add(range.type === 'add' ? 'diff-add' : 'diff-del');
+					if (el) el.classList.add('diff-add');
 				}
 			}
 		} catch {}
@@ -60,8 +61,8 @@ export function DiffButton() {
 	// Clear on disable
 	useEffect(() => {
 		if (!enabled) {
-			document.querySelectorAll('.diff-add, .diff-del').forEach(el => {
-				el.classList.remove('diff-add', 'diff-del');
+			document.querySelectorAll('.diff-add').forEach(el => {
+				el.classList.remove('diff-add');
 			});
 		}
 	}, [enabled]);
@@ -69,17 +70,19 @@ export function DiffButton() {
 	const handleModeSelect = useCallback((m: DiffMode) => {
 		if (m === 'commits') { setShowCommitPicker(true); return; }
 		setMode(m);
+		if (!enabled) setEnabled(true);
 		dd.close();
 		setShowCommitPicker(false);
-	}, [setMode, dd]);
+	}, [setMode, dd, enabled, setEnabled]);
 
 	const handleCommitConfirm = useCallback(() => {
 		if (fromCommit && toCommit) {
 			setMode('commits');
+			if (!enabled) setEnabled(true);
 			dd.close();
 			setShowCommitPicker(false);
 		}
-	}, [fromCommit, toCommit, setMode, dd]);
+	}, [fromCommit, toCommit, setMode, dd, enabled, setEnabled]);
 
 	return (
 		<div class={'tb-diff-wrap' + (enabled ? ' tb-diff-on' : '')} ref={dd.wrapRef}>

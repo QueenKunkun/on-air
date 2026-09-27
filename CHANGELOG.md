@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.26.0] - 2026-09-27
+
+- feat: Add git diff highlight — show changed lines in color with a toolbar toggle; compare workspace vs HEAD, HEAD vs HEAD~1, or any two commits
+- feat: Add scroll progress bar at the top of the preview
+- feat: Replace content search with filename search in the Search tab
+
+
 ## [0.25.6] - 2026-09-22
 
 - fix: Copy path dropdown menu positioning and event handling
