@@ -33,7 +33,8 @@ export const LS_KEYS = {
 	/** Copy button mode: 'full' or 'relative' */
 	COPY_MODE: 'onair-copy-mode',
 
-	/** Diff highlight toggle and compare mode */
+	/** Diff highlight toggle and compare range */
 	DIFF_ENABLED: 'onair-diff-enabled',
-	DIFF_MODE: 'onair-diff-mode',
+	DIFF_FROM: 'onair-diff-from',
+	DIFF_TO: 'onair-diff-to',
 } as const;
