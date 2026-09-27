@@ -1,4 +1,4 @@
-import { h } from 'preact';
+import { h, Fragment } from 'preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useDropdown } from '../hooks/useDropdown';
