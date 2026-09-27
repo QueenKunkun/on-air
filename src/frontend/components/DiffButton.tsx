@@ -102,7 +102,7 @@ export function DiffButton() {
 						<>
 							<div class="tb-diff-menu-label">Compare</div>
 							<button class={'tb-diff-menu-item' + (mode === 'auto' ? ' tb-diff-menu-active' : '')} onClick={() => handleModeSelect('auto')}>
-								Auto (workspace → last change)
+								Workspace vs last change
 							</button>
 							<button class={'tb-diff-menu-item' + (mode === 'workspace' ? ' tb-diff-menu-active' : '')} onClick={() => handleModeSelect('workspace')}>
 								Workspace vs HEAD

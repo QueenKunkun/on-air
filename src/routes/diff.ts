@@ -42,16 +42,10 @@ function parseUnifiedDiff(diff: string): DiffRange[] {
 		}
 		if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('diff ') || line.startsWith('index ')) continue;
 		if (line.startsWith('+')) {
-			const start = newLine;
-			let end = newLine;
-			// consume consecutive + lines
-			ranges.push({ type: 'add', startLine: start, endLine: end });
+			ranges.push({ type: 'add', startLine: newLine, endLine: newLine });
 			newLine++;
 		} else if (line.startsWith('-')) {
-			// deleted lines don't increment newLine
-			// We track them relative to the old file; but for highlighting in the
-			// current preview we only care about adds. Mark del at current position.
-			ranges.push({ type: 'del', startLine: newLine, endLine: newLine });
+			// deleted lines don't exist in current file — skip
 		} else if (line.startsWith(' ') || line === '') {
 			newLine++;
 		}
