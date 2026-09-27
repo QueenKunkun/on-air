@@ -408,10 +408,8 @@ span.onair-unknown-html { display: inline; background: var(--pre-bg); padding: 2
 .diff-del { background: rgba(239,68,68,.10); border-left: 3px solid #ef4444; padding-left: 8px; margin-left: -11px; }
 
 /* Diff swap */
-.tb-diff-menu-row { display: flex; align-items: center; gap: 4px; }
-.tb-diff-menu-row .tb-diff-menu-item { flex: 1; }
-.tb-diff-swap { display: inline-flex; align-items: center; justify-content: center; background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--bnr-c); width: 26px; height: 24px; cursor: pointer; opacity: .6; transition: opacity .15s; flex-shrink: 0; padding: 0; }
-.tb-diff-swap:hover { opacity: 1; background: var(--pre-bg); }
+.tb-diff-swap-btn { background: none; border: none; color: var(--bnr-c); opacity: .5; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 4px; transition: opacity .15s, background .15s; padding: 0; margin-left: 2px; }
+.tb-diff-swap-btn:hover { opacity: 1; background: rgba(128,128,128,.15); }
 
 /* Print styles - hide UI elements */
 @media print {
