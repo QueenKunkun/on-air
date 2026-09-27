@@ -1,6 +1,7 @@
 import { h } from 'preact';
-import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
+import { useState, useEffect, useCallback } from 'preact/hooks';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useDropdown } from '../hooks/useDropdown';
 import { LS_KEYS } from '../../common/localStorageKeys';
 
 interface DiffRange { type: 'add' | 'del'; startLine: number; endLine: number; }
@@ -12,42 +13,16 @@ type DiffMode = 'auto' | 'workspace' | 'HEAD~1' | 'commits';
 export function DiffButton() {
 	const [enabled, setEnabled] = useLocalStorage<boolean>(LS_KEYS.DIFF_ENABLED, false);
 	const [mode, setMode] = useLocalStorage<DiffMode>(LS_KEYS.DIFF_MODE, 'auto');
-	const [menuOpen, setMenuOpen] = useState(false);
 	const [commits, setCommits] = useState<Commit[]>([]);
 	const [showCommitPicker, setShowCommitPicker] = useState(false);
 	const [fromCommit, setFromCommit] = useState('');
 	const [toCommit, setToCommit] = useState('');
-	const wrapRef = useRef<HTMLDivElement>(null);
-	const menuRef = useRef<HTMLDivElement>(null);
+	const dd = useDropdown({ triggerSelector: '.tb-diff-caret' });
 
 	const id = window.__ONAIR__?.id || '';
 
-	// Position menu relative to caret
-	useEffect(() => {
-		if (!menuOpen || !menuRef.current || !wrapRef.current) return;
-		const caret = wrapRef.current.querySelector('.tb-diff-caret');
-		if (!caret) return;
-		const rect = caret.getBoundingClientRect();
-		menuRef.current.style.left = rect.left + 'px';
-		menuRef.current.style.top = (rect.bottom + 4) + 'px';
-	}, [menuOpen, showCommitPicker]);
-
-	// Close on outside click / Escape (same as ThemeSelect / CopyPathButton)
-	useEffect(() => {
-		if (!menuOpen) return;
-		const onDown = (e: MouseEvent) => {
-			if (!wrapRef.current?.contains(e.target as Node)) { setMenuOpen(false); setShowCommitPicker(false); }
-		};
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') { setMenuOpen(false); setShowCommitPicker(false); }
-		};
-		document.addEventListener('mousedown', onDown);
-		document.addEventListener('keydown', onKey);
-		return () => {
-			document.removeEventListener('mousedown', onDown);
-			document.removeEventListener('keydown', onKey);
-		};
-	}, [menuOpen]);
+	// Re-position when commit picker expands the menu
+	useEffect(() => { /* dropdown hook re-positions on `open` change */ }, [dd.open, showCommitPicker]);
 
 	// Fetch commits when commit picker opens
 	useEffect(() => {
@@ -68,11 +43,9 @@ export function DiffButton() {
 		try {
 			const res = await fetch(url);
 			const data: DiffResponse = await res.json();
-			// Clear existing
 			document.querySelectorAll('.diff-add, .diff-del').forEach(el => {
 				el.classList.remove('diff-add', 'diff-del');
 			});
-			// Apply ranges
 			for (const range of data.ranges) {
 				for (let line = range.startLine; line <= range.endLine; line++) {
 					const el = document.querySelector(`[data-src-line="${line}"]`);
@@ -94,44 +67,38 @@ export function DiffButton() {
 	}, [enabled]);
 
 	const handleModeSelect = useCallback((m: DiffMode) => {
-		if (m === 'commits') {
-			setShowCommitPicker(true);
-			return;
-		}
+		if (m === 'commits') { setShowCommitPicker(true); return; }
 		setMode(m);
-		setMenuOpen(false);
+		dd.close();
 		setShowCommitPicker(false);
-	}, [setMode]);
+	}, [setMode, dd]);
 
 	const handleCommitConfirm = useCallback(() => {
 		if (fromCommit && toCommit) {
 			setMode('commits');
-			setMenuOpen(false);
+			dd.close();
 			setShowCommitPicker(false);
 		}
-	}, [fromCommit, toCommit, setMode]);
-
-	const modeLabel = mode === 'workspace' ? 'Workspace vs HEAD'
-		: mode === 'HEAD~1' ? 'HEAD vs HEAD~1'
-		: mode === 'commits' ? `${fromCommit.slice(0, 7)}..${toCommit.slice(0, 7)}`
-		: 'Auto';
+	}, [fromCommit, toCommit, setMode, dd]);
 
 	return (
-		<div class={'tb-diff-wrap' + (enabled ? ' tb-diff-on' : '')} ref={wrapRef}>
+		<div class={'tb-diff-wrap' + (enabled ? ' tb-diff-on' : '')} ref={dd.wrapRef}>
 			<button
 				class="tb-diff-btn"
 				title={enabled ? 'Hide diff highlights' : 'Show diff highlights'}
 				onClick={() => setEnabled(!enabled)}
 			>
-				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-					<path d="M12 5v14" /><path d="M5 12h14" />
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M6 9l-3 3 3 3" />
+					<path d="M18 9l3 3-3 3" />
+					<path d="M14 5l-4 14" />
 				</svg>
 			</button>
-			<button class="tb-diff-caret" title="Diff options" onClick={() => setMenuOpen(o => !o)}>
+			<button class="tb-diff-caret" title="Diff options" onClick={dd.toggle}>
 				<svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style="pointer-events:none"><path d="M2 3.5L5 6.5L8 3.5Z" /></svg>
 			</button>
-			{menuOpen && (
-				<div ref={menuRef} class="tb-diff-menu">
+			{dd.open && (
+				<div ref={dd.menuRef} class="tb-diff-menu">
 					{!showCommitPicker ? (
 						<>
 							<div class="tb-diff-menu-label">Compare</div>
