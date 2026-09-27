@@ -5,6 +5,7 @@ import { LS_KEYS } from '../../common/localStorageKeys';
 import { ConnectionStatus } from './ConnectionStatus';
 import { ThemeSelect } from './ThemeSelect';
 import { CopyPathButton } from './CopyPathButton';
+import { DiffButton } from './DiffButton';
 import type { ConnectionStatus as ConnectionStatusType } from '../hooks/useWebSocket';
 
 interface BannerProps {
@@ -171,6 +172,7 @@ export function Banner({ connStatus, wsSend, fullPath }: BannerProps) {
 					<span class="tb-filepath-sep">/</span>
 					<span class="tb-filepath-name">{fileName}</span>
 				</span>
+				<DiffButton />
 				<CopyPathButton fullPath={displayPath} />
 			</div>
 			<button class="tb-settings-btn" title="Settings" onClick={() => setSettingsOpen(true)}>

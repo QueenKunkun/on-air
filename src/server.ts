@@ -17,6 +17,7 @@ import { handleStatic } from './routes/static';
 import { handlePreview } from './routes/preview';
 import { handleXref } from './routes/xref';
 import { handleSearch } from './routes/search';
+import { handleDiff, handleDiffCommits } from './routes/diff';
 import { toPosix, mimeType } from './routes/utils';
 
 import pageCss from './templates/page.css';
@@ -387,6 +388,8 @@ export class PreviewServer {
 		}
 		if (/^\/xref\b/.test(rawUrl))         return handleXref(typedReq, res, this.docs, this.uriToId);
 		if (pathname === '/api/search')        return handleSearch(typedReq, res, this.docs);
+		if (pathname === '/api/diff')          return handleDiff(typedReq, res, this.docs);
+		if (pathname === '/api/diff/commits')  return handleDiffCommits(typedReq, res, this.docs);
 		if (pathname.startsWith('/__onair__/katex/fonts/')) return this.handleKatexFont(pathname, res);
 
 		// Fallback: ID-less /preview/ path — try to resolve from Referer

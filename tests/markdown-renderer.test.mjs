@@ -66,7 +66,7 @@ test('md renders basic markdown to HTML', () => {
 	const html = md.render('# Hello\n\nParagraph');
 	assert.ok(html.includes('<h1'), 'heading rendered');
 	assert.ok(html.includes('Hello'), 'heading text present');
-	assert.ok(html.includes('<p>Paragraph</p>'), 'paragraph rendered');
+	assert.ok(html.includes('<p') && html.includes('Paragraph'), 'paragraph rendered');
 });
 
 // ─── renderMarkdown ─────────────────────────────────────────────────────────

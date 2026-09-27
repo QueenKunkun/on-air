@@ -230,6 +230,16 @@ md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
 	return self.renderToken(tokens, idx, options);
 };
 
+// Attach source line numbers to block-level tokens for diff highlighting
+md.core.ruler.push('onair_src_lines', (state) => {
+	for (const token of state.tokens) {
+		if (token.map && token.level === 0 && token.block && !token.hidden) {
+			token.attrSet('data-src-line', String(token.map[0] + 1));
+		}
+	}
+	return false;
+});
+
 // Link rewriting
 md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
 	const href = tokens[idx].attrGet('href');
