@@ -385,7 +385,7 @@ span.onair-unknown-html { display: inline; background: var(--pre-bg); padding: 2
 .tb-diff-swap-btn { background: none; border: none; color: var(--bnr-c); opacity: .5; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 4px; transition: opacity .15s, background .15s; padding: 0; }
 .tb-diff-swap-btn:hover:not(:disabled) { opacity: 1; background: rgba(128,128,128,.15); }
 .tb-diff-swap-btn:disabled { opacity: .2; cursor: not-allowed; }
-.tb-diff-status { font-size: 10px; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+.tb-diff-status { font-size: 10px; padding: 1px 6px; border-radius: 3px; white-space: nowrap; min-width: 64px; text-align: center; }
 .tb-diff-status--none { color: var(--bnr-c); opacity: .5; background: rgba(128,128,128,.15); }
 .tb-diff-status--has { color: #fff; background: #22c55e; }
 

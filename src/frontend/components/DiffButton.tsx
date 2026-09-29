@@ -16,6 +16,9 @@ export function DiffButton() {
 	const [commits, setCommits] = useState<Commit[]>([]);
 	const [diffStatus, setDiffStatus] = useState<'idle' | 'loading' | 'none' | 'has'>('idle');
 	const originalContentRef = useRef<string | null>(null);
+	// Which commit's HTML is currently displayed (null = original workspace DOM).
+	// Used to skip redundant innerHTML replacement that flashes the page.
+	const showingCommitRef = useRef<string | null>(null);
 
 	const id = window.__ONAIR__?.id || '';
 
@@ -44,9 +47,14 @@ export function DiffButton() {
 			}
 
 			if (data.toHtml) {
-				content.innerHTML = data.toHtml;
-			} else if (originalContentRef.current !== null) {
+				// Only replace DOM when the displayed side actually changes
+				if (showingCommitRef.current !== toRef) {
+					content.innerHTML = data.toHtml;
+					showingCommitRef.current = toRef;
+				}
+			} else if (showingCommitRef.current !== null && originalContentRef.current !== null) {
 				content.innerHTML = originalContentRef.current;
+				showingCommitRef.current = null;
 			}
 
 			document.querySelectorAll('.diff-add, .diff-del').forEach(el => {
@@ -65,15 +73,16 @@ export function DiffButton() {
 
 	useEffect(() => { applyDiff(); }, [applyDiff]);
 
-	// Clear and restore original on disable
+	// Clear and restore original on disable (only if we replaced it)
 	useEffect(() => {
 		if (!enabled) {
 			document.querySelectorAll('.diff-add, .diff-del').forEach(el => {
 				el.classList.remove('diff-add', 'diff-del');
 			});
 			const content = document.getElementById('content');
-			if (content && originalContentRef.current !== null) {
+			if (content && originalContentRef.current !== null && showingCommitRef.current !== null) {
 				content.innerHTML = originalContentRef.current;
+				showingCommitRef.current = null;
 			}
 		}
 	}, [enabled]);
@@ -130,11 +139,13 @@ export function DiffButton() {
 			>
 				{renderOptions(toRef)}
 			</select>
-			{enabled && diffStatus === 'none' && (
-				<span class="tb-diff-status tb-diff-status--none">No changes</span>
-			)}
-			{enabled && diffStatus === 'has' && (
-				<span class="tb-diff-status tb-diff-status--has">Diff</span>
+			{enabled && (
+				<span
+					class={'tb-diff-status ' + (diffStatus === 'has' ? 'tb-diff-status--has' : 'tb-diff-status--none')}
+					style={diffStatus === 'has' || diffStatus === 'none' ? undefined : 'visibility:hidden'}
+				>
+					{diffStatus === 'has' ? 'Diff' : 'No changes'}
+				</span>
 			)}
 			{enabled && commits.length === 0 && (
 				<span class="tb-diff-status tb-diff-status--none" title="This file has no git history">No history</span>
