@@ -13,7 +13,7 @@ export function DiffButton() {
 	const enabled = isFlagOn(enabledStr);
 	const setEnabled = (v: boolean) => setEnabledStr(v ? '1' : '0');
 	const [fromRef, setFromRef] = useLocalStorage<string>(LS_KEYS.DIFF_FROM, 'workspace');
-	const [toRef, setToRef] = useLocalStorage<string>(LS_KEYS.DIFF_TO, 'HEAD');
+	const [toRef, setToRef] = useLocalStorage<string>(LS_KEYS.DIFF_TO, '');
 	const [commits, setCommits] = useState<Commit[]>([]);
 	const [diffStatus, setDiffStatus] = useState<'idle' | 'loading' | 'none' | 'has'>('idle');
 	const originalContentRef = useRef<string | null>(null);
@@ -31,6 +31,20 @@ export function DiffButton() {
 			.then(d => setCommits(d.commits || []))
 			.catch(() => {});
 	}, [id]);
+
+	// Validate refs against loaded options. Migrates legacy 'HEAD' values:
+	// HEAD never touched this file listing beyond what's shown, so its content
+	// always equals the newest listed commit — map it there explicitly.
+	useEffect(() => {
+		if (commits.length === 0) {
+			if (fromRef !== 'workspace') setFromRef('workspace');
+			if (toRef !== 'workspace') setToRef('workspace');
+			return;
+		}
+		const valid = new Set(['workspace', ...commits.map(c => c.hash)]);
+		if (!valid.has(fromRef)) setFromRef('workspace');
+		if (!valid.has(toRef)) setToRef(commits[0].hash);
+	}, [commits, fromRef, toRef, setFromRef, setToRef]);
 
 	// Monotonic id for diff requests. Rapid select switches fire overlapping
 	// fetches; only the latest request may touch the DOM (older responses
@@ -115,7 +129,6 @@ export function DiffButton() {
 	const renderOptions = (selected: string) => (
 		<>
 			<option value="workspace">Workspace</option>
-			<option value="HEAD">HEAD</option>
 			{commits.map(c => (
 				<option value={c.hash}>{c.shortHash} {c.message.slice(0, 30)}</option>
 			))}
