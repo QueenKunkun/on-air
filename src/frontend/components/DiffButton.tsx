@@ -6,7 +6,7 @@ import { LS_KEYS } from '../../common/localStorageKeys';
 
 interface DiffRange { type: 'add' | 'del'; startLine: number; endLine: number; }
 interface DiffResponse { ranges: DiffRange[]; source: string; toHtml?: string | null; error?: string; }
-interface Commit { hash: string; shortHash: string; message: string; }
+interface Commit { hash: string; shortHash: string; date: string; message: string; }
 
 export function DiffButton() {
 	const id = window.__ONAIR__?.id || '';
@@ -148,7 +148,7 @@ export function DiffButton() {
 		<>
 			<option value="workspace">Workspace</option>
 			{commits.map(c => (
-				<option value={c.hash}>{c.shortHash} {c.message.slice(0, 30)}</option>
+				<option value={c.hash}>{c.shortHash} {c.date} {c.message.slice(0, 30)}</option>
 			))}
 		</>
 	);

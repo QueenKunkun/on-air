@@ -212,10 +212,10 @@ export function handleDiffCommits(
 	}
 
 	const relFile = toPosix(path.relative(entry.rootDir, entry.fullPath));
-	runGit(['log', '-20', '--format=%H\t%h\t%s', '--', relFile], entry.rootDir).then((out) => {
+	runGit(['log', '-20', '--format=%H\t%h\t%ad\t%s', '--date=short', '--', relFile], entry.rootDir).then((out) => {
 		const commits = out.trim().split('\n').filter(Boolean).map((line) => {
-			const [hash, shortHash, ...rest] = line.split('\t');
-			return { hash, shortHash, message: rest.join('\t') };
+			const [hash, shortHash, date, ...rest] = line.split('\t');
+			return { hash, shortHash, date, message: rest.join('\t') };
 		});
 		res.writeHead(200, { 'Content-Type': 'application/json' });
 		res.end(JSON.stringify({ commits }));
