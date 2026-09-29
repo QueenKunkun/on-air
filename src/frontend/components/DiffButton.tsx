@@ -1,6 +1,7 @@
 import { h, Fragment } from 'preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { useLocalStorage, isFlagOn } from '../hooks/useLocalStorage';
+import { coverLine } from '../diffLineMap';
 import { LS_KEYS } from '../../common/localStorageKeys';
 
 interface DiffRange { type: 'add' | 'del'; startLine: number; endLine: number; }
@@ -67,11 +68,21 @@ export function DiffButton() {
 			document.querySelectorAll('.diff-add, .diff-del').forEach(el => {
 				el.classList.remove('diff-add', 'diff-del');
 			});
+			// Collect annotated blocks; a changed line highlights its nearest
+			// containing block (exact line match fails inside multi-line
+			// blocks like lists, tables, and wrapped paragraphs).
+			const blocks: { start: number; end: number; el: Element }[] = [];
+			content.querySelectorAll('[data-src-line]').forEach(el => {
+				const s = parseInt(el.getAttribute('data-src-line') || '', 10);
+				const eAttr = el.getAttribute('data-src-line-end');
+				const e = eAttr === null ? s : parseInt(eAttr, 10);
+				if (Number.isFinite(s)) blocks.push({ start: s, end: Number.isFinite(e) ? e : s, el });
+			});
 			let count = 0;
 			for (const range of data.ranges) {
 				for (let line = range.startLine; line <= range.endLine; line++) {
-					const el = document.querySelector(`[data-src-line="${line}"]`);
-					if (el) { el.classList.add(range.type === 'add' ? 'diff-add' : 'diff-del'); count++; }
+					const idx = coverLine(blocks, line);
+					if (idx >= 0) { blocks[idx].el.classList.add(range.type === 'add' ? 'diff-add' : 'diff-del'); count++; }
 				}
 			}
 			setDiffStatus(count > 0 ? 'has' : 'none');

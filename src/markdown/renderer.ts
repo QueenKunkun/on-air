@@ -230,11 +230,16 @@ md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
 	return self.renderToken(tokens, idx, options);
 };
 
-// Attach source line numbers to block-level tokens for diff highlighting
+// Attach source line numbers to block-level tokens for diff highlighting.
+// Both start and end lines are recorded so the frontend can match a changed
+// line to its containing block. Nested blocks (list items, table rows) carry
+// their own maps — restricting to level 0 left lines inside multi-line
+// blocks unmatchable, so every changed line inside them showed "No changes".
 md.core.ruler.push('onair_src_lines', (state) => {
 	for (const token of state.tokens) {
-		if (token.map && token.level === 0 && token.block && !token.hidden) {
+		if (token.map && token.block && !token.hidden) {
 			token.attrSet('data-src-line', String(token.map[0] + 1));
+			token.attrSet('data-src-line-end', String(token.map[1]));
 		}
 	}
 	return false;
