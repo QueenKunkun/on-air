@@ -31,14 +31,21 @@ export function DiffButton() {
 			.catch(() => {});
 	}, [id]);
 
+	// Monotonic id for diff requests. Rapid select switches fire overlapping
+	// fetches; only the latest request may touch the DOM (older responses
+	// arriving late are stale and must be ignored).
+	const reqSeqRef = useRef(0);
+
 	// Apply/remove diff highlighting
 	const applyDiff = useCallback(async () => {
+		const seq = ++reqSeqRef.current;
 		if (!enabled || !id || !fromRef || !toRef || fromRef === toRef) { setDiffStatus('idle'); return; }
 		setDiffStatus('loading');
 		const url = `/api/diff?id=${id}&range=commits&from=${fromRef}&to=${toRef}`;
 		try {
 			const res = await fetch(url);
 			const data: DiffResponse = await res.json();
+			if (seq !== reqSeqRef.current) return; // superseded by a newer request
 			const content = document.getElementById('content');
 			if (!content) return;
 
@@ -76,6 +83,7 @@ export function DiffButton() {
 	// Clear and restore original on disable (only if we replaced it)
 	useEffect(() => {
 		if (!enabled) {
+			reqSeqRef.current++; // invalidate any in-flight fetch
 			document.querySelectorAll('.diff-add, .diff-del').forEach(el => {
 				el.classList.remove('diff-add', 'diff-del');
 			});
