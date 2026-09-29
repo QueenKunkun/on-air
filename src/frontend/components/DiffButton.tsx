@@ -1,6 +1,6 @@
 import { h, Fragment } from 'preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useLocalStorage, isFlagOn } from '../hooks/useLocalStorage';
 import { LS_KEYS } from '../../common/localStorageKeys';
 
 interface DiffRange { type: 'add' | 'del'; startLine: number; endLine: number; }
@@ -8,7 +8,9 @@ interface DiffResponse { ranges: DiffRange[]; source: string; toHtml?: string | 
 interface Commit { hash: string; shortHash: string; message: string; }
 
 export function DiffButton() {
-	const [enabled, setEnabled] = useLocalStorage<boolean>(LS_KEYS.DIFF_ENABLED, false);
+	const [enabledStr, setEnabledStr] = useLocalStorage(LS_KEYS.DIFF_ENABLED, '0');
+	const enabled = isFlagOn(enabledStr);
+	const setEnabled = (v: boolean) => setEnabledStr(v ? '1' : '0');
 	const [fromRef, setFromRef] = useLocalStorage<string>(LS_KEYS.DIFF_FROM, 'workspace');
 	const [toRef, setToRef] = useLocalStorage<string>(LS_KEYS.DIFF_TO, 'HEAD');
 	const [commits, setCommits] = useState<Commit[]>([]);
