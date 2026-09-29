@@ -9,33 +9,41 @@ interface DiffResponse { ranges: DiffRange[]; source: string; toHtml?: string | 
 interface Commit { hash: string; shortHash: string; message: string; }
 
 export function DiffButton() {
-	const [enabledStr, setEnabledStr] = useLocalStorage(LS_KEYS.DIFF_ENABLED, '0');
+	const id = window.__ONAIR__?.id || '';
+	// Compare settings are scoped per file: a commit hash stored for one file
+	// is meaningless for another. (Previously global keys shared them.)
+	const enabledKey = id ? `${LS_KEYS.DIFF_ENABLED}:${id}` : LS_KEYS.DIFF_ENABLED;
+	const fromKey = id ? `${LS_KEYS.DIFF_FROM}:${id}` : LS_KEYS.DIFF_FROM;
+	const toKey = id ? `${LS_KEYS.DIFF_TO}:${id}` : LS_KEYS.DIFF_TO;
+	const [enabledStr, setEnabledStr] = useLocalStorage(enabledKey, '0');
 	const enabled = isFlagOn(enabledStr);
 	const setEnabled = (v: boolean) => setEnabledStr(v ? '1' : '0');
-	const [fromRef, setFromRef] = useLocalStorage<string>(LS_KEYS.DIFF_FROM, 'workspace');
-	const [toRef, setToRef] = useLocalStorage<string>(LS_KEYS.DIFF_TO, '');
+	const [fromRef, setFromRef] = useLocalStorage<string>(fromKey, 'workspace');
+	const [toRef, setToRef] = useLocalStorage<string>(toKey, '');
 	const [commits, setCommits] = useState<Commit[]>([]);
+	const [commitsLoaded, setCommitsLoaded] = useState(false);
 	const [diffStatus, setDiffStatus] = useState<'idle' | 'loading' | 'none' | 'has'>('idle');
 	const originalContentRef = useRef<string | null>(null);
 	// Which commit's HTML is currently displayed (null = original workspace DOM).
 	// Used to skip redundant innerHTML replacement that flashes the page.
 	const showingCommitRef = useRef<string | null>(null);
 
-	const id = window.__ONAIR__?.id || '';
-
 	// Fetch commits on mount
 	useEffect(() => {
 		if (!id) return;
 		fetch(`/api/diff/commits?id=${id}`)
 			.then(r => r.json())
-			.then(d => setCommits(d.commits || []))
-			.catch(() => {});
+			.then(d => { setCommits(d.commits || []); setCommitsLoaded(true); })
+			.catch(() => { setCommitsLoaded(true); });
 	}, [id]);
 
 	// Validate refs against loaded options. Migrates legacy 'HEAD' values:
 	// HEAD never touched this file listing beyond what's shown, so its content
 	// always equals the newest listed commit — map it there explicitly.
+	// Must wait for the first commits load: an empty list beforehand means
+	// "not loaded yet", and resetting then would wipe the persisted refs.
 	useEffect(() => {
+		if (!commitsLoaded) return;
 		if (commits.length === 0) {
 			if (fromRef !== 'workspace') setFromRef('workspace');
 			if (toRef !== 'workspace') setToRef('workspace');
@@ -44,7 +52,17 @@ export function DiffButton() {
 		const valid = new Set(['workspace', ...commits.map(c => c.hash)]);
 		if (!valid.has(fromRef)) setFromRef('workspace');
 		if (!valid.has(toRef)) setToRef(commits[0].hash);
-	}, [commits, fromRef, toRef, setFromRef, setToRef]);
+	}, [commitsLoaded, commits, fromRef, toRef, setFromRef, setToRef]);
+
+	// Drop superseded global (unscoped) keys once per-file keys are in use.
+	useEffect(() => {
+		if (!id) return;
+		try {
+			localStorage.removeItem(LS_KEYS.DIFF_ENABLED);
+			localStorage.removeItem(LS_KEYS.DIFF_FROM);
+			localStorage.removeItem(LS_KEYS.DIFF_TO);
+		} catch { /* ignore */ }
+	}, [id]);
 
 	// Monotonic id for diff requests. Rapid select switches fire overlapping
 	// fetches; only the latest request may touch the DOM (older responses
