@@ -147,14 +147,15 @@ export function DiffButton() {
 			>
 				{renderOptions(toRef)}
 			</select>
-			{enabled && (
-				<span
-					class={'tb-diff-status ' + (diffStatus === 'has' ? 'tb-diff-status--has' : 'tb-diff-status--none')}
-					style={diffStatus === 'has' || diffStatus === 'none' ? undefined : 'visibility:hidden'}
-				>
-					{diffStatus === 'has' ? 'Diff' : 'No changes'}
-				</span>
-			)}
+			{/* Always mounted: .tb-center is centered, so mounting/unmounting
+				the badge on toggle would re-center the whole group and make
+				the banner jump. Hidden placeholder keeps the width stable. */}
+			<span
+				class={'tb-diff-status ' + (enabled && diffStatus === 'has' ? 'tb-diff-status--has' : 'tb-diff-status--none')}
+				style={enabled && (diffStatus === 'has' || diffStatus === 'none') ? undefined : 'visibility:hidden'}
+			>
+				{enabled && diffStatus === 'has' ? 'Diff' : 'No changes'}
+			</span>
 			{enabled && commits.length === 0 && (
 				<span class="tb-diff-status tb-diff-status--none" title="This file has no git history">No history</span>
 			)}
