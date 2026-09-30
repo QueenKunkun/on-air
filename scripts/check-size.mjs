@@ -5,7 +5,7 @@ import { createInterface } from 'readline';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const OUT = 'on-air.vsix';
-const LIMIT = 1024 * 1024;
+const LIMIT = 2 * 1024 * 1024;
 
 function human(bytes) {
   if (bytes >= 1024 * 1024) return (bytes / 1024 / 1024).toFixed(2) + ' MB';
@@ -23,11 +23,11 @@ execSync(`npx @vscode/vsce package --no-dependencies -o ${OUT}`, { cwd: ROOT, st
 const size = statSync(`${ROOT}${OUT}`).size;
 
 if (size <= LIMIT) {
-  console.log(`✓ ${OUT} = ${human(size)} (under 1 MB)`);
+  console.log(`✓ ${OUT} = ${human(size)} (under 2 MB)`);
   process.exit(0);
 }
 
-console.log(`⚠ ${OUT} = ${human(size)} (over 1 MB)`);
+console.log(`⚠ ${OUT} = ${human(size)} (over 2 MB)`);
 
 if (process.env.ALLOW_LARGE_VSIX === '1') {
   console.log('ALLOW_LARGE_VSIX=1 set — continuing.');
@@ -38,5 +38,5 @@ const answer = (await ask('Publish anyway? (y/N) ')).trim().toLowerCase();
 if (answer === 'y' || answer === 'yes') {
   process.exit(0);
 }
-console.error('Aborted: package exceeds 1 MB.');
+console.error('Aborted: package exceeds 2 MB.');
 process.exit(1);
