@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.29.0] - 2026-09-30
+
+- feat: Add word-level diff highlight — modified lines emphasize the changed words instead of painting the whole block
+
+
 ## [0.28.0] - 2026-09-27
 
 - feat: Add git diff highlight — toggle colored highlights for changed lines; compare any two commits or workspace with inline from/to selectors and a swap button
