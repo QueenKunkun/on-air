@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { diffWords } from 'diff';
 import { debugWarn } from '../common/debug';
 import { isDangerousRootDir, toPosix } from './utils';
 import { renderMarkdown } from '../markdown/renderer';
@@ -10,6 +11,8 @@ export interface DiffRange {
 	type: 'add' | 'del';
 	startLine: number;
 	endLine: number;
+	/** Added words (new-side text) for paired modifications; absent otherwise. */
+	words?: string[];
 }
 
 export interface DiffResponse {
@@ -39,32 +42,111 @@ export function runGit(args: string[], cwd: string, timeoutMs = 5000): Promise<s
 
 // Parse unified diff, returning ranges with line numbers from the requested side.
 // side 'new' = "+" line nums (right side), side 'old' = "-" line nums (left side).
+//
+// Modification pairing: within a hunk, a maximal run of '-' lines immediately
+// followed by '+' lines pairs i-th del with i-th add. Paired adds carry the
+// added `words` for word-level highlighting; paired dels are dropped (the add
+// at the same position already signals the change — a red marker would paint
+// over the green). Unpaired leftovers keep plain line ranges.
 export function parseUnifiedDiff(diff: string, side: 'old' | 'new' = 'new'): DiffRange[] {
 	const ranges: DiffRange[] = [];
 	const lines = diff.split('\n');
 	let oldLine = 0;
 	let newLine = 0;
 	const cur = () => side === 'old' ? oldLine : newLine;
+	let delRun: { num: number; text: string }[] = [];
+	let addRun: { num: number; text: string }[] = [];
+
+	const flush = () => {
+		const n = Math.min(delRun.length, addRun.length);
+		for (let i = 0; i < n; i++) {
+			const words = diffAddedWords(delRun[i].text, addRun[i].text);
+			const num = addRun[i].num;
+			ranges.push(words.length
+				? { type: 'add', startLine: num, endLine: num, words }
+				: { type: 'add', startLine: num, endLine: num });
+		}
+		for (let i = n; i < addRun.length; i++) {
+			const num = addRun[i].num;
+			ranges.push({ type: 'add', startLine: num, endLine: num });
+		}
+		for (let i = n; i < delRun.length; i++) {
+			const num = delRun[i].num;
+			ranges.push({ type: 'del', startLine: num, endLine: num });
+		}
+		delRun = [];
+		addRun = [];
+	};
+
 	for (const line of lines) {
 		const hunkMatch = line.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
 		if (hunkMatch) {
+			flush();
 			oldLine = parseInt(hunkMatch[1], 10);
 			newLine = parseInt(hunkMatch[2], 10);
 			continue;
 		}
-		if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('diff ') || line.startsWith('index ')) continue;
+		if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('diff ') || line.startsWith('index ')) { flush(); continue; }
 		if (line.startsWith('+')) {
-			ranges.push({ type: 'add', startLine: cur(), endLine: cur() });
+			addRun.push({ num: cur(), text: line.slice(1) });
 			newLine++;
 		} else if (line.startsWith('-')) {
-			ranges.push({ type: 'del', startLine: cur(), endLine: cur() });
+			if (addRun.length > 0) flush(); // '-' after '+' starts a new run
+			delRun.push({ num: cur(), text: line.slice(1) });
 			oldLine++;
 		} else if (line.startsWith(' ') || line === '') {
+			flush();
 			oldLine++;
 			newLine++;
+		} else {
+			flush(); // '\ No newline at end of file' etc.
 		}
 	}
+	flush();
 	return ranges;
+}
+
+// Word-level diff of a paired old/new line, returning added word strings.
+// Uses Intl.Segmenter for scripts without spaces (zh/ja/ko/th); the default
+// tokenizer would treat a whole CJK sentence as one token and mark it all.
+export function diffAddedWords(oldLine: string, newLine: string): string[] {
+	if (oldLine === newLine) return [];
+	const seg = segmenterFor(oldLine + '\n' + newLine);
+	let parts;
+	try {
+		parts = seg ? diffWords(oldLine, newLine, { intlSegmenter: seg }) : diffWords(oldLine, newLine);
+	} catch {
+		return [];
+	}
+	if (!parts) return [];
+	const out: string[] = [];
+	for (const p of parts) {
+		if (!p.added) continue;
+		const w = p.value.trim();
+		if (w && !out.includes(w)) out.push(w);
+	}
+	return out;
+}
+
+const segmenterCache = new Map<string, Intl.Segmenter>();
+
+function segmenterFor(text: string): Intl.Segmenter | undefined {
+	let locale: string | undefined;
+	if (/[\u3040-\u30ff]/.test(text)) locale = 'ja'; // hiragana/katakana
+	else if (/[\u4e00-\u9fff]/.test(text)) locale = 'zh'; // hanzi (also kanji)
+	else if (/[\uac00-\ud7af]/.test(text)) locale = 'ko'; // hangul
+	else if (/[\u0e00-\u0e7f]/.test(text)) locale = 'th'; // thai
+	if (!locale || typeof Intl.Segmenter === 'undefined') return undefined;
+	let s = segmenterCache.get(locale);
+	if (!s) {
+		try {
+			s = new Intl.Segmenter(locale, { granularity: 'word' });
+		} catch {
+			return undefined;
+		}
+		segmenterCache.set(locale, s);
+	}
+	return s;
 }
 
 // Merge consecutive ranges of same type
@@ -77,6 +159,7 @@ export function mergeRanges(ranges: DiffRange[]): DiffRange[] {
 		const r = sorted[i];
 		if (r.type === cur.type && r.startLine <= cur.endLine + 1) {
 			cur.endLine = Math.max(cur.endLine, r.endLine);
+			if (r.words?.length) cur.words = [...(cur.words ?? []), ...r.words.filter(w => !cur.words?.includes(w))];
 		} else {
 			out.push(cur);
 			cur = { ...r };

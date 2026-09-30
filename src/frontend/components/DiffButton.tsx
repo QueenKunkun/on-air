@@ -1,10 +1,10 @@
 import { h, Fragment } from 'preact';
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { useLocalStorage, isFlagOn } from '../hooks/useLocalStorage';
-import { coverLine } from '../diffLineMap';
+import { coverLine, wrapAddedWords, unwrapAddedWords } from '../diffLineMap';
 import { LS_KEYS } from '../../common/localStorageKeys';
 
-interface DiffRange { type: 'add' | 'del'; startLine: number; endLine: number; }
+interface DiffRange { type: 'add' | 'del'; startLine: number; endLine: number; words?: string[]; }
 interface DiffResponse { ranges: DiffRange[]; source: string; toHtml?: string | null; error?: string; }
 interface Commit { hash: string; shortHash: string; date: string; message: string; }
 
@@ -100,6 +100,7 @@ export function DiffButton() {
 			document.querySelectorAll('.diff-add, .diff-del').forEach(el => {
 				el.classList.remove('diff-add', 'diff-del');
 			});
+			unwrapAddedWords(document);
 			// Collect annotated blocks; a changed line highlights its nearest
 			// containing block (exact line match fails inside multi-line
 			// blocks like lists, tables, and wrapped paragraphs).
@@ -114,7 +115,11 @@ export function DiffButton() {
 			for (const range of data.ranges) {
 				for (let line = range.startLine; line <= range.endLine; line++) {
 					const idx = coverLine(blocks, line);
-					if (idx >= 0) { blocks[idx].el.classList.add(range.type === 'add' ? 'diff-add' : 'diff-del'); count++; }
+					if (idx < 0) continue;
+					const el = blocks[idx].el;
+					el.classList.add(range.type === 'add' ? 'diff-add' : 'diff-del');
+					if (range.type === 'add' && range.words?.length) wrapAddedWords(el, range.words);
+					count++;
 				}
 			}
 			setDiffStatus(count > 0 ? 'has' : 'none');
@@ -130,6 +135,7 @@ export function DiffButton() {
 			document.querySelectorAll('.diff-add, .diff-del').forEach(el => {
 				el.classList.remove('diff-add', 'diff-del');
 			});
+			unwrapAddedWords(document);
 			const content = document.getElementById('content');
 			if (content && originalContentRef.current !== null && showingCommitRef.current !== null) {
 				content.innerHTML = originalContentRef.current;

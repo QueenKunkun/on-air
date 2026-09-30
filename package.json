@@ -12,7 +12,7 @@
 		"url": "https://github.com/QueenKunkun/on-air/issues",
 		"email": "742711819@qq.com"
 	},
-	"version": "0.28.8",
+	"version": "0.29.0",
 	"engines": {
 		"vscode": "^1.85.0"
 	},
@@ -98,8 +98,9 @@
 		"webpack-cli": "^6.0.1"
 	},
 	"dependencies": {
-		"@vscode/ripgrep": "^1.18.0",
 		"@vscode/markdown-it-katex": "^1.1.2",
+		"@vscode/ripgrep": "^1.18.0",
+		"diff": "^9.0.0",
 		"highlight.js": "^11.11.1",
 		"htm": "^3.1.1",
 		"ignore": "^7.0.6",
